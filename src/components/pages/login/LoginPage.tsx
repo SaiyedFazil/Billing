@@ -1,33 +1,40 @@
 import { Suspense } from "react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BrandMark } from "@/components/layout/BrandMark";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { LoginBrandPanel } from "./components/LoginBrandPanel";
 import { LoginForm } from "./components/LoginForm";
 
 export function LoginPage() {
   return (
-    <main className="bg-muted/40 flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Billing</CardTitle>
-          <CardDescription>Sign in to start taking orders.</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <main className="flex min-h-screen">
+      <LoginBrandPanel />
+
+      <section className="flex flex-1 items-center justify-center px-5 py-12 sm:px-8">
+        <div className="w-full max-w-95 space-y-8">
+          <div className="flex items-center gap-3 lg:hidden">
+            <BrandMark />
+            <span className="font-heading text-xl font-bold">Billing</span>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="font-heading text-[34px] leading-tight font-extrabold tracking-tight sm:text-[38px]">
+              Welcome back
+            </h1>
+            <p className="text-muted-foreground text-[15px]">
+              Sign in to start taking orders.
+            </p>
+          </div>
+
           {/* LoginForm reads ?next= via useSearchParams, which needs a
               Suspense boundary to avoid opting the whole page out of static
               rendering. */}
-          <Suspense fallback={<Skeleton className="h-56 w-full" />}>
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <LoginForm />
           </Suspense>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </main>
   );
 }

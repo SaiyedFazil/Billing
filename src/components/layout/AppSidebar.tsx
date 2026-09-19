@@ -60,7 +60,7 @@ export function AppSidebar({
               : "bg-brand/15 hover:bg-brand/25 text-[#ff8a65]",
           )}
         >
-          <Plus className="size-[22px]" strokeWidth={2.25} />
+          <Plus className="size-5.5" strokeWidth={2.25} />
         </Link>
 
         <nav
@@ -112,7 +112,7 @@ export function AppSidebar({
             title="Sign out"
             className="text-sidebar-muted flex size-10 cursor-pointer items-center justify-center rounded-xl transition-colors hover:bg-white/10 hover:text-white"
           >
-            <LogOut className="size-[18px]" />
+            <LogOut className="size-4.5" />
           </button>
         </form>
       </div>
@@ -143,7 +143,7 @@ export function AppSidebar({
         onClick={onNavigate}
         className="bg-primary shadow-brand hover:bg-primary-hover flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white transition-colors"
       >
-        <Plus className="size-[18px]" strokeWidth={2.25} />
+        <Plus className="size-4.5" strokeWidth={2.25} />
         New bill
       </Link>
 
@@ -174,7 +174,7 @@ export function AppSidebar({
                 >
                   <Icon
                     className={cn(
-                      "size-[18px]",
+                      "size-4.5",
                       active
                         ? "text-sidebar-primary"
                         : "text-sidebar-muted group-hover:text-sidebar-foreground",
@@ -205,7 +205,7 @@ export function AppSidebar({
             title="Sign out"
             className="text-sidebar-muted flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/10 hover:text-white"
           >
-            <LogOut className="size-[18px]" />
+            <LogOut className="size-4.5" />
           </button>
         </form>
       </div>

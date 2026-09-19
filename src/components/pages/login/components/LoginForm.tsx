@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  AlertCircle,
+  ArrowRight,
+  Loader2,
+  LockKeyhole,
+  UserRound,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -44,18 +51,22 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          name="username"
-          autoComplete="username"
-          autoFocus
-          required
-          disabled={isPending}
-          aria-invalid={Boolean(fieldErrors.username)}
-        />
+        <div className="relative">
+          <UserRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2" />
+          <Input
+            id="username"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            required
+            disabled={isPending}
+            aria-invalid={Boolean(fieldErrors.username)}
+            className="h-13 rounded-[14px] pl-11 text-base md:text-base"
+          />
+        </div>
         {fieldErrors.username ? (
           <p className="text-destructive text-sm">{fieldErrors.username}</p>
         ) : null}
@@ -63,15 +74,19 @@ export function LoginForm() {
 
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          disabled={isPending}
-          aria-invalid={Boolean(fieldErrors.password)}
-        />
+        <div className="relative">
+          <LockKeyhole className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2" />
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            disabled={isPending}
+            aria-invalid={Boolean(fieldErrors.password)}
+            className="h-13 rounded-[14px] pl-11 text-base md:text-base"
+          />
+        </div>
         {fieldErrors.password ? (
           <p className="text-destructive text-sm">{fieldErrors.password}</p>
         ) : null}
@@ -80,14 +95,30 @@ export function LoginForm() {
       {error ? (
         <p
           role="alert"
-          className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+          className="bg-destructive-soft text-destructive-ink flex items-start gap-2 rounded-xl px-3.5 py-3 text-sm font-medium"
         >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
           {error}
         </p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Signing in…" : "Sign in"}
+      <Button
+        type="submit"
+        size="lg"
+        className="h-13 w-full rounded-[14px]"
+        disabled={isPending}
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="size-4.5 animate-spin" />
+            Signing in…
+          </>
+        ) : (
+          <>
+            Sign in
+            <ArrowRight className="size-4.5" />
+          </>
+        )}
       </Button>
     </form>
   );
