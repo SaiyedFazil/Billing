@@ -29,8 +29,11 @@ async function main() {
   `);
 
   const userId = (
-    (await db.execute(sql`SELECT id FROM users WHERE username = 'constraint-probe'`))
-      .rows[0] as { id: string }
+    (
+      await db.execute(
+        sql`SELECT id FROM users WHERE username = 'constraint-probe'`,
+      )
+    ).rows[0] as { id: string }
   ).id;
   const categoryId = (
     (

@@ -31,15 +31,15 @@ export function PageHeader({
         {leading}
         <div className="min-w-0 space-y-1.5">
           {eyebrow ? (
-            <p className="text-brand-ink text-xs font-semibold tracking-[0.08em] uppercase">
+            <p className="text-xs font-semibold tracking-[0.08em] text-brand-ink uppercase">
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="font-heading flex flex-wrap items-center gap-3 text-[28px] leading-tight font-extrabold tracking-tight sm:text-[34px]">
+          <h1 className="flex flex-wrap items-center gap-3 font-heading text-[28px] leading-tight font-extrabold tracking-tight sm:text-[34px]">
             {title}
           </h1>
           {description ? (
-            <p className="text-muted-foreground max-w-2xl text-[15px] text-pretty">
+            <p className="max-w-2xl text-[15px] text-pretty text-muted-foreground">
               {description}
             </p>
           ) : null}

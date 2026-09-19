@@ -20,21 +20,21 @@ variables are rewired to the `next/font` CSS variables.
 
 ## Visual language
 
-| Token | Value | Use |
-|---|---|---|
-| Espresso | `#1C1714` | sidebar, hero stat cards |
-| Tomato 600 | `#D1431B` | primary buttons (4.6:1 with white) |
-| Tomato 500 | `#F2542D` | highlights, chart "today", focus ring, selected border |
-| Tomato 50 | `#FCEBE4` | selected / soft fills |
-| Tomato 700 | `#A93212` | text on soft tomato, links |
-| Cream | `#FAF7F2` | page canvas |
-| Paper | `#FFFFFF` | cards |
-| Line | `#ECE5DB` / input `#E3DBCF` | borders |
-| Ink | `#1C1917` | text |
-| Stone | `#6F665E` | secondary text (≥4.5:1 on cream) |
-| Basil | `#1F8A55` (soft `#E4F3EA`, text `#17683F`) | success, change due, available |
-| Mustard | `#E9A23B` (soft `#FDF0D5`, text `#8A5A0B`) | chart 2, warning/locked |
-| Chilli | `#B42318` (soft `#FEE4E2`, text `#9F1C13`) | void, destructive |
+| Token      | Value                                      | Use                                                    |
+| ---------- | ------------------------------------------ | ------------------------------------------------------ |
+| Espresso   | `#1C1714`                                  | sidebar, hero stat cards                               |
+| Tomato 600 | `#D1431B`                                  | primary buttons (4.6:1 with white)                     |
+| Tomato 500 | `#F2542D`                                  | highlights, chart "today", focus ring, selected border |
+| Tomato 50  | `#FCEBE4`                                  | selected / soft fills                                  |
+| Tomato 700 | `#A93212`                                  | text on soft tomato, links                             |
+| Cream      | `#FAF7F2`                                  | page canvas                                            |
+| Paper      | `#FFFFFF`                                  | cards                                                  |
+| Line       | `#ECE5DB` / input `#E3DBCF`                | borders                                                |
+| Ink        | `#1C1917`                                  | text                                                   |
+| Stone      | `#6F665E`                                  | secondary text (≥4.5:1 on cream)                       |
+| Basil      | `#1F8A55` (soft `#E4F3EA`, text `#17683F`) | success, change due, available                         |
+| Mustard    | `#E9A23B` (soft `#FDF0D5`, text `#8A5A0B`) | chart 2, warning/locked                                |
+| Chilli     | `#B42318` (soft `#FEE4E2`, text `#9F1C13`) | void, destructive                                      |
 
 Payment colours are fixed app-wide: Cash = tomato, UPI = mustard, Card = basil,
 Other = stone. Category tiles cycle tomato → mustard → basil → plum → sky → rose

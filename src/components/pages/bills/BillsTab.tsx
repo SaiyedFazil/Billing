@@ -65,13 +65,13 @@ export function BillsTab({
         <TableCard
           footer={
             <>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 Showing{" "}
-                <span className="text-foreground font-semibold tabular-nums">
+                <span className="font-semibold text-foreground tabular-nums">
                   {firstRow}–{lastRow}
                 </span>{" "}
                 of{" "}
-                <span className="text-foreground font-semibold tabular-nums">
+                <span className="font-semibold text-foreground tabular-nums">
                   {ledger.total}
                 </span>
               </p>

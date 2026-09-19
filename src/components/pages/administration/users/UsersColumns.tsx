@@ -52,14 +52,14 @@ export function UserTableRow({
           <span className="font-semibold">
             {row.name}
             {isSelf ? (
-              <span className="text-muted-foreground ml-2 text-xs font-normal">
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
                 (you)
               </span>
             ) : null}
           </span>
         </span>
       </TableCell>
-      <TableCell className="text-foreground/80 font-mono text-[13px]">
+      <TableCell className="font-mono text-[13px] text-foreground/80">
         {row.username}
       </TableCell>
       <TableCell>

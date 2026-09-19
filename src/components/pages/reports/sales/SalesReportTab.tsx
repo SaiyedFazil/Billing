@@ -1,6 +1,11 @@
 "use client";
 
-import { BadgePercent, IndianRupee, ReceiptText, TrendingUp } from "lucide-react";
+import {
+  BadgePercent,
+  IndianRupee,
+  ReceiptText,
+  TrendingUp,
+} from "lucide-react";
 
 import { StatCard } from "@/components/custom/StatCard";
 import { TableCard } from "@/components/custom/TableCard";
@@ -110,7 +115,7 @@ export function SalesReportTab({
                 {rows.map((row) => (
                   <SalesReportRow key={row.businessDate} row={row} />
                 ))}
-                <TableRow className="bg-brand-soft text-brand-ink hover:bg-brand-soft font-bold">
+                <TableRow className="bg-brand-soft font-bold text-brand-ink hover:bg-brand-soft">
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {totals.billCount}

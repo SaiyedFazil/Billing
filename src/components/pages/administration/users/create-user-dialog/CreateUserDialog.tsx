@@ -69,11 +69,11 @@ export function CreateUserDialog({
                 setForm({ ...form, name: event.target.value })
               }
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Printed on every receipt this person creates.
             </p>
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -90,7 +90,7 @@ export function CreateUserDialog({
               }
             />
             {fieldErrors.username ? (
-              <p className="text-destructive text-sm">{fieldErrors.username}</p>
+              <p className="text-sm text-destructive">{fieldErrors.username}</p>
             ) : null}
           </div>
 
@@ -114,7 +114,7 @@ export function CreateUserDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Cashiers can bill and view reports. Owners can also change the
               menu, prices and accounts.
             </p>
@@ -134,7 +134,7 @@ export function CreateUserDialog({
               }
             />
             {fieldErrors.password ? (
-              <p className="text-destructive text-sm">{fieldErrors.password}</p>
+              <p className="text-sm text-destructive">{fieldErrors.password}</p>
             ) : null}
           </div>
 

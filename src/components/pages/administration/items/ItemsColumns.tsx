@@ -57,7 +57,7 @@ export function ItemTableRow({
           ) : (
             <div
               className={cn(
-                "font-heading flex h-full items-center justify-center text-lg font-bold",
+                "flex h-full items-center justify-center font-heading text-lg font-bold",
                 tone.ink,
               )}
             >

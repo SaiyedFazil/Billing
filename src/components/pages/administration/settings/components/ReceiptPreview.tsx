@@ -75,12 +75,12 @@ export function ReceiptPreview({
         <CardDescription>Updates as you type.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="bg-muted/70 flex justify-center rounded-2xl border border-dashed px-4 py-8">
+        <div className="flex justify-center rounded-2xl border border-dashed bg-muted/70 px-4 py-8">
           <div className="shadow-lift">
             <Receipt80mm receipt={receipt} narrow={printerWidth === "MM_58"} />
           </div>
         </div>
-        <p className="text-muted-foreground mt-3 text-xs">
+        <p className="mt-3 text-xs text-muted-foreground">
           A sample bill, not real data. Print settings are configured on the
           till — see docs/printer-setup.md.
         </p>

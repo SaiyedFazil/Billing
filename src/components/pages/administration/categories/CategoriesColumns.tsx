@@ -30,7 +30,7 @@ export function CategoryTableRow({
           <span
             aria-hidden
             className={cn(
-              "font-heading flex size-9 items-center justify-center rounded-[10px] text-base font-bold",
+              "flex size-9 items-center justify-center rounded-[10px] font-heading text-base font-bold",
               tone.tile,
               tone.ink,
             )}

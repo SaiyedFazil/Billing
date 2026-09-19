@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { collectsTender, type PaymentMethod } from "@/constants/payment-methods";
+import {
+  collectsTender,
+  type PaymentMethod,
+} from "@/constants/payment-methods";
 import {
   billTotal,
   compare,
@@ -51,7 +54,9 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
   );
   const toneByCategoryId = useMemo(
     () =>
-      new Map(menu.map((category, index) => [category.id, categoryTone(index)])),
+      new Map(
+        menu.map((category, index) => [category.id, categoryTone(index)]),
+      ),
     [menu],
   );
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);

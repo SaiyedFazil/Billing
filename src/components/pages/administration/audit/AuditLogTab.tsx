@@ -67,7 +67,7 @@ export function AuditLogTab({
       >
         <SelectTrigger
           aria-label="Filter by activity"
-          className="shadow-card w-72 data-[size=default]:h-11"
+          className="w-72 shadow-card data-[size=default]:h-11"
         >
           <SelectValue placeholder="All activity" />
         </SelectTrigger>
@@ -87,9 +87,9 @@ export function AuditLogTab({
         <TableCard
           footer={
             <>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 Page{" "}
-                <span className="text-foreground font-semibold tabular-nums">
+                <span className="font-semibold text-foreground tabular-nums">
                   {log.page}
                 </span>{" "}
                 of {lastPage} · {log.total} entries

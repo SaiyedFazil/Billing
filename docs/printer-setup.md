@@ -24,14 +24,14 @@ and receipts start coming out of the wrong printer.
 
 Open any receipt in the billing app. When the print dialog appears, set:
 
-| Setting | Value |
-|---|---|
-| Destination | Your thermal printer |
-| Paper size | 80mm x 297mm (or "Roll Paper 80mm") |
-| Margins | None |
-| Scale | 100% (Default) |
-| **Headers and footers** | **UNCHECKED** |
-| Background graphics | Unchecked |
+| Setting                 | Value                               |
+| ----------------------- | ----------------------------------- |
+| Destination             | Your thermal printer                |
+| Paper size              | 80mm x 297mm (or "Roll Paper 80mm") |
+| Margins                 | None                                |
+| Scale                   | 100% (Default)                      |
+| **Headers and footers** | **UNCHECKED**                       |
+| Background graphics     | Unchecked                           |
 
 Chrome remembers these per printer, so this is a one-time job.
 

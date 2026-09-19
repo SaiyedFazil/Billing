@@ -105,7 +105,7 @@ export function BillDetails({
         <TableCard>
           <div className="flex items-center justify-between px-5 py-4">
             <h2 className="font-heading text-lg font-bold">Items</h2>
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-muted-foreground">
               {receipt.lines.length} line{receipt.lines.length === 1 ? "" : "s"}
             </span>
           </div>
@@ -121,8 +121,10 @@ export function BillDetails({
             <TableBody>
               {receipt.lines.map((line, index) => (
                 <TableRow key={`${line.itemName}-${index}`}>
-                  <TableCell className="font-semibold">{line.itemName}</TableCell>
-                  <TableCell className="text-foreground/80 text-right tabular-nums">
+                  <TableCell className="font-semibold">
+                    {line.itemName}
+                  </TableCell>
+                  <TableCell className="text-right text-foreground/80 tabular-nums">
                     {formatINR(line.unitPrice)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -139,10 +141,12 @@ export function BillDetails({
 
         <section
           aria-label="Bill summary"
-          className="bg-card shadow-card overflow-hidden rounded-[20px] border"
+          className="overflow-hidden rounded-[20px] border bg-card shadow-card"
         >
           <dl className="space-y-2.5 p-5 text-sm">
-            <SummaryRow label="Subtotal">{formatINR(receipt.subtotal)}</SummaryRow>
+            <SummaryRow label="Subtotal">
+              {formatINR(receipt.subtotal)}
+            </SummaryRow>
             {isZero(receipt.discount) ? null : (
               <SummaryRow label="Discount">
                 -{formatINR(receipt.discount)}
@@ -153,14 +157,16 @@ export function BillDetails({
           <div className="relative space-y-4 border-t-2 border-dashed border-[#e6ded3] bg-[#fffcf9] p-5">
             <span
               aria-hidden
-              className="bg-background absolute -top-3 -left-3 size-6 rounded-full border"
+              className="absolute -top-3 -left-3 size-6 rounded-full border bg-background"
             />
             <span
               aria-hidden
-              className="bg-background absolute -top-3 -right-3 size-6 rounded-full border"
+              className="absolute -top-3 -right-3 size-6 rounded-full border bg-background"
             />
             <div className="flex items-end justify-between">
-              <span className="text-foreground/80 pb-1 font-semibold">Total</span>
+              <span className="pb-1 font-semibold text-foreground/80">
+                Total
+              </span>
               <span className="font-heading text-[34px] leading-none font-extrabold tracking-tight tabular-nums">
                 {formatINR(receipt.total)}
               </span>
@@ -184,7 +190,7 @@ export function BillDetails({
         </section>
       </div>
 
-      <p className="text-muted-foreground flex items-start gap-2 text-xs">
+      <p className="flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="mt-px size-3.5 shrink-0" />
         Item names and prices are exactly as they were when this bill was
         issued. Later menu changes do not affect this record.

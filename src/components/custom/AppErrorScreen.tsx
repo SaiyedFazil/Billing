@@ -20,7 +20,7 @@ export function AppErrorScreen({
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center p-6">
-      <div className="bg-card shadow-lift flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border px-8 py-10 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border bg-card px-8 py-10 text-center shadow-lift">
         <span
           className={cn(
             "flex size-14 items-center justify-center rounded-2xl",
@@ -34,13 +34,13 @@ export function AppErrorScreen({
         <h1 className="font-heading text-2xl font-extrabold tracking-tight">
           {isForbidden ? "Not allowed" : "Something went wrong"}
         </h1>
-        <p className="text-muted-foreground text-sm text-pretty">
+        <p className="text-sm text-pretty text-muted-foreground">
           {isForbidden
             ? "Only the owner account can open that page. Ask the owner if you need access."
             : "The page could not load. Try again — if it keeps happening, note the reference below."}
         </p>
         {error.digest && !isForbidden ? (
-          <p className="bg-muted text-muted-foreground rounded-lg px-2.5 py-1 font-mono text-xs">
+          <p className="rounded-lg bg-muted px-2.5 py-1 font-mono text-xs text-muted-foreground">
             Reference: {error.digest}
           </p>
         ) : null}

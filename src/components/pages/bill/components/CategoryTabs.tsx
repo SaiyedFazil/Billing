@@ -29,7 +29,9 @@ function CategoryChip({
           : "border-input bg-card text-foreground/80 hover:border-foreground/30",
       )}
     >
-      {dot ? <span aria-hidden className={cn("size-2 rounded-full", dot)} /> : null}
+      {dot ? (
+        <span aria-hidden className={cn("size-2 rounded-full", dot)} />
+      ) : null}
       {label}
       <span
         className={cn(
@@ -60,7 +62,7 @@ export function CategoryTabs({
   );
 
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none [&::-webkit-scrollbar]:hidden">
+    <div className="-mx-1 flex scrollbar-none gap-2 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden">
       <CategoryChip
         label="All"
         count={total}

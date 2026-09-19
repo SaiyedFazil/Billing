@@ -23,7 +23,11 @@ export type NavSection = { label: string; links: NavLink[] };
 const INSIGHTS: NavSection = {
   label: "Insights",
   links: [
-    { href: REPORT_ROUTES.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    {
+      href: REPORT_ROUTES.dashboard,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
     { href: REPORT_ROUTES.bills, label: "Bills", icon: ReceiptText },
     { href: REPORT_ROUTES.sales, label: "Sales", icon: TrendingUp },
     { href: REPORT_ROUTES.items, label: "What's selling", icon: Flame },

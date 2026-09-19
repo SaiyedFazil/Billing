@@ -33,11 +33,11 @@ function ReceiptIllustration() {
           </div>
         ))}
         <span className="border-t border-dashed border-[#bdb3a8]" />
-        <div className="text-muted-foreground flex justify-between">
+        <div className="flex justify-between text-muted-foreground">
           <span>Subtotal</span>
           <span>410.00</span>
         </div>
-        <div className="text-muted-foreground flex justify-between">
+        <div className="flex justify-between text-muted-foreground">
           <span>Discount</span>
           <span>-10.00</span>
         </div>
@@ -46,7 +46,9 @@ function ReceiptIllustration() {
           <span>₹400.00</span>
         </div>
         <span className="border-t border-dashed border-[#bdb3a8]" />
-        <p className="text-muted-foreground text-center">Thank you! Visit again</p>
+        <p className="text-center text-muted-foreground">
+          Thank you! Visit again
+        </p>
       </div>
       {/* Torn-paper edge. */}
       <svg
@@ -67,7 +69,7 @@ function ReceiptIllustration() {
 
 export function LoginBrandPanel() {
   return (
-    <section className="bg-sidebar bg-dots text-sidebar-foreground relative hidden w-[52%] max-w-[760px] shrink-0 flex-col justify-between overflow-hidden px-14 py-14 lg:flex xl:px-16">
+    <section className="relative hidden w-[52%] max-w-[760px] shrink-0 flex-col justify-between overflow-hidden bg-sidebar bg-dots px-14 py-14 text-sidebar-foreground lg:flex xl:px-16">
       <div className="relative z-10 flex items-center gap-3">
         <BrandMark className="size-11" />
         <span className="font-heading text-[22px] font-bold text-white">
@@ -78,7 +80,7 @@ export function LoginBrandPanel() {
       <ReceiptIllustration />
 
       <div className="relative z-10 max-w-[520px] space-y-5">
-        <span className="bg-brand/15 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold text-[#ff9b7a]">
+        <span className="inline-flex items-center gap-2 rounded-full bg-brand/15 px-3 py-1.5 text-[13px] font-semibold text-[#ff9b7a]">
           <Flame className="size-3.5" />
           Counter billing
         </span>
@@ -91,7 +93,7 @@ export function LoginBrandPanel() {
           Take orders, print receipts and see the day&apos;s takings, all from
           one screen at the counter.
         </p>
-        <p className="text-sidebar-muted pt-3 text-[13px]">
+        <p className="pt-3 text-[13px] text-sidebar-muted">
           Accounts are created by the shop owner.
         </p>
       </div>

@@ -32,13 +32,13 @@ export function AuditTableRow({
 
   return (
     <TableRow>
-      <TableCell className="text-foreground/80 text-[13px] whitespace-nowrap tabular-nums">
+      <TableCell className="text-[13px] whitespace-nowrap text-foreground/80 tabular-nums">
         {row.createdAt.toLocaleString("en-GB")}
       </TableCell>
       <TableCell>
         {row.actorName ? (
           <span className="flex items-center gap-2.5">
-            <span className="bg-muted text-foreground/80 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-foreground/80">
               {initials(row.actorName)}
             </span>
             {row.actorName}
@@ -48,11 +48,14 @@ export function AuditTableRow({
         )}
       </TableCell>
       <TableCell>
-        <Badge variant={destructive ? "destructive" : "secondary"} dot={destructive}>
+        <Badge
+          variant={destructive ? "destructive" : "secondary"}
+          dot={destructive}
+        >
           {label}
         </Badge>
       </TableCell>
-      <TableCell className="text-muted-foreground font-mono text-xs">
+      <TableCell className="font-mono text-xs text-muted-foreground">
         {row.entityType}
       </TableCell>
       <TableCell className="text-right">

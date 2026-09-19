@@ -55,7 +55,7 @@ export function LoginForm() {
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>
         <div className="relative">
-          <UserRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2" />
+          <UserRound className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="username"
             name="username"
@@ -68,14 +68,14 @@ export function LoginForm() {
           />
         </div>
         {fieldErrors.username ? (
-          <p className="text-destructive text-sm">{fieldErrors.username}</p>
+          <p className="text-sm text-destructive">{fieldErrors.username}</p>
         ) : null}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
         <div className="relative">
-          <LockKeyhole className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2" />
+          <LockKeyhole className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="password"
             name="password"
@@ -88,14 +88,14 @@ export function LoginForm() {
           />
         </div>
         {fieldErrors.password ? (
-          <p className="text-destructive text-sm">{fieldErrors.password}</p>
+          <p className="text-sm text-destructive">{fieldErrors.password}</p>
         ) : null}
       </div>
 
       {error ? (
         <p
           role="alert"
-          className="bg-destructive-soft text-destructive-ink flex items-start gap-2 rounded-xl px-3.5 py-3 text-sm font-medium"
+          className="flex items-start gap-2 rounded-xl bg-destructive-soft px-3.5 py-3 text-sm font-medium text-destructive-ink"
         >
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           {error}

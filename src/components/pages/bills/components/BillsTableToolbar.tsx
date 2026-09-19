@@ -36,7 +36,7 @@ export function BillsTableToolbar({
   disabled: boolean;
 }) {
   return (
-    <div className="bg-card shadow-card flex flex-wrap items-end gap-3 rounded-[20px] border p-4">
+    <div className="flex flex-wrap items-end gap-3 rounded-[20px] border bg-card p-4 shadow-card">
       <div className="space-y-1.5">
         <Label htmlFor="bills-from" className={FIELD_LABEL}>
           From

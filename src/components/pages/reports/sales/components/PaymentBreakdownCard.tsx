@@ -17,10 +17,13 @@ export function PaymentBreakdownCard({
   const share = (net: string) => (total > 0 ? (Number(net) / total) * 100 : 0);
 
   return (
-    <section className="bg-card shadow-card space-y-5 rounded-[20px] border p-6">
+    <section className="space-y-5 rounded-[20px] border bg-card p-6 shadow-card">
       <h2 className="font-heading text-lg font-bold">By payment method</h2>
 
-      <div aria-hidden className="flex h-3.5 gap-0.75 overflow-hidden rounded-full">
+      <div
+        aria-hidden
+        className="flex h-3.5 gap-0.75 overflow-hidden rounded-full"
+      >
         {payments.map((payment) => (
           <span
             key={payment.paymentMethod}
@@ -30,7 +33,7 @@ export function PaymentBreakdownCard({
         ))}
       </div>
 
-      <ul className="divide-border/70 divide-y">
+      <ul className="divide-y divide-border/70">
         {payments.map((payment) => (
           <li
             key={payment.paymentMethod}
@@ -47,7 +50,7 @@ export function PaymentBreakdownCard({
               <p className="text-sm font-semibold">
                 {PAYMENT_METHOD_LABELS[payment.paymentMethod]}
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 {payment.billCount} bill{payment.billCount === 1 ? "" : "s"}
               </p>
             </div>
@@ -55,7 +58,7 @@ export function PaymentBreakdownCard({
               <p className="text-sm font-bold tabular-nums">
                 {formatINR(payment.net)}
               </p>
-              <p className="text-muted-foreground text-xs tabular-nums">
+              <p className="text-xs text-muted-foreground tabular-nums">
                 {Math.round(share(payment.net))}%
               </p>
             </div>

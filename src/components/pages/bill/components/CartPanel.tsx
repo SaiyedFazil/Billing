@@ -60,17 +60,17 @@ export function CartPanel({
   return (
     <aside
       aria-label="Current bill"
-      className="bg-card shadow-lift relative flex min-h-0 flex-col overflow-hidden rounded-3xl border lg:h-full"
+      className="relative flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lift lg:h-full"
     >
       <header className="flex items-center gap-3 px-5 pt-5 pb-2">
-        <span className="bg-brand-soft text-primary flex size-10 items-center justify-center rounded-xl">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
           <ReceiptText className="size-5" />
         </span>
         <div>
           <h2 className="font-heading text-xl leading-tight font-bold">
             Current bill
           </h2>
-          <p className="text-muted-foreground text-[13px]">
+          <p className="text-[13px] text-muted-foreground">
             {itemCount === 0
               ? "No items yet"
               : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
@@ -81,10 +81,10 @@ export function CartPanel({
       <ScrollArea className="min-h-0 flex-1 px-5">
         {lines.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <ShoppingBag className="size-5" />
             </span>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Tap an item to start the bill.
             </p>
           </div>
@@ -107,16 +107,18 @@ export function CartPanel({
       <div className="relative space-y-3.5 border-t-2 border-dashed border-[#e6ded3] bg-[#fffcf9] px-5 pt-5 pb-5">
         <span
           aria-hidden
-          className="bg-background absolute -top-3 -left-3 size-6 rounded-full border"
+          className="absolute -top-3 -left-3 size-6 rounded-full border bg-background"
         />
         <span
           aria-hidden
-          className="bg-background absolute -top-3 -right-3 size-6 rounded-full border"
+          className="absolute -top-3 -right-3 size-6 rounded-full border bg-background"
         />
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-semibold tabular-nums">{formatINR(subtotal)}</span>
+          <span className="font-semibold tabular-nums">
+            {formatINR(subtotal)}
+          </span>
         </div>
 
         <DiscountInput
@@ -127,7 +129,7 @@ export function CartPanel({
         />
 
         <div className="flex items-end justify-between border-t pt-3">
-          <span className="text-foreground/80 pb-1 text-[15px] font-semibold">
+          <span className="pb-1 text-[15px] font-semibold text-foreground/80">
             Total
           </span>
           <span className="font-heading text-[38px] leading-none font-extrabold tracking-tight tabular-nums">
@@ -145,8 +147,11 @@ export function CartPanel({
         />
 
         {error ? (
-          <div role="alert" className="bg-destructive-soft space-y-2 rounded-xl p-3">
-            <p className="text-destructive-ink flex gap-2 text-sm font-medium">
+          <div
+            role="alert"
+            className="space-y-2 rounded-xl bg-destructive-soft p-3"
+          >
+            <p className="flex gap-2 text-sm font-medium text-destructive-ink">
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               {error}
             </p>

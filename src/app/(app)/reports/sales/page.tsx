@@ -11,7 +11,9 @@ export const metadata = {
   description: "Takings per day over any date range.",
 };
 
-export default async function Page({ searchParams }: PageProps<"/reports/sales">) {
+export default async function Page({
+  searchParams,
+}: PageProps<"/reports/sales">) {
   const params = await searchParams;
   const timeZone = await getShopTimezone();
   const { from, to, presets } = resolveReportRange(params, timeZone, "LAST_7");

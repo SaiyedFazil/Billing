@@ -1,6 +1,9 @@
 import { Container } from "@/components/layout/Container";
 import { BillsTab } from "@/components/pages/bills/BillsTab";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/constants/payment-methods";
+import {
+  PAYMENT_METHODS,
+  type PaymentMethod,
+} from "@/constants/payment-methods";
 import { requireUser } from "@/lib/auth/guard";
 import { resolveReportRange } from "@/lib/utils/report-params";
 import { listBills, listCashiers } from "@/server/bills/bills-queries";
@@ -36,7 +39,13 @@ export default async function Page({ searchParams }: PageProps<"/bills">) {
 
   const [ledger, cashiers] = await Promise.all([
     listBills(
-      { from, to, cashierId: cashierId || undefined, paymentMethod, billNumber },
+      {
+        from,
+        to,
+        cashierId: cashierId || undefined,
+        paymentMethod,
+        billNumber,
+      },
       page,
       PAGE_SIZE,
     ),

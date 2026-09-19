@@ -52,7 +52,7 @@ export function ConfirmDialog({
             }}
             className={cn(
               destructive &&
-                "bg-destructive hover:bg-destructive/90 text-white shadow-none",
+                "bg-destructive text-white shadow-none hover:bg-destructive/90",
             )}
           >
             {isPending ? "Working…" : confirmLabel}

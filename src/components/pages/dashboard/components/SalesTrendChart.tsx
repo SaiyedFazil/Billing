@@ -33,7 +33,13 @@ function compactRupees(value: number): string {
   return `₹${value}`;
 }
 
-function LegendSwatch({ className, label }: { className: string; label: string }) {
+function LegendSwatch({
+  className,
+  label,
+}: {
+  className: string;
+  label: string;
+}) {
   return (
     <span className="flex items-center gap-1.5">
       <span className={`size-2.5 rounded-[3px] ${className}`} />
@@ -50,13 +56,13 @@ export function SalesTrendChart({
   data: Array<{ label: string; net: number; isToday: boolean }>;
 }) {
   return (
-    <section className="bg-card shadow-card flex flex-col gap-5 rounded-[20px] border p-6">
+    <section className="flex flex-col gap-5 rounded-[20px] border bg-card p-6 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="font-heading text-lg font-bold">Last 7 days</h2>
-          <p className="text-muted-foreground text-[13px]">Net sales per day</p>
+          <p className="text-[13px] text-muted-foreground">Net sales per day</p>
         </div>
-        <div className="text-muted-foreground flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <LegendSwatch className="bg-chart-1" label="Today" />
           <LegendSwatch className="bg-chart-5" label="Earlier" />
         </div>

@@ -37,7 +37,7 @@ export function AppSidebar({
 
   if (collapsed) {
     return (
-      <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col items-center gap-2.5 pt-5 pb-4">
+      <div className="flex h-full flex-col items-center gap-2.5 bg-sidebar pt-5 pb-4 text-sidebar-foreground">
         <Link
           href={REPORT_ROUTES.dashboard}
           aria-label={shopName}
@@ -56,8 +56,8 @@ export function AppSidebar({
           className={cn(
             "flex size-12 items-center justify-center rounded-[14px] transition-colors",
             billActive
-              ? "bg-primary shadow-brand text-white"
-              : "bg-brand/15 hover:bg-brand/25 text-[#ff8a65]",
+              ? "bg-primary text-white shadow-brand"
+              : "bg-brand/15 text-[#ff8a65] hover:bg-brand/25",
           )}
         >
           <Plus className="size-5.5" strokeWidth={2.25} />
@@ -70,7 +70,10 @@ export function AppSidebar({
           {sections.map((section, index) => (
             <Fragment key={section.label}>
               {index > 0 ? (
-                <span aria-hidden className="my-1.5 h-px w-8 shrink-0 bg-white/10" />
+                <span
+                  aria-hidden
+                  className="my-1.5 h-px w-8 shrink-0 bg-white/10"
+                />
               ) : null}
               {section.links.map((link) => {
                 const Icon = link.icon;
@@ -110,7 +113,7 @@ export function AppSidebar({
             type="submit"
             aria-label="Sign out"
             title="Sign out"
-            className="text-sidebar-muted flex size-10 cursor-pointer items-center justify-center rounded-xl transition-colors hover:bg-white/10 hover:text-white"
+            className="flex size-10 cursor-pointer items-center justify-center rounded-xl text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white"
           >
             <LogOut className="size-4.5" />
           </button>
@@ -120,7 +123,7 @@ export function AppSidebar({
   }
 
   return (
-    <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col gap-5 px-4 pt-5 pb-4">
+    <div className="flex h-full flex-col gap-5 bg-sidebar px-4 pt-5 pb-4 text-sidebar-foreground">
       <Link
         href={REPORT_ROUTES.dashboard}
         onClick={onNavigate}
@@ -128,10 +131,10 @@ export function AppSidebar({
       >
         <BrandMark />
         <span className="min-w-0">
-          <span className="font-heading block truncate text-base leading-tight font-bold text-white">
+          <span className="block truncate font-heading text-base leading-tight font-bold text-white">
             {shopName}
           </span>
-          <span className="text-sidebar-muted block text-xs">
+          <span className="block text-xs text-sidebar-muted">
             Counter billing
           </span>
         </span>
@@ -141,7 +144,7 @@ export function AppSidebar({
         href={NEW_BILL_HREF}
         aria-current={billActive ? "page" : undefined}
         onClick={onNavigate}
-        className="bg-primary shadow-brand hover:bg-primary-hover flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white transition-colors"
+        className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-white shadow-brand transition-colors hover:bg-primary-hover"
       >
         <Plus className="size-4.5" strokeWidth={2.25} />
         New bill
@@ -153,7 +156,7 @@ export function AppSidebar({
       >
         {sections.map((section) => (
           <div key={section.label} className="space-y-0.5">
-            <p className="text-sidebar-muted px-3 pb-2 text-[11px] font-semibold tracking-widest uppercase">
+            <p className="px-3 pb-2 text-[11px] font-semibold tracking-widest text-sidebar-muted uppercase">
               {section.label}
             </p>
             {section.links.map((link) => {
@@ -188,7 +191,7 @@ export function AppSidebar({
         ))}
       </nav>
 
-      <div className="border-sidebar-border flex items-center gap-2.5 rounded-2xl border bg-white/5 p-2.5">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-sidebar-border bg-white/5 p-2.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3a2c24] text-[13px] font-semibold text-[#ffb79e]">
           {initials(user.name)}
         </span>
@@ -196,14 +199,14 @@ export function AppSidebar({
           <p className="truncate text-sm font-semibold text-white">
             {user.name}
           </p>
-          <p className="text-sidebar-muted text-xs">{ROLE_LABELS[user.role]}</p>
+          <p className="text-xs text-sidebar-muted">{ROLE_LABELS[user.role]}</p>
         </div>
         <form action={logoutAction}>
           <button
             type="submit"
             aria-label="Sign out"
             title="Sign out"
-            className="text-sidebar-muted flex size-9 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/10 hover:text-white"
+            className="flex size-9 cursor-pointer items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white"
           >
             <LogOut className="size-4.5" />
           </button>

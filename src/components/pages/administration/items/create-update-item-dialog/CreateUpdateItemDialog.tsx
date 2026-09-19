@@ -75,7 +75,7 @@ export function CreateUpdateItemDialog({
               }
             />
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -101,7 +101,7 @@ export function CreateUpdateItemDialog({
                 </SelectContent>
               </Select>
               {fieldErrors.categoryId ? (
-                <p className="text-destructive text-sm">
+                <p className="text-sm text-destructive">
                   {fieldErrors.categoryId}
                 </p>
               ) : null}
@@ -117,7 +117,7 @@ export function CreateUpdateItemDialog({
                 onChange={(value) => setForm({ ...form, priceInput: value })}
               />
               {fieldErrors.price ? (
-                <p className="text-destructive text-sm">{fieldErrors.price}</p>
+                <p className="text-sm text-destructive">{fieldErrors.price}</p>
               ) : null}
             </div>
           </div>

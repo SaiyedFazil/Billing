@@ -18,24 +18,26 @@ Drizzle + Neon Postgres, Auth.js v5, deployed to Netlify on free tiers.
    save it. `₹1.005` also rounds to `1.00` rather than `1.01`, so the shop
    loses money on every percentage discount. Never introduce a `number` into a
    money path, including `JSON.parse` of an API payload.
+
 2. **Every server action AND every protected page starts with `requireUser()`
    or `requireSuperadmin()`.** `proxy.ts` only redirects — Server Actions are
    publicly callable endpoints, so the guard is the real access control.
 
    **A layout guard is not enough for pages.** Next.js renders layouts and
-   pages *in parallel*, so a page that relies on its layout's
+   pages _in parallel_, so a page that relies on its layout's
    `requireSuperadmin()` will still run its queries and stream the results into
    the RSC payload before the layout's error propagates. This was caught in
    testing: a cashier requesting `/administration/items` saw the "Not allowed"
    screen but received the entire menu with prices in the response body. Every
    page under `/administration` now calls the guard itself.
+
 3. **The client never sends prices.** Bill payloads carry `{ itemId, quantity }`.
    The server re-reads every price from the database.
 4. **Reports read `bill_items` snapshot columns.** Never join to `items` for a
    name or price — that would let a rename rewrite history.
 5. **Never `DELETE` an item, category or user.** Set `is_active = false`.
 6. **Inside `db.transaction`, only throw.** Returning from the callback commits.
-   Any validation that can fail belongs *before* the transaction opens — see
+   Any validation that can fail belongs _before_ the transaction opens — see
    the structure of `create-bill-service.ts`.
 7. **Drizzle uses `neon-serverless` with a `Pool`.** Never `neon-http` — it
    cannot do interactive transactions, which bill creation depends on.
@@ -89,13 +91,13 @@ npm run verify:all       # the above plus all database checks
 
 Individually:
 
-| Command | Proves |
-|---|---|
-| `verify:money` | exact rupee arithmetic and the shop-local midnight rollover |
-| `verify:retry` | cold-start retry fires once, and never on a real error |
-| `db:verify` | CHECK constraints reject impossible bills |
-| `db:verify-immutability` | triggers reject history rewrites, but allow voiding |
-| `verify:bill` | idempotency, price-change detection, gapless numbering |
+| Command                  | Proves                                                      |
+| ------------------------ | ----------------------------------------------------------- |
+| `verify:money`           | exact rupee arithmetic and the shop-local midnight rollover |
+| `verify:retry`           | cold-start retry fires once, and never on a real error      |
+| `db:verify`              | CHECK constraints reject impossible bills                   |
+| `db:verify-immutability` | triggers reject history rewrites, but allow voiding         |
+| `verify:bill`            | idempotency, price-change detection, gapless numbering      |
 
 Run `npm run verify:all` before every deploy.
 

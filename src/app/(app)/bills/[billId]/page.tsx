@@ -30,7 +30,11 @@ export default async function Page({ params }: PageProps<"/bills/[billId]">) {
 
   return (
     <Container>
-      <BillDetails billId={billId} receipt={receipt} status={statusRow.status} />
+      <BillDetails
+        billId={billId}
+        receipt={receipt}
+        status={statusRow.status}
+      />
     </Container>
   );
 }

@@ -17,7 +17,9 @@ function check(label: string, condition: boolean, detail?: unknown) {
 async function main() {
   // Soft delete must hide the row from the active partial unique index, so the
   // same name can be reused afterwards.
-  await db.execute(sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`,
+  );
 
   const [created] = await db
     .insert(categories)
@@ -61,7 +63,9 @@ async function main() {
     duplicateRejected,
   );
 
-  await db.execute(sql`DELETE FROM categories WHERE name ILIKE 'soft delete probe'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name ILIKE 'soft delete probe'`,
+  );
 
   console.log(
     failures === 0

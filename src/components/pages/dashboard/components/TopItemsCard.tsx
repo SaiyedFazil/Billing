@@ -6,18 +6,18 @@ import type { ItemSalesRow } from "@/types/report.types";
 
 export function TopItemsCard({ items }: { items: ItemSalesRow[] }) {
   return (
-    <section className="bg-card shadow-card flex flex-col gap-5 rounded-[20px] border p-6">
+    <section className="flex flex-col gap-5 rounded-[20px] border bg-card p-6 shadow-card">
       <div className="space-y-1">
         <h2 className="font-heading text-lg font-bold">Top sellers today</h2>
-        <p className="text-muted-foreground text-[13px]">By share of takings</p>
+        <p className="text-[13px] text-muted-foreground">By share of takings</p>
       </div>
 
       {items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
-          <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Flame className="size-5" />
           </span>
-          <p className="text-muted-foreground text-sm">No sales yet today.</p>
+          <p className="text-sm text-muted-foreground">No sales yet today.</p>
         </div>
       ) : (
         <ol className="space-y-4">
@@ -42,7 +42,7 @@ export function TopItemsCard({ items }: { items: ItemSalesRow[] }) {
                     {formatINR(item.revenue)}
                   </span>
                 </div>
-                <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
                     className={cn(
                       "h-full rounded-full",
@@ -51,7 +51,7 @@ export function TopItemsCard({ items }: { items: ItemSalesRow[] }) {
                     style={{ width: `${Math.min(item.sharePercent, 100)}%` }}
                   />
                 </div>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   {item.quantity} sold · {item.sharePercent}% of takings
                 </p>
               </div>

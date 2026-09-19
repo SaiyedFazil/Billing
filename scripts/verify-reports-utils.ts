@@ -21,22 +21,36 @@ function check(label: string, actual: unknown, expected: unknown) {
 
 check("shiftIsoDate forward", shiftIsoDate("2026-08-26", 1), "2026-08-27");
 check("shiftIsoDate back", shiftIsoDate("2026-08-01", -1), "2026-07-31");
-check("shiftIsoDate across a year", shiftIsoDate("2026-01-01", -1), "2025-12-31");
-check("shiftIsoDate across a leap day", shiftIsoDate("2028-02-28", 1), "2028-02-29");
+check(
+  "shiftIsoDate across a year",
+  shiftIsoDate("2026-01-01", -1),
+  "2025-12-31",
+);
+check(
+  "shiftIsoDate across a leap day",
+  shiftIsoDate("2028-02-28", 1),
+  "2028-02-29",
+);
 
 check("isValidIsoDate accepts", isValidIsoDate("2026-08-26"), true);
-check("isValidIsoDate rejects a bad shape", isValidIsoDate("26/08/2026"), false);
+check(
+  "isValidIsoDate rejects a bad shape",
+  isValidIsoDate("26/08/2026"),
+  false,
+);
 check("isValidIsoDate rejects junk", isValidIsoDate("hello"), false);
 check("isValidIsoDate rejects empty", isValidIsoDate(""), false);
 
-check("eachDateInRange is inclusive", eachDateInRange("2026-08-25", "2026-08-27"), [
-  "2026-08-25",
-  "2026-08-26",
-  "2026-08-27",
-]);
-check("eachDateInRange single day", eachDateInRange("2026-08-25", "2026-08-25"), [
-  "2026-08-25",
-]);
+check(
+  "eachDateInRange is inclusive",
+  eachDateInRange("2026-08-25", "2026-08-27"),
+  ["2026-08-25", "2026-08-26", "2026-08-27"],
+);
+check(
+  "eachDateInRange single day",
+  eachDateInRange("2026-08-25", "2026-08-25"),
+  ["2026-08-25"],
+);
 check(
   "eachDateInRange handles an inverted range",
   eachDateInRange("2026-08-27", "2026-08-25"),

@@ -29,13 +29,13 @@ export function MenuItemCard({
       disabled={soldOut}
       onClick={() => onSelect(item)}
       className={cn(
-        "group bg-card relative flex flex-col rounded-[18px] border p-2 text-left transition-all duration-150",
-        "focus-visible:border-brand focus-visible:ring-brand/25 focus-visible:ring-4 focus-visible:outline-none",
+        "group relative flex flex-col rounded-[18px] border bg-card p-2 text-left transition-all duration-150",
+        "focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-brand/25 focus-visible:outline-none",
         soldOut
           ? "cursor-not-allowed opacity-60"
           : inCart
-            ? "border-brand ring-brand cursor-pointer shadow-[0_10px_24px_-16px_rgb(209_67_27/0.7)] ring-1 active:scale-[0.98]"
-            : "shadow-card hover:border-brand/40 hover:shadow-lift cursor-pointer hover:-translate-y-0.5 active:scale-[0.98]",
+            ? "cursor-pointer border-brand shadow-[0_10px_24px_-16px_rgb(209_67_27/0.7)] ring-1 ring-brand active:scale-[0.98]"
+            : "cursor-pointer shadow-card hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift active:scale-[0.98]",
       )}
     >
       <span
@@ -56,7 +56,7 @@ export function MenuItemCard({
           <span
             aria-hidden
             className={cn(
-              "font-heading flex h-full items-center justify-center text-5xl font-bold",
+              "flex h-full items-center justify-center font-heading text-5xl font-bold",
               soldOut ? "text-muted-foreground/60" : tone.ink,
             )}
           >
@@ -65,13 +65,13 @@ export function MenuItemCard({
         )}
 
         {soldOut ? (
-          <span className="bg-foreground text-background absolute bottom-2 left-2 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase">
+          <span className="absolute bottom-2 left-2 rounded-full bg-foreground px-2.5 py-1 text-[10px] font-semibold tracking-wider text-background uppercase">
             Sold out
           </span>
         ) : null}
 
         {inCart ? (
-          <span className="bg-primary absolute top-2 right-2 flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[13px] font-bold text-white shadow-[0_4px_10px_-4px_rgb(209_67_27/0.7)]">
+          <span className="absolute top-2 right-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-2 text-[13px] font-bold text-white shadow-[0_4px_10px_-4px_rgb(209_67_27/0.7)]">
             ×{quantity}
             <span className="sr-only"> on the bill</span>
           </span>
@@ -85,7 +85,7 @@ export function MenuItemCard({
           </span>
           <span
             className={cn(
-              "font-heading block text-lg font-bold tabular-nums",
+              "block font-heading text-lg font-bold tabular-nums",
               soldOut && "text-muted-foreground",
             )}
           >

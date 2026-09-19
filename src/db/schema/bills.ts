@@ -53,7 +53,10 @@ export const bills = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("bills_date_number_idx").on(table.businessDate, table.billNumber),
+    uniqueIndex("bills_date_number_idx").on(
+      table.businessDate,
+      table.billNumber,
+    ),
     uniqueIndex("bills_idempotency_key_idx").on(table.idempotencyKey),
 
     // These hold because numeric is exact. They would fail under float, which

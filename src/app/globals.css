@@ -137,7 +137,10 @@
 
 /* The sign-in brand panel's dot grid. */
 @utility bg-dots {
-  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.07) 1px,
+    transparent 1px
+  );
   background-size: 22px 22px;
 }
 

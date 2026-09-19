@@ -28,7 +28,7 @@ export function BillTableRow({ row }: { row: BillLedgerRow }) {
       <TableCell>
         <Link
           href={REPORT_ROUTES.bill(row.id)}
-          className="text-brand-ink font-mono font-semibold underline-offset-4 hover:underline"
+          className="font-mono font-semibold text-brand-ink underline-offset-4 hover:underline"
         >
           #{row.billNumber}
         </Link>
@@ -38,7 +38,7 @@ export function BillTableRow({ row }: { row: BillLedgerRow }) {
       </TableCell>
       <TableCell>
         <span className="flex items-center gap-2.5">
-          <span className="bg-muted text-foreground/80 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-foreground/80">
             {initials(row.cashierName)}
           </span>
           {row.cashierName}

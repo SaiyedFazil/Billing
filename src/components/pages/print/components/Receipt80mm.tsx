@@ -84,9 +84,7 @@ export function Receipt80mm({
           <tr>
             <td>Paid: {PAYMENT_METHOD_LABELS[receipt.paymentMethod]}</td>
             <td className="amt">
-              {formatReceiptAmount(
-                receipt.tendered ?? receipt.total,
-              )}
+              {formatReceiptAmount(receipt.tendered ?? receipt.total)}
             </td>
           </tr>
           {receipt.changeDue !== null ? (

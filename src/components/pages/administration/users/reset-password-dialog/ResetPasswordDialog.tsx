@@ -61,7 +61,7 @@ export function ResetPasswordDialog({
               onChange={(event) => setPassword(event.target.value)}
             />
             {fieldErrors.password ? (
-              <p className="text-destructive text-sm">{fieldErrors.password}</p>
+              <p className="text-sm text-destructive">{fieldErrors.password}</p>
             ) : null}
           </div>
 

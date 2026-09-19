@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="border-input bg-background text-foreground/80 inline-flex h-6 items-center rounded-md border border-b-2 px-2 font-mono text-[11px]">
+    <kbd className="inline-flex h-6 items-center rounded-md border border-b-2 border-input bg-background px-2 font-mono text-[11px] text-foreground/80">
       {children}
     </kbd>
   );
@@ -32,7 +32,7 @@ export function ItemSearchBox({
 
   return (
     <div className="relative">
-      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-4.5 size-5 -translate-y-1/2" />
+      <Search className="pointer-events-none absolute top-1/2 left-4.5 size-5 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={inputRef}
         value={value}
@@ -48,7 +48,7 @@ export function ItemSearchBox({
           }
         }}
         placeholder="Search the menu"
-        className="shadow-card h-14 rounded-2xl pr-4 pl-12 text-base md:pr-64 md:text-base"
+        className="h-14 rounded-2xl pr-4 pl-12 text-base shadow-card md:pr-64 md:text-base"
         aria-label="Search menu items"
         aria-describedby="menu-search-hint"
       />
@@ -57,7 +57,7 @@ export function ItemSearchBox({
       </span>
       <div
         aria-hidden
-        className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1.5 text-xs md:flex"
+        className="pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1.5 text-xs text-muted-foreground md:flex"
       >
         <Kbd>Enter</Kbd>
         adds top match

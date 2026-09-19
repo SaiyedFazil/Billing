@@ -59,7 +59,7 @@ export function StatCard({
         <Flame
           aria-hidden
           strokeWidth={1.5}
-          className="text-brand/15 absolute -right-5 -bottom-7 size-32"
+          className="absolute -right-5 -bottom-7 size-32 text-brand/15"
         />
       ) : null}
 
@@ -78,7 +78,7 @@ export function StatCard({
       <div className="relative space-y-1">
         <p
           className={cn(
-            "font-heading truncate leading-tight font-extrabold tracking-tight tabular-nums",
+            "truncate font-heading leading-tight font-extrabold tracking-tight tabular-nums",
             compact ? "text-[26px]" : "text-[34px]",
           )}
         >

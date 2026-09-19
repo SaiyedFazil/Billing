@@ -20,21 +20,23 @@ export function CartLine({
   disabled: boolean;
 }) {
   return (
-    <li className="border-border/70 space-y-2 border-b py-3 last:border-b-0">
+    <li className="space-y-2 border-b border-border/70 py-3 last:border-b-0">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-[15px] font-semibold">{line.name}</p>
+        <p className="min-w-0 truncate text-[15px] font-semibold">
+          {line.name}
+        </p>
         <span className="text-[15px] font-bold tabular-nums">
           {formatINR(lineTotal(line.unitPrice, line.quantity))}
         </span>
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-[13px] tabular-nums">
+        <span className="text-[13px] text-muted-foreground tabular-nums">
           {formatINR(line.unitPrice)} each
         </span>
 
         <div className="flex items-center gap-1.5">
-          <div className="bg-muted flex items-center gap-0.5 rounded-full p-0.75">
+          <div className="flex items-center gap-0.5 rounded-full bg-muted p-0.75">
             <button
               type="button"
               className={STEP_BUTTON}
@@ -63,7 +65,7 @@ export function CartLine({
             disabled={disabled}
             aria-label={`Remove ${line.name}`}
             onClick={() => onRemove(line.itemId)}
-            className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive flex size-8.5 cursor-pointer items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex size-8.5 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
           >
             <X className="size-4" />
           </button>

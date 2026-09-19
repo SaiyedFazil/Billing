@@ -27,13 +27,13 @@ export function ItemReportRow({ row }: { row: ItemSalesRow }) {
       </TableCell>
       <TableCell className="tabular-nums">
         <div className="flex items-center gap-2.5">
-          <div className="bg-muted h-2 w-24 overflow-hidden rounded-full">
+          <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
             <div
-              className="bg-brand h-full rounded-full"
+              className="h-full rounded-full bg-brand"
               style={{ width: `${Math.min(row.sharePercent, 100)}%` }}
             />
           </div>
-          <span className="text-muted-foreground w-10 text-xs">
+          <span className="w-10 text-xs text-muted-foreground">
             {row.sharePercent}%
           </span>
         </div>

@@ -35,11 +35,10 @@ async function main() {
     stats: stats.billCount,
     sql: truth.n,
   });
-  check(
-    "dashboard net matches SQL",
-    compare(stats.net, truth.net) === 0,
-    { stats: stats.net, sql: truth.net },
-  );
+  check("dashboard net matches SQL", compare(stats.net, truth.net) === 0, {
+    stats: stats.net,
+    sql: truth.net,
+  });
   check(
     "every money figure is a two-decimal rupee string",
     [stats.gross, stats.net, stats.averageBill].every((value) =>
@@ -88,7 +87,10 @@ async function main() {
         itemSales.reduce((sum, r) => add(sum, r.revenue), ZERO),
         add(stats.net, stats.discount),
       ) === 0,
-    { items: itemSales.reduce((s, r) => add(s, r.revenue), ZERO), net: stats.net },
+    {
+      items: itemSales.reduce((s, r) => add(s, r.revenue), ZERO),
+      net: stats.net,
+    },
   );
 
   // A voided bill must not count as revenue.

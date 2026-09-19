@@ -47,7 +47,7 @@ export function ReportDateRangeBar({
       <div
         role="group"
         aria-label="Date range"
-        className="bg-card shadow-card flex flex-wrap gap-1 rounded-[14px] border p-1"
+        className="flex flex-wrap gap-1 rounded-[14px] border bg-card p-1 shadow-card"
       >
         {RANGE_PRESETS.map((preset) => {
           const active = preset === activePreset;
@@ -61,8 +61,8 @@ export function ReportDateRangeBar({
               className={cn(
                 "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 active
-                  ? "bg-foreground text-background font-semibold"
-                  : "text-foreground/80 hover:bg-muted font-medium",
+                  ? "bg-foreground font-semibold text-background"
+                  : "font-medium text-foreground/80 hover:bg-muted",
               )}
             >
               {RANGE_PRESET_LABELS[preset]}
@@ -74,7 +74,7 @@ export function ReportDateRangeBar({
       <div className="flex flex-wrap items-center gap-2">
         <Label
           htmlFor="range-from"
-          className="text-muted-foreground text-[13px]"
+          className="text-[13px] text-muted-foreground"
         >
           From
         </Label>
@@ -88,7 +88,7 @@ export function ReportDateRangeBar({
         />
         <Label
           htmlFor="range-to"
-          className="text-muted-foreground ml-1 text-[13px]"
+          className="ml-1 text-[13px] text-muted-foreground"
         >
           To
         </Label>

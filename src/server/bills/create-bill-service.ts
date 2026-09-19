@@ -111,9 +111,13 @@ export async function createBill(
 
   // billTotal clamps; a clamped value means the caller sent something invalid.
   if (compare(discount, input.discount) !== 0) {
-    return fail("VALIDATION", "The discount cannot be more than the subtotal.", {
-      discount: "Must be between ₹0 and the subtotal",
-    });
+    return fail(
+      "VALIDATION",
+      "The discount cannot be more than the subtotal.",
+      {
+        discount: "Must be between ₹0 and the subtotal",
+      },
+    );
   }
 
   if (compare(total, input.expectedTotal) !== 0) {

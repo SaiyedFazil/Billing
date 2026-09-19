@@ -22,7 +22,7 @@ export function LoginPage() {
             <h1 className="font-heading text-[34px] leading-tight font-extrabold tracking-tight sm:text-[38px]">
               Welcome back
             </h1>
-            <p className="text-muted-foreground text-[15px]">
+            <p className="text-[15px] text-muted-foreground">
               Sign in to start taking orders.
             </p>
           </div>

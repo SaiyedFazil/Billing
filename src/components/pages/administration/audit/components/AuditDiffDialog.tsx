@@ -16,10 +16,10 @@ import type { AuditLogEntry } from "@/types/audit.types";
 function Snapshot({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+      <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         {label}
       </p>
-      <pre className="bg-table-head max-h-64 overflow-auto rounded-xl border p-3.5 font-mono text-xs leading-relaxed">
+      <pre className="max-h-64 overflow-auto rounded-xl border bg-table-head p-3.5 font-mono text-xs leading-relaxed">
         {value === null || value === undefined
           ? "—"
           : JSON.stringify(value, null, 2)}
@@ -41,7 +41,8 @@ export function AuditDiffDialog({
         <DialogHeader>
           <DialogTitle>
             {entry
-              ? (AUDIT_ACTION_LABELS[entry.action as AuditAction] ?? entry.action)
+              ? (AUDIT_ACTION_LABELS[entry.action as AuditAction] ??
+                entry.action)
               : ""}
           </DialogTitle>
           <DialogDescription>

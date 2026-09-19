@@ -13,13 +13,13 @@ export function TableCard({
   return (
     <div
       className={cn(
-        "bg-card shadow-card overflow-hidden rounded-[20px] border",
+        "overflow-hidden rounded-[20px] border bg-card shadow-card",
         className,
       )}
     >
       {children}
       {footer ? (
-        <div className="bg-table-head/60 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-table-head/60 px-4 py-3">
           {footer}
         </div>
       ) : null}

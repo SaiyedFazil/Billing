@@ -19,12 +19,12 @@ export function DiscountInput({
       <div className="flex items-center justify-between gap-3">
         <Label
           htmlFor="discount"
-          className="text-muted-foreground text-sm font-normal"
+          className="text-sm font-normal text-muted-foreground"
         >
           Discount
         </Label>
         <div className="relative w-32">
-          <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+          <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
             ₹
           </span>
           <MoneyInput
@@ -38,7 +38,7 @@ export function DiscountInput({
         </div>
       </div>
       {invalid ? (
-        <p className="text-destructive text-right text-xs">
+        <p className="text-right text-xs text-destructive">
           Discount cannot be more than the subtotal.
         </p>
       ) : null}

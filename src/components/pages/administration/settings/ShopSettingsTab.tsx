@@ -71,7 +71,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                   }
                 />
                 {fieldErrors.shopName ? (
-                  <p className="text-destructive text-sm">
+                  <p className="text-sm text-destructive">
                     {fieldErrors.shopName}
                   </p>
                 ) : null}
@@ -112,7 +112,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     setForm({ ...form, receiptFooter: event.target.value })
                   }
                 />
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   The thank-you line at the bottom of every receipt.
                 </p>
               </div>
@@ -152,14 +152,14 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     }
                   />
                   {fieldErrors.timezone ? (
-                    <p className="text-destructive text-sm">
+                    <p className="text-sm text-destructive">
                       {fieldErrors.timezone}
                     </p>
                   ) : null}
                 </div>
               </div>
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Changing the timezone affects which day future bills are counted
                 against. Bills already issued keep the date they were given.
               </p>
