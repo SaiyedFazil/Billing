@@ -48,7 +48,10 @@ export function MenuGrid({
         toneByCategoryId={toneByCategoryId}
       />
 
-      <ScrollArea className="min-h-0 flex-1">
+      {/* The negative margins and matching padding give card rings, the hover
+          lift and the scrollbar room inside the viewport without shifting the
+          grid out of line with the search box. */}
+      <ScrollArea className="-mx-1 -mt-1 min-h-0 flex-1 lg:-mr-3">
         {items.length === 0 ? (
           <TableEmptyState
             icon={SearchX}
@@ -62,7 +65,7 @@ export function MenuGrid({
             }
           />
         ) : (
-          <div className="grid grid-cols-2 gap-3 pb-4 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 p-1 pb-4 sm:grid-cols-3 sm:gap-4 lg:pr-3 xl:grid-cols-4 2xl:grid-cols-5">
             {items.map((item) => (
               <MenuItemCard
                 key={item.id}

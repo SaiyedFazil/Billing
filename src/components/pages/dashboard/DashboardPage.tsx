@@ -52,7 +52,8 @@ export function DashboardPage({
         eyebrow={formatLongDate(stats.businessDate)}
         title="Today"
         actions={
-          <Button asChild>
+          // Phones already have New bill in the top bar.
+          <Button asChild className="max-lg:hidden">
             <Link href={NEW_BILL_HREF}>
               <Plus className="size-4.5" strokeWidth={2.25} />
               New bill
