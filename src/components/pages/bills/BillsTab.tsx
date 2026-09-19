@@ -1,6 +1,10 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
+
+import { TableCard } from "@/components/custom/TableCard";
 import { TableEmptyState } from "@/components/custom/TableEmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -38,13 +42,11 @@ export function BillsTab({
   const lastRow = Math.min(ledger.page * ledger.pageSize, ledger.total);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Bills</h1>
-        <p className="text-muted-foreground text-sm">
-          Every bill ever issued, including voided ones.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Bills"
+        description="Every bill ever issued, including voided ones."
+      />
 
       <BillsTableToolbar
         {...filters}
@@ -55,16 +57,57 @@ export function BillsTab({
 
       {ledger.rows.length === 0 ? (
         <TableEmptyState
+          icon={ReceiptText}
           title="No bills match"
           description="Try widening the date range or clearing a filter."
         />
       ) : (
-        <>
+        <TableCard
+          footer={
+            <>
+              <p className="text-muted-foreground text-sm">
+                Showing{" "}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {firstRow}–{lastRow}
+                </span>{" "}
+                of{" "}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {ledger.total}
+                </span>
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ledger.page <= 1 || tab.isPending}
+                  onClick={() => tab.goToPage(ledger.page - 1)}
+                >
+                  <ChevronLeft />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ledger.page >= lastPage || tab.isPending}
+                  onClick={() => tab.goToPage(ledger.page + 1)}
+                >
+                  Next
+                  <ChevronRight />
+                </Button>
+              </div>
+            </>
+          }
+        >
           <Table>
             <TableHeader>
               <TableRow>
                 {BILL_HEADERS.map((header) => (
-                  <TableHead key={header}>{header}</TableHead>
+                  <TableHead
+                    key={header}
+                    className={header === "Total" ? "text-right" : ""}
+                  >
+                    {header}
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -74,31 +117,7 @@ export function BillsTab({
               ))}
             </TableBody>
           </Table>
-
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
-              Showing {firstRow}–{lastRow} of {ledger.total}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={ledger.page <= 1 || tab.isPending}
-                onClick={() => tab.goToPage(ledger.page - 1)}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={ledger.page >= lastPage || tab.isPending}
-                onClick={() => tab.goToPage(ledger.page + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </>
+        </TableCard>
       )}
     </div>
   );

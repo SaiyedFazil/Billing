@@ -1,10 +1,12 @@
 import Link from "next/link";
 
+import { PaymentMethodLabel } from "@/components/custom/PaymentMethodLabel";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { PAYMENT_METHOD_LABELS } from "@/constants/payment-methods";
 import { REPORT_ROUTES } from "@/lib/routes/report-routes";
+import { cn } from "@/lib/utils";
 import { formatBillDate } from "@/lib/utils/dates";
+import { initials } from "@/lib/utils/initials";
 import { formatINR } from "@/lib/utils/money";
 import type { BillLedgerRow } from "@/types/report.types";
 
@@ -19,28 +21,52 @@ export const BILL_HEADERS = [
 ] as const;
 
 export function BillTableRow({ row }: { row: BillLedgerRow }) {
+  const isVoid = row.status === "VOID";
+
   return (
-    <TableRow className="hover:bg-muted/50">
+    <TableRow>
       <TableCell>
         <Link
           href={REPORT_ROUTES.bill(row.id)}
-          className="font-medium underline-offset-4 hover:underline"
+          className="text-brand-ink font-mono font-semibold underline-offset-4 hover:underline"
         >
           #{row.billNumber}
         </Link>
       </TableCell>
-      <TableCell>{formatBillDate(row.businessDate)}</TableCell>
-      <TableCell>{row.cashierName}</TableCell>
-      <TableCell className="tabular-nums">{row.lineCount}</TableCell>
-      <TableCell>{PAYMENT_METHOD_LABELS[row.paymentMethod]}</TableCell>
-      <TableCell className="font-semibold tabular-nums">
+      <TableCell className="text-foreground/80 tabular-nums">
+        {formatBillDate(row.businessDate)}
+      </TableCell>
+      <TableCell>
+        <span className="flex items-center gap-2.5">
+          <span className="bg-muted text-foreground/80 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+            {initials(row.cashierName)}
+          </span>
+          {row.cashierName}
+        </span>
+      </TableCell>
+      <TableCell className="text-foreground/80 tabular-nums">
+        {row.lineCount}
+      </TableCell>
+      <TableCell>
+        <PaymentMethodLabel method={row.paymentMethod} />
+      </TableCell>
+      <TableCell
+        className={cn(
+          "text-right font-bold tabular-nums",
+          isVoid && "text-muted-foreground line-through",
+        )}
+      >
         {formatINR(row.total)}
       </TableCell>
       <TableCell>
-        {row.status === "VOID" ? (
-          <Badge variant="destructive">Void</Badge>
+        {isVoid ? (
+          <Badge variant="destructive" dot>
+            Void
+          </Badge>
         ) : (
-          <Badge variant="secondary">Completed</Badge>
+          <Badge variant="success" dot>
+            Completed
+          </Badge>
         )}
       </TableCell>
     </TableRow>
