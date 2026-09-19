@@ -5,5 +5,5 @@ export default async function ReportsLayout({
   children,
 }: LayoutProps<"/reports">) {
   await requireUser();
-  return <Container className="py-6">{children}</Container>;
+  return <Container>{children}</Container>;
 }

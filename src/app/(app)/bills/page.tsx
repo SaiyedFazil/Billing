@@ -44,7 +44,7 @@ export default async function Page({ searchParams }: PageProps<"/bills">) {
   ]);
 
   return (
-    <Container className="py-6">
+    <Container>
       <BillsTab
         ledger={ledger}
         filters={{

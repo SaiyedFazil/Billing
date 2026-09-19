@@ -29,7 +29,7 @@ export default async function Page() {
   ]);
 
   return (
-    <Container className="py-6">
+    <Container>
       <DashboardPage
         stats={stats}
         trend={trend}

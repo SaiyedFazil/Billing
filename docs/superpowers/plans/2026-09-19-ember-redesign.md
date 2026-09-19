@@ -27,7 +27,8 @@ globals.css, no config file), shadcn on `radix-ui`, lucide-react, recharts 3,
 - No test framework (client decision). Each task is verified with
   `npm run typecheck` and `npm run lint`; the last task runs
   `npm run verify:offline` and `npm run build`.
-- Not a git repository — no commit steps.
+- Work on branch `feature/ember-redesign`. Commit each task on its own after
+  its typecheck passes, before starting the next task.
 
 ---
 

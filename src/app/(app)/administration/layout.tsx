@@ -11,5 +11,5 @@ export default async function AdministrationLayout({
 }: LayoutProps<"/administration">) {
   await requireSuperadmin();
 
-  return <Container className="py-6">{children}</Container>;
+  return <Container>{children}</Container>;
 }
