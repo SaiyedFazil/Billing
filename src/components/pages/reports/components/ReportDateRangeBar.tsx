@@ -3,9 +3,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   isValidIsoDate,
   RANGE_PRESET_LABELS,
@@ -27,6 +27,11 @@ export function ReportDateRangeBar({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
+  // A custom range matches no preset, so nothing is highlighted.
+  const activePreset = RANGE_PRESETS.find(
+    (preset) => presets[preset].from === from && presets[preset].to === to,
+  );
+
   function apply(nextFrom: string, nextTo: string) {
     if (!isValidIsoDate(nextFrom) || !isValidIsoDate(nextTo)) return;
     // Swap rather than reject — the user clearly meant the range between them.
@@ -38,49 +43,63 @@ export function ReportDateRangeBar({
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-wrap gap-2">
-        {RANGE_PRESETS.map((preset) => (
-          <Button
-            key={preset}
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => apply(presets[preset].from, presets[preset].to)}
-          >
-            {RANGE_PRESET_LABELS[preset]}
-          </Button>
-        ))}
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        role="group"
+        aria-label="Date range"
+        className="bg-card shadow-card flex flex-wrap gap-1 rounded-[14px] border p-1"
+      >
+        {RANGE_PRESETS.map((preset) => {
+          const active = preset === activePreset;
+          return (
+            <button
+              key={preset}
+              type="button"
+              aria-pressed={active}
+              disabled={isPending}
+              onClick={() => apply(presets[preset].from, presets[preset].to)}
+              className={cn(
+                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                active
+                  ? "bg-foreground text-background font-semibold"
+                  : "text-foreground/80 hover:bg-muted font-medium",
+              )}
+            >
+              {RANGE_PRESET_LABELS[preset]}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex items-end gap-2">
-        <div className="space-y-1">
-          <Label htmlFor="range-from" className="text-xs font-normal">
-            From
-          </Label>
-          <Input
-            id="range-from"
-            type="date"
-            value={from}
-            className="w-40"
-            disabled={isPending}
-            onChange={(event) => apply(event.target.value, to)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="range-to" className="text-xs font-normal">
-            To
-          </Label>
-          <Input
-            id="range-to"
-            type="date"
-            value={to}
-            className="w-40"
-            disabled={isPending}
-            onChange={(event) => apply(from, event.target.value)}
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Label
+          htmlFor="range-from"
+          className="text-muted-foreground text-[13px]"
+        >
+          From
+        </Label>
+        <Input
+          id="range-from"
+          type="date"
+          value={from}
+          className="w-40"
+          disabled={isPending}
+          onChange={(event) => apply(event.target.value, to)}
+        />
+        <Label
+          htmlFor="range-to"
+          className="text-muted-foreground ml-1 text-[13px]"
+        >
+          To
+        </Label>
+        <Input
+          id="range-to"
+          type="date"
+          value={to}
+          className="w-40"
+          disabled={isPending}
+          onChange={(event) => apply(from, event.target.value)}
+        />
       </div>
     </div>
   );

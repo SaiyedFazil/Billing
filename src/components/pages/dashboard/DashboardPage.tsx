@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { StatCard } from "@/components/custom/StatCard";
 import { NEW_BILL_HREF } from "@/components/layout/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,6 @@ import type {
 } from "@/types/report.types";
 
 import { SalesTrendChart } from "./components/SalesTrendChart";
-import { StatCard } from "./components/StatCard";
 import { TopItemsCard } from "./components/TopItemsCard";
 
 export function DashboardPage({

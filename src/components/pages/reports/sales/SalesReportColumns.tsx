@@ -8,13 +8,17 @@ export const SALES_HEADERS = ["Date", "Bills", "Gross", "Discount", "Net"] as co
 export function SalesReportRow({ row }: { row: SalesByDayRow }) {
   return (
     <TableRow>
-      <TableCell>{formatBillDate(row.businessDate)}</TableCell>
-      <TableCell className="tabular-nums">{row.billCount}</TableCell>
-      <TableCell className="tabular-nums">{formatINR(row.gross)}</TableCell>
-      <TableCell className="tabular-nums">
+      <TableCell className="text-foreground/80 tabular-nums">
+        {formatBillDate(row.businessDate)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{row.billCount}</TableCell>
+      <TableCell className="text-foreground/80 text-right tabular-nums">
+        {formatINR(row.gross)}
+      </TableCell>
+      <TableCell className="text-muted-foreground text-right tabular-nums">
         {isZero(row.discount) ? "—" : `-${formatINR(row.discount)}`}
       </TableCell>
-      <TableCell className="font-semibold tabular-nums">
+      <TableCell className="text-right font-bold tabular-nums">
         {formatINR(row.net)}
       </TableCell>
     </TableRow>
