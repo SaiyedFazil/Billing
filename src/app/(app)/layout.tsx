@@ -1,6 +1,7 @@
-import { AppNavbar } from "@/components/layout/AppNavbar";
+import { AppShell } from "@/components/layout/AppShell";
 import { OfflineBanner } from "@/components/custom/OfflineBanner";
 import { requireUser } from "@/lib/auth/guard";
+import { getShopName } from "@/server/settings/settings-queries";
 
 export default async function AppLayout({
   children,
@@ -10,12 +11,14 @@ export default async function AppLayout({
   // proxy.ts has already redirected anonymous requests, but this is the gate
   // that actually enforces it.
   const user = await requireUser();
+  const shopName = await getShopName();
 
   return (
     <div className="flex min-h-screen flex-col">
       <OfflineBanner />
-      <AppNavbar user={user} />
-      <main className="flex-1">{children}</main>
+      <AppShell user={user} shopName={shopName}>
+        {children}
+      </AppShell>
     </div>
   );
 }
