@@ -1,0 +1,39 @@
+export const AUDIT_ACTIONS = [
+  "ITEM_CREATED",
+  "ITEM_UPDATED",
+  "ITEM_PRICE_CHANGED",
+  "ITEM_DELETED",
+  "CATEGORY_CREATED",
+  "CATEGORY_UPDATED",
+  "CATEGORY_DELETED",
+  "USER_CREATED",
+  "USER_UPDATED",
+  "USER_DEACTIVATED",
+  "USER_PASSWORD_RESET",
+  "SETTINGS_UPDATED",
+  "BILL_REPRINTED",
+  "BILL_VOIDED",
+  "LOGIN_FAILED",
+  "LOGIN_LOCKED",
+] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  ITEM_CREATED: "Item created",
+  ITEM_UPDATED: "Item updated",
+  ITEM_PRICE_CHANGED: "Price changed",
+  ITEM_DELETED: "Item removed",
+  CATEGORY_CREATED: "Category created",
+  CATEGORY_UPDATED: "Category updated",
+  CATEGORY_DELETED: "Category removed",
+  USER_CREATED: "User created",
+  USER_UPDATED: "User updated",
+  USER_DEACTIVATED: "User deactivated",
+  USER_PASSWORD_RESET: "Password reset",
+  SETTINGS_UPDATED: "Settings updated",
+  BILL_REPRINTED: "Bill reprinted",
+  BILL_VOIDED: "Bill voided",
+  LOGIN_FAILED: "Failed sign-in",
+  LOGIN_LOCKED: "Account locked",
+};

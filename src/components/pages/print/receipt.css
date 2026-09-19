@@ -1,0 +1,90 @@
+/* 80mm roll, ~72mm printable. See spec §9. */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 72mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+.receipt {
+  width: 72mm;
+  margin: 0 auto;
+  padding: 4mm 2mm;
+  /* Monospace so the amount column aligns like a real thermal receipt. */
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #000;
+  background: #fff;
+}
+
+.receipt--58 {
+  width: 50mm;
+  font-size: 11px;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-shop-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.receipt--58 .receipt-shop-name {
+  font-size: 13px;
+}
+
+.receipt hr {
+  border: none;
+  border-top: 1px dashed #000;
+  margin: 4px 0;
+}
+
+.receipt table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.receipt td {
+  padding: 1px 0;
+  vertical-align: top;
+}
+
+.receipt .qty {
+  width: 3ch;
+  text-align: center;
+}
+
+.receipt .amt {
+  width: 8ch;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt .row-head {
+  font-weight: 700;
+}
+
+.receipt .row-total {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.receipt--58 .row-total {
+  font-size: 12px;
+}

@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  # Next.js 16 requires >= 20.9. 22 is the current Netlify LTS.
+  NODE_VERSION = "22"
