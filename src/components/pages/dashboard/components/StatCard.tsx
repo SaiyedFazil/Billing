@@ -1,25 +1,91 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Flame, type LucideIcon } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+const TONES = {
+  hero: {
+    card: "bg-sidebar border-transparent text-white shadow-hero",
+    label: "text-[#d6cdc4]",
+    icon: "bg-brand/20 text-[#ff8a65]",
+    hint: "text-[#b5aba1]",
+  },
+  brand: {
+    card: "bg-card shadow-card",
+    label: "text-muted-foreground",
+    icon: "bg-brand-soft text-primary",
+    hint: "text-muted-foreground",
+  },
+  mustard: {
+    card: "bg-card shadow-card",
+    label: "text-muted-foreground",
+    icon: "bg-warning-soft text-warning-ink",
+    hint: "text-muted-foreground",
+  },
+  basil: {
+    card: "bg-card shadow-card",
+    label: "text-muted-foreground",
+    icon: "bg-success-soft text-success-ink",
+    hint: "text-muted-foreground",
+  },
+} as const;
 
 export function StatCard({
   label,
   value,
   hint,
+  icon: Icon,
+  tone,
+  compact = false,
 }: {
   label: string;
   value: string;
   hint?: string;
+  icon: LucideIcon;
+  /** "hero" is the dark card that leads a row — use it once per row. */
+  tone: keyof typeof TONES;
+  /** Smaller value type, for text values such as an item name. */
+  compact?: boolean;
 }) {
+  const style = TONES[tone];
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-muted-foreground text-sm font-medium">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="truncate text-3xl font-bold tabular-nums">{value}</p>
-        {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        "relative flex flex-col gap-3.5 overflow-hidden rounded-[20px] border p-5.5",
+        style.card,
+      )}
+    >
+      {tone === "hero" ? (
+        <Flame
+          aria-hidden
+          strokeWidth={1.5}
+          className="text-brand/15 absolute -right-5 -bottom-7 size-32"
+        />
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3">
+        <span className={cn("text-sm font-medium", style.label)}>{label}</span>
+        <span
+          className={cn(
+            "flex size-9 items-center justify-center rounded-[10px]",
+            style.icon,
+          )}
+        >
+          <Icon className="size-4.5" />
+        </span>
+      </div>
+
+      <div className="relative space-y-1">
+        <p
+          className={cn(
+            "font-heading truncate leading-tight font-extrabold tracking-tight tabular-nums",
+            compact ? "text-[26px]" : "text-[34px]",
+          )}
+        >
+          {value}
+        </p>
+        {hint ? <p className={cn("text-[13px]", style.hint)}>{hint}</p> : null}
+      </div>
+    </div>
   );
 }
