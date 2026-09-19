@@ -22,8 +22,9 @@ async function main() {
   );
   console.log(
     "before:",
-    before.rows.map((row) => (row as { tablename: string }).tablename).join(", ") ||
-      "(no tables)",
+    before.rows
+      .map((row) => (row as { tablename: string }).tablename)
+      .join(", ") || "(no tables)",
   );
 
   // Order matters only without CASCADE; with it, one statement each is enough.
@@ -38,7 +39,9 @@ async function main() {
   await db.execute(sql`DROP TABLE IF EXISTS shop_settings CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS users CASCADE`);
 
-  await db.execute(sql`DROP FUNCTION IF EXISTS prevent_bill_item_mutation CASCADE`);
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS prevent_bill_item_mutation CASCADE`,
+  );
   await db.execute(sql`DROP FUNCTION IF EXISTS prevent_bill_delete CASCADE`);
   await db.execute(sql`DROP FUNCTION IF EXISTS restrict_bill_update CASCADE`);
 
@@ -57,8 +60,9 @@ async function main() {
 
   console.log(
     "after tables:",
-    after.rows.map((row) => (row as { tablename: string }).tablename).join(", ") ||
-      "(none)",
+    after.rows
+      .map((row) => (row as { tablename: string }).tablename)
+      .join(", ") || "(none)",
   );
   console.log(
     "after enums:",

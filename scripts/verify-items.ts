@@ -73,7 +73,10 @@ async function main() {
   );
 
   // Soft delete must free the name within the category.
-  await db.update(items).set({ isActive: false }).where(eq(items.id, created.id));
+  await db
+    .update(items)
+    .set({ isActive: false })
+    .where(eq(items.id, created.id));
   const [reused] = await db
     .insert(items)
     .values({
@@ -87,13 +90,11 @@ async function main() {
   // A negative price must be impossible.
   let negativeRejected = false;
   try {
-    await db
-      .insert(items)
-      .values({
-        categoryId: category.id,
-        name: "Negative Probe",
-        price: "-1.00",
-      });
+    await db.insert(items).values({
+      categoryId: category.id,
+      name: "Negative Probe",
+      price: "-1.00",
+    });
   } catch {
     negativeRejected = true;
   }

@@ -3,6 +3,8 @@
 import { Plus } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/custom/ConfirmDialog";
+import { TableCard } from "@/components/custom/TableCard";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,47 +30,48 @@ export function UsersTab({
   const tab = useUsersTab();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Accounts</h1>
-          <p className="text-muted-foreground text-sm">
-            Who can sign in. Accounts are deactivated, never deleted — bills
-            reference them.
-          </p>
-        </div>
-        <Button onClick={tab.openCreate}>
-          <Plus className="size-4" />
-          New account
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Accounts"
+        description="Who can sign in. Accounts are deactivated, never deleted — bills reference them."
+        actions={
+          <Button onClick={tab.openCreate}>
+            <Plus className="size-4.5" strokeWidth={2.25} />
+            New account
+          </Button>
+        }
+      />
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {USER_HEADERS.map((header, index) => (
-              <TableHead
-                key={header || `col-${index}`}
-                className={index === USER_HEADERS.length - 1 ? "text-right" : ""}
-              >
-                {header}
-              </TableHead>
+      <TableCard>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {USER_HEADERS.map((header, index) => (
+                <TableHead
+                  key={header || `col-${index}`}
+                  className={
+                    index === USER_HEADERS.length - 1 ? "text-right" : ""
+                  }
+                >
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((row) => (
+              <UserTableRow
+                key={row.id}
+                row={row}
+                currentUserId={currentUserId}
+                onReset={tab.setResetTarget}
+                onToggle={tab.setToggleTarget}
+                disabled={tab.isPending}
+              />
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((row) => (
-            <UserTableRow
-              key={row.id}
-              row={row}
-              currentUserId={currentUserId}
-              onReset={tab.setResetTarget}
-              onToggle={tab.setToggleTarget}
-              disabled={tab.isPending}
-            />
-          ))}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </TableCard>
 
       <CreateUserDialog
         open={tab.createOpen}

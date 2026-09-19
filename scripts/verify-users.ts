@@ -18,7 +18,11 @@ function check(label: string, condition: boolean, detail?: unknown) {
 
 async function main() {
   const activeOwners = await countActiveSuperadmins();
-  check("at least one active superadmin exists", activeOwners >= 1, activeOwners);
+  check(
+    "at least one active superadmin exists",
+    activeOwners >= 1,
+    activeOwners,
+  );
 
   const [anyOwner] = await db
     .select({ id: users.id })

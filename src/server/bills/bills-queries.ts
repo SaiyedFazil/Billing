@@ -1,4 +1,14 @@
-import { and, asc, count, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  lte,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import { billItems, bills, users } from "@/db/schema";
@@ -90,7 +100,8 @@ export async function listBills(
       lte(bills.businessDate, filters.to),
     ];
 
-    if (filters.cashierId) conditions.push(eq(bills.createdBy, filters.cashierId));
+    if (filters.cashierId)
+      conditions.push(eq(bills.createdBy, filters.cashierId));
     if (filters.paymentMethod) {
       conditions.push(eq(bills.paymentMethod, filters.paymentMethod));
     }

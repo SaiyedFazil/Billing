@@ -8,7 +8,9 @@ export const metadata = {
   description: "Which items are selling.",
 };
 
-export default async function Page({ searchParams }: PageProps<"/reports/items">) {
+export default async function Page({
+  searchParams,
+}: PageProps<"/reports/items">) {
   const params = await searchParams;
   const timeZone = await getShopTimezone();
   const { from, to, presets } = resolveReportRange(params, timeZone, "LAST_30");

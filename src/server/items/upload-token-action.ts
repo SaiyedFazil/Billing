@@ -8,7 +8,9 @@ import { type ActionResult, ok } from "@/lib/utils/result";
  * Only a superadmin can obtain an upload token — otherwise anyone signed in
  * could push arbitrary files into the shop's ImageKit account.
  */
-export async function getUploadTokenAction(): Promise<ActionResult<UploadAuth>> {
+export async function getUploadTokenAction(): Promise<
+  ActionResult<UploadAuth>
+> {
   return guarded(async () => {
     await requireSuperadmin();
     return ok(getUploadAuth());

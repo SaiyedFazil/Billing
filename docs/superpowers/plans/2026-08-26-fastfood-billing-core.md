@@ -39,7 +39,7 @@ Every task's requirements implicitly include this section.
 4. **Every server action begins with a guard.** `requireUser()` or `requireSuperadmin()` on the first line. Middleware is a redirect convenience, never access control.
 5. **The client never sends prices.** Bill payloads carry `{ itemId, quantity }` only. The server re-reads prices from the database.
 6. **Drizzle uses `drizzle-orm/neon-serverless` with a `Pool`** — never `neon-http`. Interactive transactions are required.
-7. **Inside `db.transaction`, only throw.** Returning a value from the callback commits. Validation that can fail must happen *before* the transaction opens.
+7. **Inside `db.transaction`, only throw.** Returning a value from the callback commits. Validation that can fail must happen _before_ the transaction opens.
 8. **Naming:** components `PascalCase.tsx` · feature hooks `useThingTab.ts` · global hooks `use-thing.ts` · `lib`/`server`/`db` files `kebab-case.ts` · types `<domain>.types.ts`.
 9. **Path alias `@/*` → `src/*`.**
 10. **TypeScript `strict: true`.** No `any` without a written justification comment.
@@ -52,6 +52,7 @@ Every task's requirements implicitly include this section.
 Files created by this plan, and what each owns. Structure follows spec §13.
 
 **Configuration (Task 1–3)**
+
 - `package.json`, `tsconfig.json`, `next.config.mjs`, `postcss.config.mjs`, `components.json` — project config
 - `netlify.toml` — build + adapter config
 - `.env.template`, `.gitignore` — env contract
@@ -60,11 +61,13 @@ Files created by this plan, and what each owns. Structure follows spec §13.
 - `src/db/with-connection-retry.ts` — one retry on cold-start connection failures (spec §11.4)
 
 **Schema (Task 4–8)** — one file per table, all re-exported from `src/db/schema/index.ts`
+
 - `enums.ts` · `users.ts` · `categories.ts` · `items.ts` · `bills.ts` · `bill-items.ts` · `bill-counters.ts` · `audit-log.ts` · `shop-settings.ts`
 - `src/db/migrations/` — generated SQL plus one hand-written trigger migration
 - `src/db/seed.ts` — first superadmin, settings row, sample menu
 
 **Auth (Task 9–13)**
+
 - `src/lib/auth/password.ts` — bcrypt hash/verify, nothing else
 - `src/auth.config.ts` / `src/auth.ts` — Auth.js split (edge-safe config vs full config)
 - `src/lib/auth/guard.ts` — `requireUser` / `requireSuperadmin`
@@ -75,6 +78,7 @@ Files created by this plan, and what each owns. Structure follows spec §13.
 - `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/components/layout/` — shell
 
 **Billing (Task 14–26)**
+
 - `src/lib/utils/{money,dates,result}.ts` — pure helpers, no I/O
 - `src/types/{bill,item}.types.ts`, `src/constants/` — shared shapes
 - `src/lib/validation/bill-schema.ts` — the Zod contract
@@ -93,11 +97,13 @@ Files created by this plan, and what each owns. Structure follows spec §13.
 ### Task 1: Scaffold the Next.js project
 
 **Files:**
+
 - Create: `package.json`, `tsconfig.json`, `next.config.mjs`, `postcss.config.mjs`, `components.json`, `.gitignore`
 - Create: `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`
 - Create: `src/lib/utils/cn.ts`
 
 **Interfaces:**
+
 - Consumes: nothing (first task)
 - Produces: `cn(...inputs: ClassValue[]): string` from `@/lib/utils/cn` — used by every shadcn component. Path alias `@/*` resolving to `src/*`.
 
@@ -184,10 +190,12 @@ Expected: both exit 0. If `tsc` reports unresolved `@/lib/utils`, a shadcn compo
 ### Task 2: Netlify config, environment contract, first deploy
 
 **Files:**
+
 - Create: `netlify.toml`, `.env.template`, `.env.local`
 - Modify: `.gitignore`
 
 **Interfaces:**
+
 - Consumes: Task 1's built app
 - Produces: `process.env.DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` available at runtime. A live Netlify URL.
 
@@ -279,11 +287,13 @@ netlify env:set AUTH_URL https://YOUR-SITE.netlify.app
 ### Task 3: Drizzle + Neon connection
 
 **Files:**
+
 - Create: `src/db/index.ts`, `drizzle.config.ts`, `src/db/schema/index.ts`
 - Create: `scripts/db-ping.ts`
 - Modify: `package.json` (scripts)
 
 **Interfaces:**
+
 - Consumes: `DATABASE_URL` from Task 2
 - Produces:
   - `db` — the Drizzle client, imported everywhere as `import { db } from "@/db"`
@@ -386,7 +396,9 @@ import { db } from "../src/db";
 
 async function main() {
   const started = Date.now();
-  const result = await db.execute(sql`select now() as now, version() as version`);
+  const result = await db.execute(
+    sql`select now() as now, version() as version`,
+  );
   const row = result.rows[0] as { now: string; version: string };
 
   console.log("Connected in", Date.now() - started, "ms");
@@ -509,10 +521,12 @@ Expected: two `PASS` lines.
 ### Task 4: Schema part 1 — enums, users, categories, items
 
 **Files:**
+
 - Create: `src/db/schema/enums.ts`, `users.ts`, `categories.ts`, `items.ts`
 - Modify: `src/db/schema/index.ts`
 
 **Interfaces:**
+
 - Consumes: `db` from Task 3
 - Produces: table objects `users`, `categories`, `items`; enums `userRoleEnum`, `paymentMethodEnum`, `billStatusEnum`, `printerWidthEnum`. Inferred types `User = typeof users.$inferSelect`, `Item = typeof items.$inferSelect`.
 
@@ -720,10 +734,12 @@ Open the printed URL. Expected: `users`, `categories`, `items` are listed with t
 ### Task 5: Schema part 2 — bills, bill_items, bill_counters
 
 **Files:**
+
 - Create: `src/db/schema/bills.ts`, `bill-items.ts`, `bill-counters.ts`
 - Modify: `src/db/schema/index.ts`
 
 **Interfaces:**
+
 - Consumes: `users`, `items`, `categories` from Task 4; enums
 - Produces: tables `bills`, `billItems`, `billCounters`. Types `Bill`, `BillItem`.
 
@@ -799,7 +815,10 @@ export const bills = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("bills_date_number_idx").on(table.businessDate, table.billNumber),
+    uniqueIndex("bills_date_number_idx").on(
+      table.businessDate,
+      table.billNumber,
+    ),
     uniqueIndex("bills_idempotency_key_idx").on(table.idempotencyKey),
 
     check("bills_subtotal_non_negative", sql`${table.subtotal} >= 0`),
@@ -916,7 +935,10 @@ import { sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 
-async function expectRejection(label: string, statement: ReturnType<typeof sql>) {
+async function expectRejection(
+  label: string,
+  statement: ReturnType<typeof sql>,
+) {
   try {
     await db.execute(statement);
     console.error(`FAIL — ${label}: the database ACCEPTED invalid data`);
@@ -937,9 +959,13 @@ async function main() {
   `);
   const userId =
     (user.rows[0] as { id: string } | undefined)?.id ??
-    ((
-      await db.execute(sql`SELECT id FROM users WHERE username = 'constraint-probe'`)
-    ).rows[0] as { id: string }).id;
+    (
+      (
+        await db.execute(
+          sql`SELECT id FROM users WHERE username = 'constraint-probe'`,
+        )
+      ).rows[0] as { id: string }
+    ).id;
 
   await expectRejection(
     "total must equal subtotal minus discount",
@@ -985,11 +1011,13 @@ Expected: three `PASS` lines, exit code 0. Any `FAIL` means a constraint did not
 ### Task 6: Schema part 3 — audit_log and shop_settings
 
 **Files:**
+
 - Create: `src/db/schema/audit-log.ts`, `shop-settings.ts`
 - Create: `src/constants/audit-actions.ts`
 - Modify: `src/db/schema/index.ts`
 
 **Interfaces:**
+
 - Consumes: `users` from Task 4
 - Produces: tables `auditLog`, `shopSettings`. Constant `AUDIT_ACTIONS` and type `AuditAction`.
 
@@ -1148,11 +1176,13 @@ Expected: `PASS — singleton enforced`.
 ### Task 7: Immutability triggers
 
 **Files:**
+
 - Create: `src/db/migrations/9999_immutability_triggers.sql`
 - Create: `scripts/verify-immutability.ts`
 - Modify: `package.json` (script)
 
 **Interfaces:**
+
 - Consumes: `bills`, `billItems` tables from Task 5
 - Produces: three database triggers. No TypeScript surface — this is the enforcement layer beneath all application code.
 
@@ -1246,7 +1276,10 @@ import { sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 
-async function expectRejection(label: string, statement: ReturnType<typeof sql>) {
+async function expectRejection(
+  label: string,
+  statement: ReturnType<typeof sql>,
+) {
   try {
     await db.execute(statement);
     console.error(`FAIL — ${label}: the database ACCEPTED the mutation`);
@@ -1316,15 +1349,21 @@ async function main() {
   }
 
   // Clean up. Triggers block DELETE on bills, so drop them for the teardown.
-  await db.execute(sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
   await db.execute(sql`DELETE FROM bill_items WHERE bill_id = ${billId}::uuid`);
   await db.execute(sql`DELETE FROM bills WHERE id = ${billId}::uuid`);
-  await db.execute(sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
   await db.execute(sql`DELETE FROM items WHERE name = 'Probe Item'`);
   await db.execute(sql`DELETE FROM categories WHERE name = 'Probe Category'`);
-  await db.execute(sql`DELETE FROM users WHERE username = 'immutability-probe'`);
+  await db.execute(
+    sql`DELETE FROM users WHERE username = 'immutability-probe'`,
+  );
 
   process.exit(process.exitCode ?? 0);
 }
@@ -1352,9 +1391,11 @@ Expected: four `PASS` rejection lines, then `PASS — voiding a bill is permitte
 ### Task 8: Seed script
 
 **Files:**
+
 - Create: `src/db/seed.ts`, `src/lib/auth/password.ts`
 
 **Interfaces:**
+
 - Consumes: all tables; `SEED_SUPERADMIN_*` env vars from Task 2
 - Produces: `hashPassword(plain: string): Promise<string>` and `verifyPassword(plain: string, hash: string): Promise<boolean>` from `@/lib/auth/password`. A seeded database with one superadmin, a settings row, and a sample menu.
 
@@ -1574,11 +1615,13 @@ Expected: nine rows, prices as integers (6000, 8000, 11000, …). If any price s
 ### Task 9: Auth.js configuration
 
 **Files:**
+
 - Create: `src/auth.config.ts`, `src/auth.ts`, `src/types/next-auth.d.ts`
 - Create: `src/app/api/auth/[...nextauth]/route.ts`
 - Create: `src/lib/validation/user-schema.ts`
 
 **Interfaces:**
+
 - Consumes: `users` table, `verifyPassword` from Task 8
 - Produces: `auth()`, `signIn()`, `signOut()`, `handlers` from `@/auth`. Session shape `{ user: { id, name, username, role } }`. `loginSchema` from `@/lib/validation/user-schema`.
 
@@ -1762,10 +1805,12 @@ Expected: JSON containing a `credentials` provider. If you get a 500, `AUTH_SECR
 ### Task 10: Role guards
 
 **Files:**
+
 - Create: `src/lib/auth/guard.ts`, `src/lib/utils/result.ts`
 - Create: `src/constants/roles.ts`
 
 **Interfaces:**
+
 - Consumes: `auth()` from Task 9
 - Produces:
   - `ActionResult<T>`, `ErrorCode`, `ok(data)`, `fail(code, message, fields?)` from `@/lib/utils/result`
@@ -1810,8 +1855,7 @@ export type ActionError = {
 };
 
 export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: ActionError };
+  { ok: true; data: T } | { ok: false; error: ActionError };
 
 export function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
@@ -1873,10 +1917,7 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireSuperadmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== "SUPERADMIN") {
-    throw new GuardError(
-      "FORBIDDEN",
-      "Only the owner account can do this.",
-    );
+    throw new GuardError("FORBIDDEN", "Only the owner account can do this.");
   }
   return user;
 }
@@ -1925,6 +1966,7 @@ Expected: exit 0.
 ### Task 11: Middleware and the login page
 
 **Files:**
+
 - Create: `src/middleware.ts`
 - Create: `src/components/pages/login/LoginPage.tsx`, `components/LoginForm.tsx`
 - Create: `src/app/login/page.tsx`
@@ -1932,6 +1974,7 @@ Expected: exit 0.
 - Modify: `src/app/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `authConfig`, `signIn`, `loginSchema`, `ActionResult`
 - Produces: `loginAction(formData): Promise<ActionResult<null>>`. A working `/login` route that establishes a session.
 
@@ -2181,10 +2224,12 @@ npm run dev
 ### Task 12: Login lockout and audit logging
 
 **Files:**
+
 - Create: `src/server/audit/write-audit-log.ts`, `src/server/users/login-attempts.ts`
 - Modify: `src/auth.ts`
 
 **Interfaces:**
+
 - Consumes: `auditLog`, `users` tables; `AuditAction` from Task 6
 - Produces:
   - `writeAuditLog(entry): Promise<void>` where `entry = { actorId?, action: AuditAction, entityType: string, entityId?, before?, after? }`
@@ -2290,26 +2335,26 @@ import { registerFailedLogin } from "./server/users/login-attempts";
 Then replace each failing `return null` in `authorize` so the failure is recorded. The block becomes:
 
 ```ts
-        const user = await db.query.users.findFirst({
-          where: sql`lower(${users.username}) = lower(${username})`,
-        });
+const user = await db.query.users.findFirst({
+  where: sql`lower(${users.username}) = lower(${username})`,
+});
 
-        if (!user) {
-          // No such account — nothing to count, and we must not reveal that.
-          return null;
-        }
-        if (!user.isActive) {
-          return null;
-        }
-        if (user.lockedUntil && user.lockedUntil > new Date()) {
-          return null;
-        }
+if (!user) {
+  // No such account — nothing to count, and we must not reveal that.
+  return null;
+}
+if (!user.isActive) {
+  return null;
+}
+if (user.lockedUntil && user.lockedUntil > new Date()) {
+  return null;
+}
 
-        const valid = await verifyPassword(password, user.passwordHash);
-        if (!valid) {
-          await registerFailedLogin(username);
-          return null;
-        }
+const valid = await verifyPassword(password, user.passwordHash);
+if (!valid) {
+  await registerFailedLogin(username);
+  return null;
+}
 ```
 
 - [ ] **Step 4: Verify the lockout triggers**
@@ -2357,6 +2402,7 @@ Sign in with the correct password. Expected: success, and `failed_attempts` stay
 ### Task 13: Application shell
 
 **Files:**
+
 - Create: `src/components/providers/AppProviders.tsx`
 - Create: `src/components/layout/AppNavbar.tsx`, `UserMenu.tsx`, `Container.tsx`
 - Create: `src/lib/auth/logout.ts`
@@ -2364,6 +2410,7 @@ Sign in with the correct password. Expected: success, and `failed_attempts` stay
 - Modify: `src/app/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: `requireUser` from Task 10, `signOut` from Task 9
 - Produces: an authenticated layout wrapping every `(app)` route with a navbar showing the signed-in user and a sign-out control. `logoutAction()` server action.
 
@@ -2586,7 +2633,9 @@ export const metadata = { title: "New Bill | Billing" };
 export default function Page() {
   return (
     <Container className="py-8">
-      <p className="text-muted-foreground">Billing screen — built in Task 23.</p>
+      <p className="text-muted-foreground">
+        Billing screen — built in Task 23.
+      </p>
     </Container>
   );
 }
@@ -2615,11 +2664,13 @@ Expected: both exit 0.
 ### Task 14: Money, date and formatting helpers
 
 **Files:**
+
 - Create: `src/lib/utils/money.ts`, `src/lib/utils/dates.ts`
 - Create: `scripts/verify-money.ts`
 - Modify: `src/lib/utils/index.ts`, `package.json`
 
 **Interfaces:**
+
 - Consumes: nothing (pure functions, no I/O)
 - Produces:
   - `parseRupees(rupees: string): number`
@@ -2808,12 +2859,24 @@ check("lineTotal quantity one", lineTotal(11000, 1), 11000);
 // --- billTotal --------------------------------------------------------
 check(
   "billTotal without discount",
-  billTotal([{ unitPrice: 6000, quantity: 2 }, { unitPrice: 3000, quantity: 1 }], 0),
+  billTotal(
+    [
+      { unitPrice: 6000, quantity: 2 },
+      { unitPrice: 3000, quantity: 1 },
+    ],
+    0,
+  ),
   { subtotal: 15000, discount: 0, total: 15000 },
 );
 check(
   "billTotal with discount",
-  billTotal([{ unitPrice: 6000, quantity: 2 }, { unitPrice: 3000, quantity: 1 }], 1000),
+  billTotal(
+    [
+      { unitPrice: 6000, quantity: 2 },
+      { unitPrice: 3000, quantity: 1 },
+    ],
+    1000,
+  ),
   { subtotal: 15000, discount: 1000, total: 14000 },
 );
 check(
@@ -2846,7 +2909,9 @@ check(
 );
 check("formatBillDate", formatBillDate("2026-08-26"), "26/08/26");
 
-console.log(failures === 0 ? "\nAll money checks passed." : `\n${failures} FAILURE(S)`);
+console.log(
+  failures === 0 ? "\nAll money checks passed." : `\n${failures} FAILURE(S)`,
+);
 process.exit(failures === 0 ? 0 : 1);
 ```
 
@@ -2867,10 +2932,12 @@ The `businessDate` rollover check is the one most worth watching — if it fails
 ### Task 15: Domain types and payment constants
 
 **Files:**
+
 - Create: `src/types/bill.types.ts`, `src/types/item.types.ts`
 - Create: `src/constants/payment-methods.ts`
 
 **Interfaces:**
+
 - Consumes: schema types from Tasks 4–5
 - Produces:
   - `MenuItem = { id, name, price, imageUrl, isAvailable, categoryId }`
@@ -3002,9 +3069,11 @@ Expected: exit 0.
 ### Task 16: Menu query
 
 **Files:**
+
 - Create: `src/server/items/items-queries.ts`, `src/server/settings/settings-queries.ts`
 
 **Interfaces:**
+
 - Consumes: `items`, `categories`, `shopSettings` tables; `MenuCategory` from Task 15; `withConnectionRetry` from Task 3
 - Produces:
   - `getMenu(): Promise<MenuCategory[]>` — active categories with their active items, ordered
@@ -3140,9 +3209,11 @@ Expected: `PASS — retired item hidden`.
 ### Task 17: Bill validation schema
 
 **Files:**
+
 - Create: `src/lib/validation/bill-schema.ts`
 
 **Interfaces:**
+
 - Consumes: `PAYMENT_METHODS` from Task 15
 - Produces: `createBillSchema` — a Zod schema parsing to `CreateBillInput`. Exported `MAX_LINE_QUANTITY = 99`.
 
@@ -3224,10 +3295,12 @@ Expected: seven `PASS` lines, exit 0.
 ### Task 18: The bill creation service
 
 **Files:**
+
 - Create: `src/server/bills/create-bill-service.ts`
 - Create: `src/lib/utils/parse-db-error.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, all bill tables, `billTotal`, `businessDate`, `getShopTimezone`, `CreateBillInput`, `ActionResult`
 - Produces: `createBill(input: CreateBillInput, userId: string): Promise<ActionResult<CreatedBill>>` — the single entry point for turning a cart into a persisted bill.
 
@@ -3248,7 +3321,10 @@ function asPgError(error: unknown): PgError | null {
   return error as PgError;
 }
 
-export function isUniqueViolation(error: unknown, constraint?: string): boolean {
+export function isUniqueViolation(
+  error: unknown,
+  constraint?: string,
+): boolean {
   const pg = asPgError(error);
   if (pg?.code !== UNIQUE_VIOLATION) return false;
   if (!constraint) return true;
@@ -3358,9 +3434,13 @@ export async function createBill(
   const { subtotal, discount, total } = billTotal(priced, input.discount);
 
   if (discount !== input.discount) {
-    return fail("VALIDATION", "The discount cannot be more than the subtotal.", {
-      discount: "Must be between ₹0 and the subtotal",
-    });
+    return fail(
+      "VALIDATION",
+      "The discount cannot be more than the subtotal.",
+      {
+        discount: "Must be between ₹0 and the subtotal",
+      },
+    );
   }
 
   if (total !== input.expectedTotal) {
@@ -3473,7 +3553,9 @@ function check(label: string, condition: boolean, detail?: unknown) {
 
 async function main() {
   const [{ id: userId }] = (
-    await db.execute(sql`SELECT id FROM users WHERE role = 'SUPERADMIN' LIMIT 1`)
+    await db.execute(
+      sql`SELECT id FROM users WHERE role = 'SUPERADMIN' LIMIT 1`,
+    )
   ).rows as Array<{ id: string }>;
 
   const menu = await getMenu();
@@ -3507,7 +3589,10 @@ async function main() {
   const repeat = await createBill(
     {
       idempotencyKey: key,
-      lines: [{ itemId: burger.id, quantity: 2 }, { itemId: drink.id, quantity: 1 }],
+      lines: [
+        { itemId: burger.id, quantity: 2 },
+        { itemId: drink.id, quantity: 1 },
+      ],
       discount: 1000,
       paymentMethod: "CASH",
       tendered: expectedTotal + 5000,
@@ -3521,7 +3606,9 @@ async function main() {
   );
 
   const count = (
-    await db.execute(sql`SELECT count(*)::int AS n FROM bills WHERE idempotency_key = ${key}::uuid`)
+    await db.execute(
+      sql`SELECT count(*)::int AS n FROM bills WHERE idempotency_key = ${key}::uuid`,
+    )
   ).rows[0] as { n: number };
   check("only one row was written", count.n === 1, count);
 
@@ -3580,7 +3667,9 @@ async function main() {
   const gapless = numbers.every((n, i) => n === numbers[0] + i);
   check("bill numbers are contiguous for the day", gapless, numbers);
 
-  console.log(failures === 0 ? "\nAll bill checks passed." : `\n${failures} FAILURE(S)`);
+  console.log(
+    failures === 0 ? "\nAll bill checks passed." : `\n${failures} FAILURE(S)`,
+  );
   process.exit(failures === 0 ? 0 : 1);
 }
 
@@ -3624,9 +3713,11 @@ Expected: `last_number` equals `bills` for each date. If `last_number` is higher
 ### Task 19: The bill server action
 
 **Files:**
+
 - Create: `src/server/bills/bills-actions.ts`, `src/server/bills/bills-queries.ts`
 
 **Interfaces:**
+
 - Consumes: `createBill` (Task 18), `guarded`/`requireUser` (Task 10), `createBillSchema` (Task 17)
 - Produces:
   - `createBillAction(payload: unknown): Promise<ActionResult<CreatedBill>>` — the client's only write entry point
@@ -3762,11 +3853,13 @@ Expected: full receipt JSON — shop details, cashier name, snapshot lines, inte
 ### Task 20: Cart reducer and the container hook
 
 **Files:**
+
 - Create: `src/components/pages/bill/hooks/useCartReducer.ts`
 - Create: `src/components/pages/bill/utils/cart.ts`
 - Create: `src/components/pages/bill/hooks/useBillPage.ts`
 
 **Interfaces:**
+
 - Consumes: `CartLine`, `billTotal`, `createBillAction`, `MenuCategory`
 - Produces:
   - `useCartReducer()` returning `{ lines, addItem, setQuantity, removeItem, clear }`
@@ -3915,7 +4008,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { collectsTender, type PaymentMethod } from "@/constants/payment-methods";
+import {
+  collectsTender,
+  type PaymentMethod,
+} from "@/constants/payment-methods";
 import { billTotal, parseRupees } from "@/lib/utils/money";
 import { createBillAction } from "@/server/bills/bills-actions";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
@@ -4101,9 +4197,11 @@ Expected: exit 0. The hook has no UI yet — Tasks 21–23 consume it.
 ### Task 21: Menu grid components
 
 **Files:**
+
 - Create: `src/components/pages/bill/components/CategoryTabs.tsx`, `ItemSearchBox.tsx`, `MenuItemCard.tsx`, `MenuGrid.tsx`
 
 **Interfaces:**
+
 - Consumes: `MenuCategory`, `MenuItem`, `formatINR`
 - Produces: `<MenuGrid categories activeCategoryId onCategoryChange search onSearchChange onSearchEnter items onSelect />`
 
@@ -4185,7 +4283,7 @@ export function ItemSearchBox({
 
   return (
     <div className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         ref={inputRef}
         value={value}
@@ -4238,7 +4336,7 @@ export function MenuItemCard({
       onClick={() => onSelect(item)}
       className={cn(
         "flex flex-col overflow-hidden rounded-lg border text-left transition",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         soldOut
           ? "cursor-not-allowed opacity-40"
           : "hover:border-primary hover:shadow-sm active:scale-[0.98]",
@@ -4259,18 +4357,16 @@ export function MenuItemCard({
           </div>
         )}
         {soldOut ? (
-          <span className="absolute inset-x-0 bottom-0 bg-destructive px-2 py-0.5 text-center text-[10px] font-semibold uppercase text-destructive-foreground">
+          <span className="text-destructive-foreground absolute inset-x-0 bottom-0 bg-destructive px-2 py-0.5 text-center text-[10px] font-semibold uppercase">
             Sold out
           </span>
         ) : null}
       </div>
       <div className="space-y-0.5 p-2">
-        <p className="line-clamp-2 text-sm font-medium leading-tight">
+        <p className="line-clamp-2 text-sm leading-tight font-medium">
           {item.name}
         </p>
-        <p className="text-sm text-muted-foreground">
-          {formatINR(item.price)}
-        </p>
+        <p className="text-sm text-muted-foreground">{formatINR(item.price)}</p>
       </div>
     </button>
   );
@@ -4369,10 +4465,12 @@ Expected: exit 0.
 ### Task 22: Cart and payment components
 
 **Files:**
+
 - Create: `src/components/custom/MoneyInput.tsx`
 - Create: `src/components/pages/bill/components/CartLine.tsx`, `CartPanel.tsx`, `DiscountInput.tsx`, `PaymentPanel.tsx`, `PriceChangedDialog.tsx`
 
 **Interfaces:**
+
 - Consumes: everything `useBillPage` returns
 - Produces: `<CartPanel />` and `<PriceChangedDialog />`, both driven entirely by props
 
@@ -4665,7 +4763,10 @@ export function PriceChangedDialog({
   isSaving: boolean;
 }) {
   return (
-    <Dialog open={message !== null} onOpenChange={(open) => !open && onDismiss()}>
+    <Dialog
+      open={message !== null}
+      onOpenChange={(open) => !open && onDismiss()}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Prices changed</DialogTitle>
@@ -4768,7 +4869,9 @@ export function CartPanel({
       <div className="space-y-3 border-t px-4 py-3">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium tabular-nums">{formatINR(subtotal)}</span>
+          <span className="font-medium tabular-nums">
+            {formatINR(subtotal)}
+          </span>
         </div>
 
         <DiscountInput
@@ -4842,10 +4945,12 @@ Expected: exit 0.
 ### Task 23: Assemble the billing page
 
 **Files:**
+
 - Create: `src/components/pages/bill/BillPage.tsx`
 - Modify: `src/app/(app)/bill/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useBillPage`, `MenuGrid`, `CartPanel`, `PriceChangedDialog`, `getMenu`
 - Produces: a working `/bill` route
 
@@ -5003,12 +5108,14 @@ Expected: your bill, with `total = subtotal - discount` and all values integers.
 ### Task 24: The 80mm print view
 
 **Files:**
+
 - Create: `src/app/print/[billId]/page.tsx`
 - Create: `src/components/pages/print/ReceiptView.tsx`
 - Create: `src/components/pages/print/components/Receipt80mm.tsx`, `Receipt58mm.tsx`, `AutoPrintTrigger.tsx`
 - Create: `src/app/print/[billId]/print.css`
 
 **Interfaces:**
+
 - Consumes: `getReceipt` (Task 19), `ReceiptData`, `formatReceiptAmount`, `formatBillDate`, `formatBillTime`
 - Produces: a shell-free `/print/[billId]` route that auto-prints at 80mm or 58mm per shop settings
 
@@ -5123,7 +5230,7 @@ export function Receipt80mm({
   const { shop } = receipt;
 
   return (
-    <div className={`receipt${narrow ? " receipt--58" : ""}`}>
+    <div className={`receipt${narrow ? "receipt--58" : ""}`}>
       <div style={{ textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: narrow ? 13 : 15 }}>
           {shop.name}
@@ -5186,9 +5293,7 @@ export function Receipt80mm({
           {receipt.discount > 0 ? (
             <tr>
               <td>Discount</td>
-              <td className="amt">
-                -{formatReceiptAmount(receipt.discount)}
-              </td>
+              <td className="amt">-{formatReceiptAmount(receipt.discount)}</td>
             </tr>
           ) : null}
           <tr style={{ fontWeight: 700, fontSize: narrow ? 12 : 14 }}>
@@ -5264,7 +5369,10 @@ export function ReceiptView({ receipt }: { receipt: ReceiptData }) {
         <Receipt80mm receipt={receipt} />
       )}
 
-      <div className="no-print" style={{ padding: "16px", textAlign: "center" }}>
+      <div
+        className="no-print"
+        style={{ padding: "16px", textAlign: "center" }}
+      >
         <Link
           href="/bill"
           style={{ textDecoration: "underline", fontSize: 14 }}
@@ -5359,10 +5467,12 @@ process.exit(0);
 ### Task 25: Offline detection
 
 **Files:**
+
 - Create: `src/hooks/use-online-status.ts`, `src/components/custom/OfflineBanner.tsx`
 - Modify: `src/app/(app)/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: `useOnlineStatus(): boolean`; `<OfflineBanner />` rendered in the authenticated shell
 
@@ -5421,7 +5531,7 @@ export function OfflineBanner() {
   return (
     <div
       role="alert"
-      className="flex items-center justify-center gap-2 bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground"
+      className="text-destructive-foreground flex items-center justify-center gap-2 bg-destructive px-4 py-2 text-sm font-semibold"
     >
       <WifiOff className="size-4 shrink-0" />
       No internet connection — bills CANNOT be saved right now.
@@ -5439,11 +5549,11 @@ import { OfflineBanner } from "@/components/custom/OfflineBanner";
 ```
 
 ```tsx
-    <div className="flex min-h-screen flex-col">
-      <OfflineBanner />
-      <AppNavbar user={user} />
-      <main className="flex-1">{children}</main>
-    </div>
+<div className="flex min-h-screen flex-col">
+  <OfflineBanner />
+  <AppNavbar user={user} />
+  <main className="flex-1">{children}</main>
+</div>
 ```
 
 - [ ] **Step 4: Verify it appears**
@@ -5479,10 +5589,12 @@ Expected: one new bill, not two. This is the idempotency key doing its job under
 ### Task 26: Handover docs and M3 acceptance
 
 **Files:**
+
 - Create: `docs/printer-setup.md`, `docs/deployment.md`
 - Create: `CLAUDE.md`
 
 **Interfaces:**
+
 - Consumes: everything built in M0–M3
 - Produces: the documents handed to the client, and the project conventions file future work reads
 
@@ -5516,14 +5628,14 @@ otherwise Windows will silently switch it back.
 
 Open any receipt in the billing app. When the print dialog appears:
 
-| Setting | Value |
-|---|---|
-| Destination | Your thermal printer |
-| Paper size | 80mm x 297mm (or "Roll Paper 80mm") |
-| Margins | None |
-| Scale | 100% (Default) |
-| **Headers and footers** | **UNCHECKED** |
-| Background graphics | Unchecked |
+| Setting                 | Value                               |
+| ----------------------- | ----------------------------------- |
+| Destination             | Your thermal printer                |
+| Paper size              | 80mm x 297mm (or "Roll Paper 80mm") |
+| Margins                 | None                                |
+| Scale                   | 100% (Default)                      |
+| **Headers and footers** | **UNCHECKED**                       |
+| Background graphics     | Unchecked                           |
 
 Chrome remembers these settings per printer, so you only set them once.
 
@@ -5560,16 +5672,16 @@ Repeat step 3.
 
 `docs/deployment.md`:
 
-```markdown
+````markdown
 # Deployment and Operations
 
 ## Stack
 
-| Service | Plan | What it holds |
-|---|---|---|
-| Netlify | Starter (free) | The Next.js application |
-| Neon | Free | Postgres — all sales data |
-| ImageKit | Free | Item photos (from M4) |
+| Service  | Plan           | What it holds             |
+| -------- | -------------- | ------------------------- |
+| Netlify  | Starter (free) | The Next.js application   |
+| Neon     | Free           | Postgres — all sales data |
+| ImageKit | Free           | Item photos (from M4)     |
 
 ## Deploying a change
 
@@ -5577,6 +5689,7 @@ Repeat step 3.
 npm run build          # confirm it compiles first
 netlify deploy --build --prod
 ```
+````
 
 ## Environment variables
 
@@ -5632,7 +5745,8 @@ No code changes required — environment variables only:
 - Netlify Pro (~$19/mo) or Vercel Pro (~$20/mo)
 - Neon Launch (~$19/mo) — removes autosuspend, extends the restore window
 - ImageKit paid — only if photo storage ever exceeds 5 GB (it will not)
-```
+
+````
 
 - [ ] **Step 3: Write the conventions file**
 
@@ -5687,10 +5801,11 @@ npm run db:verify                 # CHECK constraints reject bad data
 npm run db:verify-immutability    # triggers reject history rewrites
 npm run verify:bill               # bill creation, idempotency, gapless numbers
 npx tsc --noEmit && npm run build
-```
+````
 
 Run all of them before deploying.
-```
+
+````
 
 - [ ] **Step 4: Run the full M3 acceptance pass**
 
@@ -5703,7 +5818,7 @@ npm run db:verify-immutability
 npm run verify:bill
 npx tsc --noEmit
 npm run build
-```
+````
 
 Expected: all six exit 0.
 

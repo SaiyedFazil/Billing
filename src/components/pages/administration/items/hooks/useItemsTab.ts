@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { categoryTone } from "@/lib/utils/category-tone";
 import { formatINR, parseRupees } from "@/lib/utils/money";
 import {
   createItemAction,
@@ -72,6 +73,15 @@ export function useItemsTab({
       );
     });
   }, [items, categoryFilter, debouncedSearch]);
+
+  // Display only: the same tint per category as its tiles on the till.
+  const toneByCategoryId = useMemo(
+    () =>
+      new Map(
+        categories.map((category, index) => [category.id, categoryTone(index)]),
+      ),
+    [categories],
+  );
 
   const openCreate = useCallback(() => {
     setForm(emptyForm(categories[0]?.id ?? ""));
@@ -182,6 +192,7 @@ export function useItemsTab({
     setCategoryFilter,
     visibleItems,
     categories,
+    toneByCategoryId,
 
     dialogOpen,
     setDialogOpen,

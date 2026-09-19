@@ -2,11 +2,11 @@
 
 ## Stack
 
-| Service | Plan | Holds |
-|---|---|---|
-| Netlify | Starter (free) | The Next.js application |
-| Neon | Free | Postgres — all sales data |
-| ImageKit | Free | Item photos (from M4) |
+| Service  | Plan           | Holds                     |
+| -------- | -------------- | ------------------------- |
+| Netlify  | Starter (free) | The Next.js application   |
+| Neon     | Free           | Postgres — all sales data |
+| ImageKit | Free           | Item photos (from M4)     |
 
 Netlify Starter is used rather than Vercel Hobby because **Vercel's Hobby plan
 prohibits commercial use** and this is paid client work. Netlify's Starter plan

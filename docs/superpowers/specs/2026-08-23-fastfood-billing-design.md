@@ -60,30 +60,30 @@ API layer.
 
 **Rejected alternatives:**
 
-- *Explicit REST API layer* — adds roughly 30–40% more code (DTOs, fetch
+- _Explicit REST API layer_ — adds roughly 30–40% more code (DTOs, fetch
   wrappers, duplicated validation, manual loading state) to buy flexibility for
   a mobile app that is not planned. YAGNI.
-- *Supabase as backend* — auth, DB, storage and RLS in one vendor is genuinely
+- _Supabase as backend_ — auth, DB, storage and RLS in one vendor is genuinely
   attractive, but RLS policy complexity is overkill for two roles, Neon was
   already chosen for Postgres, and it is the heaviest lock-in of the three
   options.
 
 ### 4.2 Stack
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Framework | Next.js 15, App Router | RSC + Server Actions remove the API layer |
-| Language | TypeScript, `strict` | |
-| Styling | Tailwind CSS | |
-| Components | shadcn/ui | Owned source, no runtime dependency, easy to restyle |
-| ORM | Drizzle | Thin SQL-first layer; Prisma's query engine adds meaningful cold-start weight on serverless functions |
-| Database | Neon Postgres (free) | |
-| DB driver | `@neondatabase/serverless` **Pool (WebSocket)** via `drizzle-orm/neon-serverless` | Interactive transactions — see §4.3 |
-| Auth | Auth.js v5, credentials provider, JWT sessions | No per-user cost, no vendor, 2–10 users |
-| Validation | Zod | One schema shared by client form and server action |
-| Charts | Recharts (via shadcn chart) | |
-| Image storage | ImageKit (free: 5 GB storage, 20 GB bandwidth, no credit card) | On-the-fly resize/WebP conversion |
-| Hosting | Netlify Starter (free) | Commercial use permitted, unlike Vercel Hobby |
+| Layer         | Choice                                                                            | Rationale                                                                                             |
+| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Framework     | Next.js 15, App Router                                                            | RSC + Server Actions remove the API layer                                                             |
+| Language      | TypeScript, `strict`                                                              |                                                                                                       |
+| Styling       | Tailwind CSS                                                                      |                                                                                                       |
+| Components    | shadcn/ui                                                                         | Owned source, no runtime dependency, easy to restyle                                                  |
+| ORM           | Drizzle                                                                           | Thin SQL-first layer; Prisma's query engine adds meaningful cold-start weight on serverless functions |
+| Database      | Neon Postgres (free)                                                              |                                                                                                       |
+| DB driver     | `@neondatabase/serverless` **Pool (WebSocket)** via `drizzle-orm/neon-serverless` | Interactive transactions — see §4.3                                                                   |
+| Auth          | Auth.js v5, credentials provider, JWT sessions                                    | No per-user cost, no vendor, 2–10 users                                                               |
+| Validation    | Zod                                                                               | One schema shared by client form and server action                                                    |
+| Charts        | Recharts (via shadcn chart)                                                       |                                                                                                       |
+| Image storage | ImageKit (free: 5 GB storage, 20 GB bandwidth, no credit card)                    | On-the-fly resize/WebP conversion                                                                     |
+| Hosting       | Netlify Starter (free)                                                            | Commercial use permitted, unlike Vercel Hobby                                                         |
 
 **No test framework.** Client decision — the app will be verified manually. The
 money helpers in `lib/utils/money.ts` are kept deliberately small and obvious to
@@ -202,67 +202,67 @@ printer_width   : 'MM_80' | 'MM_58'
 
 ### 6.2 `users`
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | `gen_random_uuid()` |
-| username | text NOT NULL | unique index on `lower(username)` |
-| password_hash | text NOT NULL | bcrypt, cost 12 |
-| name | text NOT NULL | shown on receipts |
-| role | user_role NOT NULL | |
-| is_active | boolean NOT NULL default true | deactivate, never delete |
-| failed_attempts | integer NOT NULL default 0 | login lockout |
-| locked_until | timestamptz NULL | |
-| created_by | uuid NULL → users.id | |
-| created_at / updated_at | timestamptz NOT NULL | |
+| Column                  | Type                          | Notes                             |
+| ----------------------- | ----------------------------- | --------------------------------- |
+| id                      | uuid PK                       | `gen_random_uuid()`               |
+| username                | text NOT NULL                 | unique index on `lower(username)` |
+| password_hash           | text NOT NULL                 | bcrypt, cost 12                   |
+| name                    | text NOT NULL                 | shown on receipts                 |
+| role                    | user_role NOT NULL            |                                   |
+| is_active               | boolean NOT NULL default true | deactivate, never delete          |
+| failed_attempts         | integer NOT NULL default 0    | login lockout                     |
+| locked_until            | timestamptz NULL              |                                   |
+| created_by              | uuid NULL → users.id          |                                   |
+| created_at / updated_at | timestamptz NOT NULL          |                                   |
 
 ### 6.3 `categories`
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| name | text NOT NULL | unique index on `lower(name)` where `is_active` |
-| sort_order | integer NOT NULL default 0 | billing screen order |
-| is_active | boolean NOT NULL default true | soft delete |
-| created_at / updated_at | timestamptz NOT NULL | |
+| Column                  | Type                          | Notes                                           |
+| ----------------------- | ----------------------------- | ----------------------------------------------- |
+| id                      | uuid PK                       |                                                 |
+| name                    | text NOT NULL                 | unique index on `lower(name)` where `is_active` |
+| sort_order              | integer NOT NULL default 0    | billing screen order                            |
+| is_active               | boolean NOT NULL default true | soft delete                                     |
+| created_at / updated_at | timestamptz NOT NULL          |                                                 |
 
 ### 6.4 `items`
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| category_id | uuid NOT NULL → categories.id ON DELETE RESTRICT | |
-| name | text NOT NULL | unique index on `(category_id, lower(name))` where `is_active` |
-| price | numeric(10,2) NOT NULL | `CHECK (price >= 0)` |
-| image_url | text NULL | ImageKit URL |
-| image_file_id | text NULL | ImageKit fileId, needed to delete |
-| is_active | boolean NOT NULL default true | retired / soft-deleted |
-| is_available | boolean NOT NULL default true | temporarily sold out |
-| sort_order | integer NOT NULL default 0 | |
-| created_by | uuid NULL → users.id | |
-| created_at / updated_at | timestamptz NOT NULL | |
+| Column                  | Type                                             | Notes                                                          |
+| ----------------------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| id                      | uuid PK                                          |                                                                |
+| category_id             | uuid NOT NULL → categories.id ON DELETE RESTRICT |                                                                |
+| name                    | text NOT NULL                                    | unique index on `(category_id, lower(name))` where `is_active` |
+| price                   | numeric(10,2) NOT NULL                           | `CHECK (price >= 0)`                                           |
+| image_url               | text NULL                                        | ImageKit URL                                                   |
+| image_file_id           | text NULL                                        | ImageKit fileId, needed to delete                              |
+| is_active               | boolean NOT NULL default true                    | retired / soft-deleted                                         |
+| is_available            | boolean NOT NULL default true                    | temporarily sold out                                           |
+| sort_order              | integer NOT NULL default 0                       |                                                                |
+| created_by              | uuid NULL → users.id                             |                                                                |
+| created_at / updated_at | timestamptz NOT NULL                             |                                                                |
 
 Index: `(category_id)` where `is_active`.
 
 ### 6.5 `bills`
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| bill_number | integer NOT NULL | daily sequence, gapless |
-| business_date | date NOT NULL | shop-local date, stored not computed |
-| subtotal | numeric(10,2) NOT NULL | `CHECK >= 0` |
-| discount | numeric(10,2) NOT NULL default 0.00 | flat rupee amount, not a percentage |
-| total | numeric(10,2) NOT NULL | |
-| payment_method | payment_method NOT NULL | |
-| tendered | numeric(10,2) NULL | cash only |
-| change_due | numeric(10,2) NULL | cash only |
-| status | bill_status NOT NULL default 'COMPLETED' | |
-| voided_at | timestamptz NULL | v2 UI |
-| voided_by | uuid NULL → users.id | v2 UI |
-| void_reason | text NULL | v2 UI |
-| idempotency_key | uuid NOT NULL UNIQUE | double-submit protection |
-| created_by | uuid NOT NULL → users.id ON DELETE RESTRICT | |
-| created_at | timestamptz NOT NULL default now() | |
+| Column          | Type                                        | Notes                                |
+| --------------- | ------------------------------------------- | ------------------------------------ |
+| id              | uuid PK                                     |                                      |
+| bill_number     | integer NOT NULL                            | daily sequence, gapless              |
+| business_date   | date NOT NULL                               | shop-local date, stored not computed |
+| subtotal        | numeric(10,2) NOT NULL                      | `CHECK >= 0`                         |
+| discount        | numeric(10,2) NOT NULL default 0.00         | flat rupee amount, not a percentage  |
+| total           | numeric(10,2) NOT NULL                      |                                      |
+| payment_method  | payment_method NOT NULL                     |                                      |
+| tendered        | numeric(10,2) NULL                          | cash only                            |
+| change_due      | numeric(10,2) NULL                          | cash only                            |
+| status          | bill_status NOT NULL default 'COMPLETED'    |                                      |
+| voided_at       | timestamptz NULL                            | v2 UI                                |
+| voided_by       | uuid NULL → users.id                        | v2 UI                                |
+| void_reason     | text NULL                                   | v2 UI                                |
+| idempotency_key | uuid NOT NULL UNIQUE                        | double-submit protection             |
+| created_by      | uuid NOT NULL → users.id ON DELETE RESTRICT |                                      |
+| created_at      | timestamptz NOT NULL default now()          |                                      |
 
 Constraints:
 
@@ -276,26 +276,26 @@ Indexes: `(business_date DESC)`, `(created_at DESC)`, `(created_by)`,
 
 ### 6.6 `bill_items` — immutable snapshot
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| bill_id | uuid NOT NULL → bills.id ON DELETE RESTRICT | never cascade |
-| item_id | uuid NOT NULL → items.id ON DELETE RESTRICT | link for analytics only |
-| item_name | text NOT NULL | **snapshot** |
-| category_name | text NOT NULL | **snapshot** |
-| unit_price | numeric(10,2) NOT NULL | **snapshot** |
-| quantity | integer NOT NULL | `CHECK (quantity > 0)` |
-| line_total | numeric(10,2) NOT NULL | `CHECK (line_total = unit_price * quantity)` |
-| created_at | timestamptz NOT NULL | |
+| Column        | Type                                        | Notes                                        |
+| ------------- | ------------------------------------------- | -------------------------------------------- |
+| id            | uuid PK                                     |                                              |
+| bill_id       | uuid NOT NULL → bills.id ON DELETE RESTRICT | never cascade                                |
+| item_id       | uuid NOT NULL → items.id ON DELETE RESTRICT | link for analytics only                      |
+| item_name     | text NOT NULL                               | **snapshot**                                 |
+| category_name | text NOT NULL                               | **snapshot**                                 |
+| unit_price    | numeric(10,2) NOT NULL                      | **snapshot**                                 |
+| quantity      | integer NOT NULL                            | `CHECK (quantity > 0)`                       |
+| line_total    | numeric(10,2) NOT NULL                      | `CHECK (line_total = unit_price * quantity)` |
+| created_at    | timestamptz NOT NULL                        |                                              |
 
 Indexes: `(bill_id)`, `(item_id)`.
 
 ### 6.7 `bill_counters` — gapless numbering
 
-| Column | Type |
-|---|---|
-| business_date | date PK |
-| last_number | integer NOT NULL default 0 |
+| Column        | Type                       |
+| ------------- | -------------------------- |
+| business_date | date PK                    |
+| last_number   | integer NOT NULL default 0 |
 
 Incremented inside the same transaction as the bill insert:
 
@@ -320,18 +320,18 @@ more than parallelism.
 
 ### 6.8 `audit_log`
 
-| Column | Type |
-|---|---|
-| id | uuid PK |
-| actor_id | uuid NULL → users.id |
-| action | text NOT NULL |
-| entity_type | text NOT NULL |
-| entity_id | uuid NULL |
-| before | jsonb NULL |
-| after | jsonb NULL |
-| ip | text NULL |
-| user_agent | text NULL |
-| created_at | timestamptz NOT NULL default now() |
+| Column      | Type                               |
+| ----------- | ---------------------------------- |
+| id          | uuid PK                            |
+| actor_id    | uuid NULL → users.id               |
+| action      | text NOT NULL                      |
+| entity_type | text NOT NULL                      |
+| entity_id   | uuid NULL                          |
+| before      | jsonb NULL                         |
+| after       | jsonb NULL                         |
+| ip          | text NULL                          |
+| user_agent  | text NULL                          |
+| created_at  | timestamptz NOT NULL default now() |
 
 Logged actions: `ITEM_CREATED`, `ITEM_UPDATED`, `ITEM_PRICE_CHANGED`,
 `ITEM_DELETED`, `CATEGORY_CREATED`, `CATEGORY_UPDATED`, `CATEGORY_DELETED`,
@@ -346,27 +346,27 @@ queryable without a separate table.
 
 ### 6.9 `shop_settings` — singleton row
 
-| Column | Type | Notes |
-|---|---|---|
-| id | boolean PK default true | `CHECK (id)` — enforces a single row |
-| shop_name | text NOT NULL | |
-| address_line | text NULL | |
-| phone | text NULL | |
-| logo_url / logo_file_id | text NULL | |
-| receipt_footer | text NULL | e.g. "Thank you! Visit again" |
-| printer_width | printer_width NOT NULL default 'MM_80' | |
-| currency_code | text NOT NULL default 'INR' | |
-| timezone | text NOT NULL default 'Asia/Kolkata' | |
-| updated_by | uuid NULL → users.id | |
-| updated_at | timestamptz NOT NULL | |
+| Column                  | Type                                   | Notes                                |
+| ----------------------- | -------------------------------------- | ------------------------------------ |
+| id                      | boolean PK default true                | `CHECK (id)` — enforces a single row |
+| shop_name               | text NOT NULL                          |                                      |
+| address_line            | text NULL                              |                                      |
+| phone                   | text NULL                              |                                      |
+| logo_url / logo_file_id | text NULL                              |                                      |
+| receipt_footer          | text NULL                              | e.g. "Thank you! Visit again"        |
+| printer_width           | printer_width NOT NULL default 'MM_80' |                                      |
+| currency_code           | text NOT NULL default 'INR'            |                                      |
+| timezone                | text NOT NULL default 'Asia/Kolkata'   |                                      |
+| updated_by              | uuid NULL → users.id                   |                                      |
+| updated_at              | timestamptz NOT NULL                   |                                      |
 
 ### 6.10 Immutability triggers
 
-| Trigger | Table | Behaviour |
-|---|---|---|
-| `prevent_bill_item_mutation` | `bill_items` | `BEFORE UPDATE OR DELETE` → `RAISE EXCEPTION` |
-| `prevent_bill_delete` | `bills` | `BEFORE DELETE` → `RAISE EXCEPTION` |
-| `restrict_bill_update` | `bills` | `BEFORE UPDATE` → allow only when the changed columns are `status`, `voided_at`, `voided_by`, `void_reason`; otherwise `RAISE EXCEPTION` |
+| Trigger                      | Table        | Behaviour                                                                                                                                |
+| ---------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `prevent_bill_item_mutation` | `bill_items` | `BEFORE UPDATE OR DELETE` → `RAISE EXCEPTION`                                                                                            |
+| `prevent_bill_delete`        | `bills`      | `BEFORE DELETE` → `RAISE EXCEPTION`                                                                                                      |
+| `restrict_bill_update`       | `bills`      | `BEFORE UPDATE` → allow only when the changed columns are `status`, `voided_at`, `voided_by`, `void_reason`; otherwise `RAISE EXCEPTION` |
 
 M1 acceptance includes manually confirming each trigger actually rejects the
 operation it is supposed to reject.
@@ -396,19 +396,19 @@ a superadmin.
 
 ### 7.1 Role matrix
 
-| Capability | Admin | Superadmin |
-|---|:--:|:--:|
-| Create bills | ✓ | ✓ |
-| Reprint a bill | ✓ | ✓ |
-| Dashboard, sales report, item report, bills ledger | ✓ | ✓ |
-| CSV export of reports | ✓ | ✓ |
-| Add / edit / delete items and categories | — | ✓ |
-| Change prices | — | ✓ |
-| Toggle item availability ("sold out") | — | ✓ |
-| Manage users, reset passwords | — | ✓ |
-| Shop settings and receipt footer | — | ✓ |
-| View audit log | — | ✓ |
-| Export all data | — | ✓ |
+| Capability                                         | Admin | Superadmin |
+| -------------------------------------------------- | :---: | :--------: |
+| Create bills                                       |   ✓   |     ✓      |
+| Reprint a bill                                     |   ✓   |     ✓      |
+| Dashboard, sales report, item report, bills ledger |   ✓   |     ✓      |
+| CSV export of reports                              |   ✓   |     ✓      |
+| Add / edit / delete items and categories           |   —   |     ✓      |
+| Change prices                                      |   —   |     ✓      |
+| Toggle item availability ("sold out")              |   —   |     ✓      |
+| Manage users, reset passwords                      |   —   |     ✓      |
+| Shop settings and receipt footer                   |   —   |     ✓      |
+| View audit log                                     |   —   |     ✓      |
+| Export all data                                    |   —   |     ✓      |
 
 ### 7.2 Enforcement
 
@@ -428,8 +428,8 @@ server-side guard, regardless of what its layout does:
 
 ```ts
 // lib/auth/guard.ts
-requireUser()        // any active account, else UNAUTHORIZED
-requireSuperadmin()  // else FORBIDDEN
+requireUser(); // any active account, else UNAUTHORIZED
+requireSuperadmin(); // else FORBIDDEN
 ```
 
 Deactivated users are rejected by the guard even if they hold a valid JWT.
@@ -541,10 +541,18 @@ A dedicated route with no application shell — plain HTML, monospace font, and 
 print stylesheet:
 
 ```css
-@page { size: 80mm auto; margin: 0; }
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
 @media print {
-  body { width: 72mm; font-size: 12px; }
-  .no-print { display: none; }
+  body {
+    width: 72mm;
+    font-size: 12px;
+  }
+  .no-print {
+    display: none;
+  }
 }
 ```
 
@@ -595,14 +603,14 @@ this, "reprint" becomes an untraceable way to issue duplicate receipts.
 
 ## 10. Reports
 
-| Route | Content |
-|---|---|
-| `/` **Dashboard** | Today's total sales, bill count, average bill value, top-selling item. 7-day sales bar chart. |
-| `/reports/sales` | Date range → per-day gross, discount, net, bill count. Payment-method breakdown. CSV export. |
-| `/reports/items` | Date range → item, category, quantity sold, revenue, share of total. Sorted by revenue descending. CSV export. |
-| `/bills` | Every bill, filterable by date range, cashier, payment method and bill number. Click through to detail. |
-| `/bills/[id]` | Full bill with all lines, cashier, timestamp, and a reprint action. The auditor's view. |
-| `/manage/audit` | Superadmin only. Actor, action, entity, before → after, timestamp. Filterable. |
+| Route             | Content                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| `/` **Dashboard** | Today's total sales, bill count, average bill value, top-selling item. 7-day sales bar chart.                  |
+| `/reports/sales`  | Date range → per-day gross, discount, net, bill count. Payment-method breakdown. CSV export.                   |
+| `/reports/items`  | Date range → item, category, quantity sold, revenue, share of total. Sorted by revenue descending. CSV export. |
+| `/bills`          | Every bill, filterable by date range, cashier, payment method and bill number. Click through to detail.        |
+| `/bills/[id]`     | Full bill with all lines, cashier, timestamp, and a reprint action. The auditor's view.                        |
+| `/manage/audit`   | Superadmin only. Actor, action, entity, before → after, timestamp. Filterable.                                 |
 
 All report queries read `bill_items` **snapshot** columns and never join to
 `items` for name or price. Aggregation is done in SQL with `GROUP BY`, not in
@@ -630,12 +638,25 @@ Server actions never throw at the browser. Every action returns:
 
 ```ts
 type ActionResult<T> =
-  | { ok: true;  data: T }
-  | { ok: false; error: { code: ErrorCode; message: string; fields?: Record<string,string> } }
+  | { ok: true; data: T }
+  | {
+      ok: false;
+      error: {
+        code: ErrorCode;
+        message: string;
+        fields?: Record<string, string>;
+      };
+    };
 
 type ErrorCode =
-  | 'UNAUTHORIZED' | 'FORBIDDEN' | 'VALIDATION' | 'NOT_FOUND'
-  | 'CONFLICT' | 'PRICE_CHANGED' | 'DB_UNAVAILABLE' | 'UNKNOWN'
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "VALIDATION"
+  | "NOT_FOUND"
+  | "CONFLICT"
+  | "PRICE_CHANGED"
+  | "DB_UNAVAILABLE"
+  | "UNKNOWN";
 ```
 
 Database errors, stack traces and connection strings never reach the client.
@@ -692,7 +713,7 @@ failures raised before any statement executed**. A failed transaction is never
 blindly retried. Loading states are explicit so the UI never appears frozen.
 
 **Connection loss.** The app is online-only by decision, but `navigator.onLine`
-plus a hard failure banner — *"Offline — this bill has NOT been saved"* —
+plus a hard failure banner — _"Offline — this bill has NOT been saved"_ —
 prevents the worst outcome, which is a cashier believing a bill saved when it
 did not.
 
@@ -713,8 +734,8 @@ edit in a shadcn `Dialog`: name, category, price in rupees, image, sort order,
 availability toggle.
 
 Delete performs a **soft delete** (`is_active = false`) behind a confirmation
-that states plainly: *past bills keep this item; it disappears from the billing
-screen.* A hard delete would either orphan sales history or cascade it away.
+that states plainly: _past bills keep this item; it disappears from the billing
+screen._ A hard delete would either orphan sales history or cascade it away.
 
 Every create, update and delete writes to `audit_log` with before/after JSON.
 Price changes are recorded as `ITEM_PRICE_CHANGED` specifically.
@@ -1040,14 +1061,14 @@ functions readable in isolation.
 
 **7. Naming.**
 
-| Kind | Convention | Example |
-|---|---|---|
-| Components | PascalCase `.tsx` | `CartPanel.tsx` |
-| Feature hooks | camelCase | `useItemsTab.ts` |
-| Global hooks | kebab-case | `use-debounce.ts` |
-| `server/`, `db/`, `lib/` files | kebab-case | `create-bill-service.ts` |
-| Types | `<domain>.types.ts` | `bill.types.ts` |
-| Route folders | kebab-case | `administration/audit/` |
+| Kind                           | Convention          | Example                  |
+| ------------------------------ | ------------------- | ------------------------ |
+| Components                     | PascalCase `.tsx`   | `CartPanel.tsx`          |
+| Feature hooks                  | camelCase           | `useItemsTab.ts`         |
+| Global hooks                   | kebab-case          | `use-debounce.ts`        |
+| `server/`, `db/`, `lib/` files | kebab-case          | `create-bill-service.ts` |
+| Types                          | `<domain>.types.ts` | `bill.types.ts`          |
+| Route folders                  | kebab-case          | `administration/audit/`  |
 
 **8. Path alias** `@/*` → `src/*`, declared in `tsconfig.json`.
 
@@ -1070,19 +1091,19 @@ authenticated pages while `login/` and `print/` opt out, and the root
 
 ## 14. Environment variables
 
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | Neon pooled connection string |
-| `AUTH_SECRET` | Auth.js signing secret |
-| `AUTH_URL` | Deployment URL |
-| `IMAGEKIT_PRIVATE_KEY` | Server-side signing |
-| `IMAGEKIT_PUBLIC_KEY` | |
-| `IMAGEKIT_URL_ENDPOINT` | |
-| `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY` | Browser direct upload |
-| `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT` | Browser direct upload |
-| `SEED_SUPERADMIN_USERNAME` | Seed script only |
-| `SEED_SUPERADMIN_PASSWORD` | Seed script only |
-| `SEED_SUPERADMIN_NAME` | Seed script only |
+| Variable                            | Purpose                       |
+| ----------------------------------- | ----------------------------- |
+| `DATABASE_URL`                      | Neon pooled connection string |
+| `AUTH_SECRET`                       | Auth.js signing secret        |
+| `AUTH_URL`                          | Deployment URL                |
+| `IMAGEKIT_PRIVATE_KEY`              | Server-side signing           |
+| `IMAGEKIT_PUBLIC_KEY`               |                               |
+| `IMAGEKIT_URL_ENDPOINT`             |                               |
+| `NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY`   | Browser direct upload         |
+| `NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT` | Browser direct upload         |
+| `SEED_SUPERADMIN_USERNAME`          | Seed script only              |
+| `SEED_SUPERADMIN_PASSWORD`          | Seed script only              |
+| `SEED_SUPERADMIN_NAME`              | Seed script only              |
 
 Documented in `.env.template`. Real values are never committed.
 
@@ -1090,16 +1111,16 @@ Documented in `.env.template`. Real values are never committed.
 
 ## 15. Milestones
 
-| # | Milestone | Estimate |
-|---|---|---|
-| **M0** | Scaffold: Next.js + TS strict, Tailwind, shadcn, Netlify config, Neon project, Drizzle with WebSocket driver. **Deploy a blank page first** to prove the pipeline before writing features. | ½ day |
-| **M1** | Full schema, migrations, immutability triggers, indexes, seed script. Manually verify each trigger rejects what it should. | 1 day |
-| **M2** | Login page, Auth.js credentials, JWT session, middleware, role guards, lockout, logout, app shell with role-aware navigation. | 1 day |
-| **M3** | **Billing and printing** — menu grid, search, cart, discount, payment, the `createBill` transaction (gapless, idempotent), `/print/[billId]` with 80mm CSS, auto-print, reset. *First client demo.* | 2–3 days |
-| **M4** | Item and category management, soft delete, ImageKit signed direct upload, audit logging on every mutation. | 1–2 days |
-| **M5** | Dashboard, sales report, item-wise report, bills ledger, bill detail, reprint, CSV export, charts. | 2 days |
-| **M6** | User management, password reset, shop settings, audit log viewer, export-all-data. | 1 day |
-| **M7** | Empty/loading/error states, mobile pass, `printer-setup.md`, `deployment.md`, seed the client's real menu, walkthrough. | 1 day |
+| #      | Milestone                                                                                                                                                                                           | Estimate |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **M0** | Scaffold: Next.js + TS strict, Tailwind, shadcn, Netlify config, Neon project, Drizzle with WebSocket driver. **Deploy a blank page first** to prove the pipeline before writing features.          | ½ day    |
+| **M1** | Full schema, migrations, immutability triggers, indexes, seed script. Manually verify each trigger rejects what it should.                                                                          | 1 day    |
+| **M2** | Login page, Auth.js credentials, JWT session, middleware, role guards, lockout, logout, app shell with role-aware navigation.                                                                       | 1 day    |
+| **M3** | **Billing and printing** — menu grid, search, cart, discount, payment, the `createBill` transaction (gapless, idempotent), `/print/[billId]` with 80mm CSS, auto-print, reset. _First client demo._ | 2–3 days |
+| **M4** | Item and category management, soft delete, ImageKit signed direct upload, audit logging on every mutation.                                                                                          | 1–2 days |
+| **M5** | Dashboard, sales report, item-wise report, bills ledger, bill detail, reprint, CSV export, charts.                                                                                                  | 2 days   |
+| **M6** | User management, password reset, shop settings, audit log viewer, export-all-data.                                                                                                                  | 1 day    |
+| **M7** | Empty/loading/error states, mobile pass, `printer-setup.md`, `deployment.md`, seed the client's real menu, walkthrough.                                                                             | 1 day    |
 
 **Total: approximately 10–12 working days**, one developer, executed serially.
 

@@ -1,7 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,17 +38,18 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Shop settings</h1>
-        <p className="text-muted-foreground text-sm">
-          These appear on every printed receipt.
-        </p>
-      </div>
+      <PageHeader
+        title="Shop settings"
+        description="These appear on every printed receipt."
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Details</CardTitle>
+            <CardDescription>
+              Your shop name also appears in the sidebar.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -63,7 +71,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                   }
                 />
                 {fieldErrors.shopName ? (
-                  <p className="text-destructive text-sm">
+                  <p className="text-sm text-destructive">
                     {fieldErrors.shopName}
                   </p>
                 ) : null}
@@ -104,7 +112,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     setForm({ ...form, receiptFooter: event.target.value })
                   }
                 />
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   The thank-you line at the bottom of every receipt.
                 </p>
               </div>
@@ -119,7 +127,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                       setForm({ ...form, printerWidth: value as PrinterWidth })
                     }
                   >
-                    <SelectTrigger id="shop-printer">
+                    <SelectTrigger id="shop-printer" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -144,19 +152,19 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     }
                   />
                   {fieldErrors.timezone ? (
-                    <p className="text-destructive text-sm">
+                    <p className="text-sm text-destructive">
                       {fieldErrors.timezone}
                     </p>
                   ) : null}
                 </div>
               </div>
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Changing the timezone affects which day future bills are counted
                 against. Bills already issued keep the date they were given.
               </p>
 
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" size="lg" disabled={isPending}>
                 {isPending ? "Saving…" : "Save settings"}
               </Button>
             </form>

@@ -176,7 +176,11 @@ async function main() {
     SELECT item_name, category_name, unit_price, quantity, line_total
     FROM bill_items WHERE bill_id = ${result.data.id}::uuid
     ORDER BY item_name`);
-  check("two snapshot lines written", linesRow.rows.length === 2, linesRow.rows);
+  check(
+    "two snapshot lines written",
+    linesRow.rows.length === 2,
+    linesRow.rows,
+  );
   console.table(linesRow.rows);
 
   check(

@@ -34,7 +34,9 @@ export function CreateUpdateCategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{form.id ? "Edit category" : "New category"}</DialogTitle>
+          <DialogTitle>
+            {form.id ? "Edit category" : "New category"}
+          </DialogTitle>
         </DialogHeader>
 
         <form
@@ -57,7 +59,7 @@ export function CreateUpdateCategoryDialog({
               }
             />
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -76,11 +78,13 @@ export function CreateUpdateCategoryDialog({
                 }
               }}
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Lower numbers appear first on the billing screen.
             </p>
             {fieldErrors.sortOrder ? (
-              <p className="text-destructive text-sm">{fieldErrors.sortOrder}</p>
+              <p className="text-sm text-destructive">
+                {fieldErrors.sortOrder}
+              </p>
             ) : null}
           </div>
 

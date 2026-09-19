@@ -17,7 +17,7 @@ export function OfflineBanner() {
   return (
     <div
       role="alert"
-      className="bg-destructive text-destructive-foreground flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold"
+      className="flex items-center justify-center gap-2 bg-destructive px-4 py-2.5 text-sm font-semibold text-white"
     >
       <WifiOff className="size-4 shrink-0" />
       No internet connection — bills CANNOT be saved right now.

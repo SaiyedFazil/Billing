@@ -1,4 +1,8 @@
-import { businessDate, formatBillDate, formatBillTime } from "../src/lib/utils/dates";
+import {
+  businessDate,
+  formatBillDate,
+  formatBillTime,
+} from "../src/lib/utils/dates";
 import {
   add,
   billTotal,
@@ -93,11 +97,7 @@ console.log("\n--- comparison ---");
 check("compare equal", compare("60.50", "60.50"), 0);
 check("compare less", compare("60.49", "60.50"), -1);
 check("compare greater", compare("60.51", "60.50"), 1);
-check(
-  "compare ignores trailing-zero differences",
-  compare("60.5", "60.50"),
-  0,
-);
+check("compare ignores trailing-zero differences", compare("60.5", "60.50"), 0);
 check("isZero true", isZero("0.00"), true);
 check("isZero false", isZero("0.01"), false);
 

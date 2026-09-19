@@ -83,8 +83,8 @@ export function ItemImageUploader({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-md border">
+    <div className="flex items-center gap-4">
+      <div className="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-dashed bg-muted/60">
         {imageUrl ? (
           <Image
             src={thumbnailUrl(imageUrl, 160)}
@@ -94,12 +94,12 @@ export function ItemImageUploader({
             className="object-cover"
           />
         ) : (
-          <div className="text-muted-foreground flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <ImagePlus className="size-5" />
           </div>
         )}
         {isUploading ? (
-          <div className="bg-background/70 absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70">
             <Loader2 className="size-5 animate-spin" />
           </div>
         ) : null}
@@ -137,7 +137,7 @@ export function ItemImageUploader({
             Remove
           </Button>
         ) : null}
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           JPG, PNG or WebP. Max 5 MB.
         </p>
       </div>

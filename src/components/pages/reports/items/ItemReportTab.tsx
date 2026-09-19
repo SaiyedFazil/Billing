@@ -1,6 +1,10 @@
 "use client";
 
+import { Flame } from "lucide-react";
+
+import { TableCard } from "@/components/custom/TableCard";
 import { TableEmptyState } from "@/components/custom/TableEmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Table,
   TableBody,
@@ -14,7 +18,11 @@ import type { ItemSalesRow } from "@/types/report.types";
 
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { ReportDateRangeBar } from "../components/ReportDateRangeBar";
-import { ITEM_REPORT_HEADERS, ItemReportRow } from "./ItemReportColumns";
+import {
+  ITEM_REPORT_HEADERS,
+  ITEM_REPORT_NUMERIC,
+  ItemReportRow,
+} from "./ItemReportColumns";
 
 export function ItemReportTab({
   from,
@@ -29,46 +37,53 @@ export function ItemReportTab({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">What is selling</h1>
-          <p className="text-muted-foreground text-sm">
-            Ranked by revenue. Names and prices are as they were at the time of
-            sale.
-          </p>
-        </div>
-        <ExportCsvButton
-          filename={`items-${from}-to-${to}.csv`}
-          onExport={() => exportItemsCsvAction({ from, to })}
-          disabled={rows.length === 0}
-        />
-      </div>
+      <PageHeader
+        title="What's selling"
+        description="Ranked by revenue. Names and prices are as they were at the time of sale."
+        actions={
+          <ExportCsvButton
+            filename={`items-${from}-to-${to}.csv`}
+            onExport={() => exportItemsCsvAction({ from, to })}
+            disabled={rows.length === 0}
+          />
+        }
+      />
 
       <ReportDateRangeBar from={from} to={to} presets={presets} />
 
       {rows.length === 0 ? (
         <TableEmptyState
+          icon={Flame}
           title="No sales in this range"
           description="Try a wider date range."
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {ITEM_REPORT_HEADERS.map((header) => (
-                <TableHead key={header}>{header}</TableHead>
+        <TableCard>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {ITEM_REPORT_HEADERS.map((header) => (
+                  <TableHead
+                    key={header}
+                    className={
+                      ITEM_REPORT_NUMERIC.has(header) ? "text-right" : ""
+                    }
+                  >
+                    {header}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <ItemReportRow
+                  key={`${row.categoryName}-${row.itemName}`}
+                  row={row}
+                />
               ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <ItemReportRow
-                key={`${row.categoryName}-${row.itemName}`}
-                row={row}
-              />
-            ))}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </TableCard>
       )}
     </div>
   );

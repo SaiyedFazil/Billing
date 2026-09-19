@@ -14,6 +14,8 @@ import {
   PAYMENT_METHODS,
 } from "@/constants/payment-methods";
 
+const FIELD_LABEL = "text-muted-foreground text-xs font-semibold";
+
 export function BillsTableToolbar({
   from,
   to,
@@ -34,9 +36,9 @@ export function BillsTableToolbar({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1">
-        <Label htmlFor="bills-from" className="text-xs font-normal">
+    <div className="flex flex-wrap items-end gap-3 rounded-[20px] border bg-card p-4 shadow-card">
+      <div className="space-y-1.5">
+        <Label htmlFor="bills-from" className={FIELD_LABEL}>
           From
         </Label>
         <Input
@@ -48,8 +50,8 @@ export function BillsTableToolbar({
           onChange={(event) => onFilterChange("from", event.target.value)}
         />
       </div>
-      <div className="space-y-1">
-        <Label htmlFor="bills-to" className="text-xs font-normal">
+      <div className="space-y-1.5">
+        <Label htmlFor="bills-to" className={FIELD_LABEL}>
           To
         </Label>
         <Input
@@ -62,8 +64,8 @@ export function BillsTableToolbar({
         />
       </div>
 
-      <div className="space-y-1">
-        <Label className="text-xs font-normal">Cashier</Label>
+      <div className="space-y-1.5">
+        <Label className={FIELD_LABEL}>Cashier</Label>
         <Select
           value={cashierId || "ALL"}
           disabled={disabled}
@@ -83,14 +85,14 @@ export function BillsTableToolbar({
         </Select>
       </div>
 
-      <div className="space-y-1">
-        <Label className="text-xs font-normal">Payment</Label>
+      <div className="space-y-1.5">
+        <Label className={FIELD_LABEL}>Payment</Label>
         <Select
           value={paymentMethod || "ALL"}
           disabled={disabled}
           onValueChange={(value) => onFilterChange("paymentMethod", value)}
         >
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -104,8 +106,8 @@ export function BillsTableToolbar({
         </Select>
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="bills-number" className="text-xs font-normal">
+      <div className="space-y-1.5">
+        <Label htmlFor="bills-number" className={FIELD_LABEL}>
           Bill #
         </Label>
         <Input
@@ -113,7 +115,7 @@ export function BillsTableToolbar({
           inputMode="numeric"
           value={billNumber}
           placeholder="Any"
-          className="w-24"
+          className="w-28 font-mono"
           disabled={disabled}
           onChange={(event) => {
             const next = event.target.value;

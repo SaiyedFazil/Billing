@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { ROLE_LABELS } from "@/constants/roles";
+import { cn } from "@/lib/utils";
+import { initials } from "@/lib/utils/initials";
 import type { UserRow } from "@/types/user.types";
 
 export const USER_HEADERS = [
@@ -35,13 +37,31 @@ export function UserTableRow({
 
   return (
     <TableRow className={row.isActive ? "" : "opacity-60"}>
-      <TableCell className="font-medium">
-        {row.name}
-        {isSelf ? (
-          <span className="text-muted-foreground ml-2 text-xs">(you)</span>
-        ) : null}
+      <TableCell>
+        <span className="flex items-center gap-3">
+          <span
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+              row.role === "SUPERADMIN"
+                ? "bg-sidebar text-[#ffb79e]"
+                : "bg-muted text-foreground/80",
+            )}
+          >
+            {initials(row.name)}
+          </span>
+          <span className="font-semibold">
+            {row.name}
+            {isSelf ? (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                (you)
+              </span>
+            ) : null}
+          </span>
+        </span>
       </TableCell>
-      <TableCell className="font-mono text-sm">{row.username}</TableCell>
+      <TableCell className="font-mono text-[13px] text-foreground/80">
+        {row.username}
+      </TableCell>
       <TableCell>
         <Badge variant={row.role === "SUPERADMIN" ? "default" : "secondary"}>
           {ROLE_LABELS[row.role]}
@@ -52,9 +72,13 @@ export function UserTableRow({
         {!row.isActive ? (
           <Badge variant="outline">Deactivated</Badge>
         ) : isLocked ? (
-          <Badge variant="destructive">Locked</Badge>
+          <Badge variant="warning" dot>
+            Locked
+          </Badge>
         ) : (
-          <Badge variant="secondary">Active</Badge>
+          <Badge variant="success" dot>
+            Active
+          </Badge>
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -75,9 +99,14 @@ export function UserTableRow({
             row.isActive ? `Deactivate ${row.name}` : `Reactivate ${row.name}`
           }
           onClick={() => onToggle(row)}
+          className={
+            row.isActive
+              ? "text-destructive hover:bg-destructive-soft hover:text-destructive"
+              : "text-success hover:bg-success-soft hover:text-success"
+          }
         >
           {row.isActive ? (
-            <UserX className="text-destructive size-4" />
+            <UserX className="size-4" />
           ) : (
             <UserCheck className="size-4" />
           )}

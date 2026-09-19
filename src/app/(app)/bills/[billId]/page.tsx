@@ -29,8 +29,12 @@ export default async function Page({ params }: PageProps<"/bills/[billId]">) {
   if (!receipt || !statusRow) notFound();
 
   return (
-    <Container className="py-6">
-      <BillDetails billId={billId} receipt={receipt} status={statusRow.status} />
+    <Container>
+      <BillDetails
+        billId={billId}
+        receipt={receipt}
+        status={statusRow.status}
+      />
     </Container>
   );
 }

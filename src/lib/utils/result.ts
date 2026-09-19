@@ -20,8 +20,7 @@ export type ActionError = {
  * never leak a stack trace, SQL, or a connection string. See spec §11.1.
  */
 export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: ActionError };
+  { ok: true; data: T } | { ok: false; error: ActionError };
 
 export function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };

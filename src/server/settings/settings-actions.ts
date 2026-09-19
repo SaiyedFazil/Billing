@@ -62,6 +62,8 @@ export async function updateSettingsAction(
     revalidatePath(ADMIN_ROUTES.settings);
     // Every receipt renders these values.
     revalidatePath("/print", "layout");
+    // The sidebar shows the shop name on every page.
+    revalidatePath("/", "layout");
     return ok(null);
   });
 }

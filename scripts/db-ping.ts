@@ -4,7 +4,9 @@ import { db } from "../src/db";
 
 async function main() {
   const started = Date.now();
-  const result = await db.execute(sql`select now() as now, version() as version`);
+  const result = await db.execute(
+    sql`select now() as now, version() as version`,
+  );
   const row = result.rows[0] as { now: string; version: string };
 
   console.log("Connected in", Date.now() - started, "ms");

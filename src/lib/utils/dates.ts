@@ -23,6 +23,22 @@ export function formatBillDate(businessDateIso: string): string {
   return `${day}/${month}/${year.slice(2)}`;
 }
 
+/**
+ * "2026-09-19" -> "Saturday 19 September", for page headers.
+ *
+ * Built from the calendar parts at UTC midnight and formatted in UTC, so the
+ * browser's own timezone can never shift it to the previous day.
+ */
+export function formatLongDate(businessDateIso: string): string {
+  const [year, month, day] = businessDateIso.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 /** 24-hour clock in the shop's timezone, for the receipt header. */
 export function formatBillTime(at: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {

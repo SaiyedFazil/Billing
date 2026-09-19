@@ -4,7 +4,10 @@ let failures = 0;
 
 function report(label: string, pass: boolean, detail?: unknown) {
   if (!pass) failures += 1;
-  console.log(`${pass ? "PASS" : "FAIL"} — ${label}`, pass ? "" : (detail ?? ""));
+  console.log(
+    `${pass ? "PASS" : "FAIL"} — ${label}`,
+    pass ? "" : (detail ?? ""),
+  );
 }
 
 async function main() {
@@ -25,12 +28,18 @@ async function main() {
   try {
     await withConnectionRetry(async () => {
       attempts += 1;
-      throw Object.assign(new Error("connection reset"), { code: "ECONNRESET" });
+      throw Object.assign(new Error("connection reset"), {
+        code: "ECONNRESET",
+      });
     }, 10);
   } catch {
     /* expected */
   }
-  report("connection errors retried once", attempts === 2, `attempts=${attempts}`);
+  report(
+    "connection errors retried once",
+    attempts === 2,
+    `attempts=${attempts}`,
+  );
 
   // A retry that succeeds must return the value, not throw.
   attempts = 0;

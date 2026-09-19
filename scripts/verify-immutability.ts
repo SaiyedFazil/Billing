@@ -76,17 +76,25 @@ async function main() {
 
   // --- teardown --------------------------------------------------------
   // The triggers block our own cleanup, so disable them for the teardown only.
-  await db.execute(sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
   await db.execute(sql`DELETE FROM bill_items WHERE bill_id = ${billId}::uuid`);
   await db.execute(sql`DELETE FROM bills WHERE id = ${billId}::uuid`);
-  await db.execute(sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
-  await db.execute(sql`DELETE FROM items WHERE name = 'Immutability Probe Item'`);
+  await db.execute(
+    sql`DELETE FROM items WHERE name = 'Immutability Probe Item'`,
+  );
   await db.execute(
     sql`DELETE FROM categories WHERE name = 'Immutability Probe Category'`,
   );
-  await db.execute(sql`DELETE FROM users WHERE username = 'immutability-probe'`);
+  await db.execute(
+    sql`DELETE FROM users WHERE username = 'immutability-probe'`,
+  );
 
   console.log(
     failures === 0

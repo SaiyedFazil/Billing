@@ -38,15 +38,15 @@ Every task's requirements implicitly include this section. These are the same ru
 
 These are established, not guesses — they came out of building M0–M3.
 
-| Fact | Consequence |
-|---|---|
-| **Next.js 16.3.3** | Middleware is `src/proxy.ts`. Page props are `PageProps<"/route">`, layouts `LayoutProps<"/route">`. `params` and `searchParams` are **Promises** — `await` them. |
-| **Tailwind v4** | No `tailwind.config.ts`. Theme tokens live in `src/app/globals.css`. |
-| **Zod 4** | Use `z.uuid()`, `z.email()` — not the deprecated `z.string().uuid()`. `error.issues` is still correct. |
-| **Auth.js v5 beta** | JWT augmentation must target `@auth/core/jwt` as well as `next-auth/jwt`. Already done in `src/types/next-auth.d.ts`. |
-| **`db` is a lazy Proxy** | It connects on first property access. Do not add a top-level `DATABASE_URL` check to any module. |
-| **drizzle-orm 0.45.2** | `check()` is available from `drizzle-orm/pg-core`. Table callbacks return an **array**, not an object. |
-| **Migration chain** | `0001_immutability_triggers.sql` is hand-written with a matching `meta/0001_snapshot.json`. If you add a migration, `db:generate` produces `0002_*`. Never delete either 0001 file. |
+| Fact                     | Consequence                                                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Next.js 16.3.3**       | Middleware is `src/proxy.ts`. Page props are `PageProps<"/route">`, layouts `LayoutProps<"/route">`. `params` and `searchParams` are **Promises** — `await` them.                   |
+| **Tailwind v4**          | No `tailwind.config.ts`. Theme tokens live in `src/app/globals.css`.                                                                                                                |
+| **Zod 4**                | Use `z.uuid()`, `z.email()` — not the deprecated `z.string().uuid()`. `error.issues` is still correct.                                                                              |
+| **Auth.js v5 beta**      | JWT augmentation must target `@auth/core/jwt` as well as `next-auth/jwt`. Already done in `src/types/next-auth.d.ts`.                                                               |
+| **`db` is a lazy Proxy** | It connects on first property access. Do not add a top-level `DATABASE_URL` check to any module.                                                                                    |
+| **drizzle-orm 0.45.2**   | `check()` is available from `drizzle-orm/pg-core`. Table callbacks return an **array**, not an object.                                                                              |
+| **Migration chain**      | `0001_immutability_triggers.sql` is hand-written with a matching `meta/0001_snapshot.json`. If you add a migration, `db:generate` produces `0002_*`. Never delete either 0001 file. |
 
 ### What already exists
 
@@ -54,26 +54,62 @@ Do not rebuild these. Import them.
 
 ```ts
 // Auth & results
-import { guarded, requireUser, requireSuperadmin, type SessionUser } from "@/lib/auth/guard";
+import {
+  guarded,
+  requireUser,
+  requireSuperadmin,
+  type SessionUser,
+} from "@/lib/auth/guard";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 
 // Money & dates
-import { parseRupees, formatINR, formatReceiptAmount, lineTotal, billTotal } from "@/lib/utils/money";
-import { businessDate, formatBillDate, formatBillTime } from "@/lib/utils/dates";
+import {
+  parseRupees,
+  formatINR,
+  formatReceiptAmount,
+  lineTotal,
+  billTotal,
+} from "@/lib/utils/money";
+import {
+  businessDate,
+  formatBillDate,
+  formatBillTime,
+} from "@/lib/utils/dates";
 
 // Data
 import { db } from "@/db";
 import { withConnectionRetry } from "@/db/with-connection-retry";
-import { users, categories, items, bills, billItems, billCounters, auditLog, shopSettings } from "@/db/schema";
+import {
+  users,
+  categories,
+  items,
+  bills,
+  billItems,
+  billCounters,
+  auditLog,
+  shopSettings,
+} from "@/db/schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
-import { getShopSettings, getShopTimezone } from "@/server/settings/settings-queries";
+import {
+  getShopSettings,
+  getShopTimezone,
+} from "@/server/settings/settings-queries";
 import { getMenu } from "@/server/items/items-queries";
 
 // Constants
 import { ROLES, ROLE_LABELS, type Role } from "@/constants/roles";
-import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, collectsTender, type PaymentMethod } from "@/constants/payment-methods";
-import { AUDIT_ACTIONS, AUDIT_ACTION_LABELS, type AuditAction } from "@/constants/audit-actions";
+import {
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+  collectsTender,
+  type PaymentMethod,
+} from "@/constants/payment-methods";
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ACTION_LABELS,
+  type AuditAction,
+} from "@/constants/audit-actions";
 
 // UI
 import { MoneyInput } from "@/components/custom/MoneyInput";
@@ -87,6 +123,7 @@ shadcn components already installed: `alert badge button card dialog dropdown-me
 ## File Structure
 
 **Shared primitives (Task 1)**
+
 - `src/components/custom/ConfirmDialog.tsx` — one destructive-confirmation dialog, used by every delete/deactivate flow
 - `src/components/custom/TableEmptyState.tsx`, `TableErrorState.tsx`
 - `src/hooks/use-debounce.ts`, `use-url-pagination.ts`
@@ -94,24 +131,28 @@ shadcn components already installed: `alert badge button card dialog dropdown-me
 - `src/app/(app)/administration/layout.tsx` — the `requireSuperadmin()` gate for every admin page
 
 **Categories (Tasks 2–3)** · **ImageKit (Task 4)** · **Items (Tasks 5–6)**
+
 - `src/server/categories/{categories-queries,categories-actions}.ts`
 - `src/lib/storage/{index,imagekit}.ts` — the swappable adapter from spec §4.5
 - `src/server/items/items-actions.ts` (new), `items-queries.ts` (extended)
 - `src/components/pages/administration/{categories,items}/…`
 
 **Reports (Tasks 7–14)**
+
 - `src/lib/utils/csv.ts`, `src/lib/utils/date-range.ts`
 - `src/server/reports/reports-queries.ts` — all aggregation, all in SQL
 - `src/server/bills/bills-queries.ts` (extended: ledger + detail)
 - `src/components/pages/{dashboard,bills,reports}/…`
 
 **Users, settings, audit (Tasks 15–19)**
+
 - `src/server/users/{users-queries,users-actions}.ts`
 - `src/server/settings/settings-actions.ts`
 - `src/server/audit/audit-queries.ts`
 - `src/components/pages/administration/{users,settings,audit}/…`
 
 **Handover (Tasks 20–21)**
+
 - `src/components/layout/AppNavbar.tsx` (extended: role-aware links)
 - `scripts/reset-bills.ts`, `scripts/seed-real-menu.ts`
 
@@ -122,12 +163,14 @@ shadcn components already installed: `alert badge button card dialog dropdown-me
 ### Task 1: Admin shell and shared primitives
 
 **Files:**
+
 - Create: `src/app/(app)/administration/layout.tsx`
 - Create: `src/components/custom/ConfirmDialog.tsx`, `TableEmptyState.tsx`, `TableErrorState.tsx`
 - Create: `src/hooks/use-debounce.ts`, `src/hooks/use-url-pagination.ts`
 - Create: `src/lib/routes/administration-routes.ts`, `src/lib/routes/report-routes.ts`
 
 **Interfaces:**
+
 - Consumes: `requireSuperadmin`, `Container`
 - Produces:
   - `<ConfirmDialog open onOpenChange title description confirmLabel onConfirm isPending variant />`
@@ -257,7 +300,7 @@ export function ConfirmDialog({
             }}
             className={cn(
               destructive &&
-                "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                "text-destructive-foreground bg-destructive hover:bg-destructive/90",
             )}
           >
             {isPending ? "Working…" : confirmLabel}
@@ -287,7 +330,7 @@ export function TableEmptyState({
     <div className="flex flex-col items-center gap-2 py-12 text-center">
       <p className="font-medium">{title}</p>
       {description ? (
-        <p className="text-muted-foreground max-w-sm text-sm">{description}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
       ) : null}
       {action ? <div className="pt-2">{action}</div> : null}
     </div>
@@ -313,8 +356,8 @@ export function TableErrorState({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <AlertCircle className="text-destructive size-6" />
-      <p className="text-destructive max-w-sm text-sm">{message}</p>
+      <AlertCircle className="size-6 text-destructive" />
+      <p className="max-w-sm text-sm text-destructive">{message}</p>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry}>
           Try again
@@ -369,7 +412,8 @@ export function useUrlPagination() {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1) || 1);
   const pageSize = Math.max(
     1,
-    Number(searchParams.get("pageSize") ?? DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE,
+    Number(searchParams.get("pageSize") ?? DEFAULT_PAGE_SIZE) ||
+      DEFAULT_PAGE_SIZE,
   );
 
   const push = useCallback(
@@ -440,11 +484,13 @@ Task 20 replaces that raw error with a proper 403 page. Leaving it ugly until th
 ### Task 2: Category queries and actions
 
 **Files:**
+
 - Create: `src/server/categories/categories-queries.ts`, `categories-actions.ts`
 - Create: `src/lib/validation/category-schema.ts`
 - Create: `src/types/category.types.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, `categories`, `items`, `guarded`, `requireSuperadmin`, `writeAuditLog`, `withConnectionRetry`
 - Produces:
   - `listCategories(): Promise<CategoryRow[]>` where `CategoryRow = { id, name, sortOrder, isActive, itemCount }`
@@ -613,9 +659,13 @@ export async function createCategoryAction(
     }
 
     if (await nameIsTaken(parsed.data.name)) {
-      return fail<{ id: string }>("CONFLICT", "A category with that name already exists.", {
-        name: "Already in use",
-      });
+      return fail<{ id: string }>(
+        "CONFLICT",
+        "A category with that name already exists.",
+        {
+          name: "Already in use",
+        },
+      );
     }
 
     const [created] = await db
@@ -661,9 +711,13 @@ export async function updateCategoryAction(
     }
 
     if (await nameIsTaken(values.name, id)) {
-      return fail<null>("CONFLICT", "A category with that name already exists.", {
-        name: "Already in use",
-      });
+      return fail<null>(
+        "CONFLICT",
+        "A category with that name already exists.",
+        {
+          name: "Already in use",
+        },
+      );
     }
 
     await db
@@ -753,7 +807,9 @@ function check(label: string, condition: boolean, detail?: unknown) {
 async function main() {
   // Soft delete must hide the row from the active unique index, so the same
   // name can be reused afterwards.
-  await db.execute(sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`,
+  );
 
   const [created] = await db
     .insert(categories)
@@ -783,10 +839,14 @@ async function main() {
     );
   check("only one ACTIVE row holds that name", rows.length === 1, rows);
 
-  await db.execute(sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name = 'Soft Delete Probe'`,
+  );
 
   console.log(
-    failures === 0 ? "\nAll category checks passed." : `\n${failures} FAILURE(S)`,
+    failures === 0
+      ? "\nAll category checks passed."
+      : `\n${failures} FAILURE(S)`,
   );
   process.exit(failures === 0 ? 0 : 1);
 }
@@ -810,12 +870,14 @@ Expected: two `PASS` lines. This proves the partial unique index from M1 does wh
 ### Task 3: Category management UI
 
 **Files:**
+
 - Create: `src/components/pages/administration/categories/CategoriesTab.tsx`, `CategoriesColumns.tsx`
 - Create: `src/components/pages/administration/categories/create-update-category-dialog/CreateUpdateCategoryDialog.tsx`
 - Create: `src/components/pages/administration/categories/hooks/useCategoriesTab.ts`
 - Modify: `src/app/(app)/administration/categories/page.tsx` (create)
 
 **Interfaces:**
+
 - Consumes: `listCategories`, the three category actions, `ConfirmDialog`, `TableEmptyState`
 - Produces: a working `/administration/categories` route
 
@@ -973,7 +1035,7 @@ export function CategoryTableRow({
           aria-label={`Remove ${row.name}`}
           onClick={() => onDelete(row)}
         >
-          <Trash2 className="text-destructive size-4" />
+          <Trash2 className="size-4 text-destructive" />
         </Button>
       </TableCell>
     </TableRow>
@@ -1047,7 +1109,7 @@ export function CreateUpdateCategoryDialog({
               }
             />
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -1066,11 +1128,13 @@ export function CreateUpdateCategoryDialog({
                 }
               }}
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Lower numbers appear first on the billing screen.
             </p>
             {fieldErrors.sortOrder ? (
-              <p className="text-destructive text-sm">{fieldErrors.sortOrder}</p>
+              <p className="text-sm text-destructive">
+                {fieldErrors.sortOrder}
+              </p>
             ) : null}
           </div>
 
@@ -1127,7 +1191,7 @@ export function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Categories</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Groups the billing screen uses for its tabs.
           </p>
         </div>
@@ -1150,7 +1214,9 @@ export function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
               {CATEGORY_HEADERS.map((header, index) => (
                 <TableHead
                   key={header || `actions-${index}`}
-                  className={index === CATEGORY_HEADERS.length - 1 ? "text-right" : ""}
+                  className={
+                    index === CATEGORY_HEADERS.length - 1 ? "text-right" : ""
+                  }
                 >
                   {header}
                 </TableHead>
@@ -1245,10 +1311,12 @@ npx tsc --noEmit && npm run lint
 ### Task 4: ImageKit storage adapter
 
 **Files:**
+
 - Create: `src/lib/storage/index.ts`, `src/lib/storage/imagekit.ts`
 - Create: `src/server/items/upload-token-action.ts`
 
 **Interfaces:**
+
 - Consumes: `guarded`, `requireSuperadmin`, ImageKit env vars from `.env.local`
 - Produces:
   - `getUploadAuth(): { token, expire, signature, publicKey, urlEndpoint }`
@@ -1378,7 +1446,9 @@ import { type ActionResult, ok } from "@/lib/utils/result";
  * Only a superadmin can obtain an upload token — otherwise anyone signed in
  * could push files into the shop's ImageKit account.
  */
-export async function getUploadTokenAction(): Promise<ActionResult<UploadAuth>> {
+export async function getUploadTokenAction(): Promise<
+  ActionResult<UploadAuth>
+> {
   return guarded(async () => {
     await requireSuperadmin();
     return ok(getUploadAuth());
@@ -1448,7 +1518,9 @@ async function main() {
   );
 
   console.log(
-    failures === 0 ? "\nAll ImageKit checks passed." : `\n${failures} FAILURE(S)`,
+    failures === 0
+      ? "\nAll ImageKit checks passed."
+      : `\n${failures} FAILURE(S)`,
   );
   process.exit(failures === 0 ? 0 : 1);
 }
@@ -1476,12 +1548,14 @@ Expected: six `PASS` lines. The last one is a real network call — if it return
 ### Task 5: Item queries and actions
 
 **Files:**
+
 - Create: `src/server/items/items-actions.ts`
 - Modify: `src/server/items/items-queries.ts` (append `listItemsForAdmin`)
 - Create: `src/lib/validation/item-schema.ts`
 - Modify: `src/types/item.types.ts` (append `AdminItemRow`)
 
 **Interfaces:**
+
 - Consumes: `db`, `items`, `categories`, `guarded`, `requireSuperadmin`, `writeAuditLog`, `deleteFile`, `parseRupees`
 - Produces:
   - `listItemsForAdmin(): Promise<AdminItemRow[]>`
@@ -1530,7 +1604,10 @@ export const itemSchema = z.object({
     .string()
     .trim()
     .regex(/^\d+(\.\d{1,2})?$/, "Price must be an amount like 60.50")
-    .refine((value) => Number(value) <= 100_000, "Price is unrealistically high"),
+    .refine(
+      (value) => Number(value) <= 100_000,
+      "Price is unrealistically high",
+    ),
   imageUrl: z.url("Invalid image URL").nullable(),
   imageFileId: z.string().min(1).nullable(),
   isAvailable: z.boolean(),
@@ -1658,9 +1735,13 @@ export async function createItemAction(
     }
 
     if (!(await categoryIsActive(parsed.data.categoryId))) {
-      return fail<{ id: string }>("CONFLICT", "That category no longer exists.", {
-        categoryId: "Choose another category",
-      });
+      return fail<{ id: string }>(
+        "CONFLICT",
+        "That category no longer exists.",
+        {
+          categoryId: "Choose another category",
+        },
+      );
     }
 
     if (await nameIsTaken(parsed.data.categoryId, parsed.data.name)) {
@@ -1765,7 +1846,11 @@ export async function updateItemAction(
         await deleteFile(before.imageFileId);
       } catch (error) {
         // A stale file costs a few KB. Never fail the save over it.
-        console.error("Failed to delete replaced image", before.imageFileId, error);
+        console.error(
+          "Failed to delete replaced image",
+          before.imageFileId,
+          error,
+        );
       }
     }
 
@@ -1875,7 +1960,11 @@ async function main() {
 
   const [created] = await db
     .insert(items)
-    .values({ categoryId: category.id, name: "Audit Probe Item", price: "50.00" })
+    .values({
+      categoryId: category.id,
+      name: "Audit Probe Item",
+      price: "50.00",
+    })
     .returning({ id: items.id });
 
   // Simulate what updateItemAction does on a price change.
@@ -1906,14 +1995,23 @@ async function main() {
   );
 
   // Soft delete must free the name within the category.
-  await db.update(items).set({ isActive: false }).where(eq(items.id, created.id));
+  await db
+    .update(items)
+    .set({ isActive: false })
+    .where(eq(items.id, created.id));
   const [reused] = await db
     .insert(items)
-    .values({ categoryId: category.id, name: "Audit Probe Item", price: "1.00" })
+    .values({
+      categoryId: category.id,
+      name: "Audit Probe Item",
+      price: "1.00",
+    })
     .returning({ id: items.id });
   check("a retired item's name can be reused", Boolean(reused?.id));
 
-  await db.execute(sql`DELETE FROM audit_log WHERE entity_id = ${created.id}::uuid`);
+  await db.execute(
+    sql`DELETE FROM audit_log WHERE entity_id = ${created.id}::uuid`,
+  );
   await db.execute(sql`DELETE FROM items WHERE name = 'Audit Probe Item'`);
 
   console.log(
@@ -1941,6 +2039,7 @@ Expected: two `PASS` lines.
 ### Task 6: Item management UI
 
 **Files:**
+
 - Create: `src/components/pages/administration/items/ItemsTab.tsx`, `ItemsColumns.tsx`
 - Create: `src/components/pages/administration/items/components/ItemsTableToolbar.tsx`
 - Create: `src/components/pages/administration/items/create-update-item-dialog/CreateUpdateItemDialog.tsx`
@@ -1949,6 +2048,7 @@ Expected: two `PASS` lines.
 - Modify: `src/app/(app)/administration/items/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `listItemsForAdmin`, `listCategoryOptions`, all item actions, `getUploadTokenAction`, `MoneyInput`, `ConfirmDialog`, `thumbnailUrl`
 - Produces: a working `/administration/items` route
 
@@ -1979,14 +2079,21 @@ export function ItemImageUploader({
   disabled,
 }: {
   imageUrl: string | null;
-  onChange: (next: { imageUrl: string | null; imageFileId: string | null }) => void;
+  onChange: (next: {
+    imageUrl: string | null;
+    imageFileId: string | null;
+  }) => void;
   disabled: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   async function handleFile(file: File) {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
+    if (
+      !ALLOWED_IMAGE_TYPES.includes(
+        file.type as (typeof ALLOWED_IMAGE_TYPES)[number],
+      )
+    ) {
       toast.error("Use a JPG, PNG or WebP image.");
       return;
     }
@@ -2019,7 +2126,10 @@ export function ItemImageUploader({
         throw new Error(await response.text());
       }
 
-      const uploaded = (await response.json()) as { url: string; fileId: string };
+      const uploaded = (await response.json()) as {
+        url: string;
+        fileId: string;
+      };
       onChange({ imageUrl: uploaded.url, imageFileId: uploaded.fileId });
       toast.success("Image uploaded");
     } catch (error) {
@@ -2033,7 +2143,7 @@ export function ItemImageUploader({
 
   return (
     <div className="flex items-center gap-3">
-      <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-md border">
+      <div className="relative size-20 shrink-0 overflow-hidden rounded-md border bg-muted">
         {imageUrl ? (
           <Image
             src={thumbnailUrl(imageUrl, 160)}
@@ -2043,12 +2153,12 @@ export function ItemImageUploader({
             className="object-cover"
           />
         ) : (
-          <div className="text-muted-foreground flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <ImagePlus className="size-5" />
           </div>
         )}
         {isUploading ? (
-          <div className="bg-background/70 absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70">
             <Loader2 className="size-5 animate-spin" />
           </div>
         ) : null}
@@ -2086,7 +2196,9 @@ export function ItemImageUploader({
             Remove
           </Button>
         ) : null}
-        <p className="text-muted-foreground text-xs">JPG, PNG or WebP. Max 5 MB.</p>
+        <p className="text-xs text-muted-foreground">
+          JPG, PNG or WebP. Max 5 MB.
+        </p>
       </div>
     </div>
   );
@@ -2262,7 +2374,9 @@ export function useItemsTab({
         });
         if (result.ok) {
           toast.success(
-            row.isAvailable ? `${row.name} marked sold out` : `${row.name} is back on`,
+            row.isAvailable
+              ? `${row.name} marked sold out`
+              : `${row.name} is back on`,
           );
           router.refresh();
         } else {
@@ -2344,7 +2458,7 @@ export function ItemTableRow({
   return (
     <TableRow>
       <TableCell>
-        <div className="bg-muted relative size-10 overflow-hidden rounded">
+        <div className="relative size-10 overflow-hidden rounded bg-muted">
           {row.imageUrl ? (
             <Image
               src={thumbnailUrl(row.imageUrl, 80)}
@@ -2354,7 +2468,7 @@ export function ItemTableRow({
               className="object-cover"
             />
           ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-sm font-semibold">
+            <div className="flex h-full items-center justify-center text-sm font-semibold text-muted-foreground">
               {row.name.charAt(0)}
             </div>
           )}
@@ -2391,7 +2505,7 @@ export function ItemTableRow({
           aria-label={`Remove ${row.name}`}
           onClick={() => onDelete(row)}
         >
-          <Trash2 className="text-destructive size-4" />
+          <Trash2 className="size-4 text-destructive" />
         </Button>
       </TableCell>
     </TableRow>
@@ -2433,7 +2547,7 @@ export function ItemsTableToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative min-w-56 flex-1">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -2538,10 +2652,12 @@ export function CreateUpdateItemDialog({
               autoFocus
               disabled={isPending}
               aria-invalid={Boolean(fieldErrors.name)}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
             />
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -2551,7 +2667,9 @@ export function CreateUpdateItemDialog({
               <Select
                 value={form.categoryId}
                 disabled={isPending}
-                onValueChange={(value) => setForm({ ...form, categoryId: value })}
+                onValueChange={(value) =>
+                  setForm({ ...form, categoryId: value })
+                }
               >
                 <SelectTrigger id="item-category">
                   <SelectValue placeholder="Choose a category" />
@@ -2565,7 +2683,9 @@ export function CreateUpdateItemDialog({
                 </SelectContent>
               </Select>
               {fieldErrors.categoryId ? (
-                <p className="text-destructive text-sm">{fieldErrors.categoryId}</p>
+                <p className="text-sm text-destructive">
+                  {fieldErrors.categoryId}
+                </p>
               ) : null}
             </div>
 
@@ -2579,7 +2699,7 @@ export function CreateUpdateItemDialog({
                 onChange={(value) => setForm({ ...form, priceInput: value })}
               />
               {fieldErrors.price ? (
-                <p className="text-destructive text-sm">{fieldErrors.price}</p>
+                <p className="text-sm text-destructive">{fieldErrors.price}</p>
               ) : null}
             </div>
           </div>
@@ -2676,7 +2796,7 @@ export function ItemsTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Items</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Everything the till can sell.
           </p>
         </div>
@@ -2713,7 +2833,9 @@ export function ItemsTab({
                   {ITEM_HEADERS.map((header, index) => (
                     <TableHead
                       key={header || `col-${index}`}
-                      className={index === ITEM_HEADERS.length - 1 ? "text-right" : ""}
+                      className={
+                        index === ITEM_HEADERS.length - 1 ? "text-right" : ""
+                      }
                     >
                       {header}
                     </TableHead>
@@ -2848,10 +2970,12 @@ Expected: all green.
 ### Task 7: Report types, date ranges and CSV
 
 **Files:**
+
 - Create: `src/lib/utils/date-range.ts`, `src/lib/utils/csv.ts`
 - Create: `src/types/report.types.ts`
 
 **Interfaces:**
+
 - Consumes: `businessDate`
 - Produces:
   - `presetRange(preset: RangePreset, timeZone: string): { from: string; to: string }`
@@ -3078,17 +3202,31 @@ function check(label: string, actual: unknown, expected: unknown) {
   if (!pass) failures += 1;
   console.log(
     `${pass ? "PASS" : "FAIL"} — ${label}` +
-      (pass ? "" : `: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`),
+      (pass
+        ? ""
+        : `: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`),
   );
 }
 
 check("shiftIsoDate forward", shiftIsoDate("2026-08-26", 1), "2026-08-27");
 check("shiftIsoDate back", shiftIsoDate("2026-08-01", -1), "2026-07-31");
-check("shiftIsoDate across a year", shiftIsoDate("2026-01-01", -1), "2025-12-31");
-check("shiftIsoDate across a leap day", shiftIsoDate("2028-02-28", 1), "2028-02-29");
+check(
+  "shiftIsoDate across a year",
+  shiftIsoDate("2026-01-01", -1),
+  "2025-12-31",
+);
+check(
+  "shiftIsoDate across a leap day",
+  shiftIsoDate("2028-02-28", 1),
+  "2028-02-29",
+);
 
 check("isValidIsoDate accepts", isValidIsoDate("2026-08-26"), true);
-check("isValidIsoDate rejects a bad shape", isValidIsoDate("26/08/2026"), false);
+check(
+  "isValidIsoDate rejects a bad shape",
+  isValidIsoDate("26/08/2026"),
+  false,
+);
 check("isValidIsoDate rejects junk", isValidIsoDate("hello"), false);
 
 check(
@@ -3096,9 +3234,11 @@ check(
   eachDateInRange("2026-08-25", "2026-08-27"),
   ["2026-08-25", "2026-08-26", "2026-08-27"],
 );
-check("eachDateInRange single day", eachDateInRange("2026-08-25", "2026-08-25"), [
-  "2026-08-25",
-]);
+check(
+  "eachDateInRange single day",
+  eachDateInRange("2026-08-25", "2026-08-25"),
+  ["2026-08-25"],
+);
 check(
   "eachDateInRange handles an inverted range",
   eachDateInRange("2026-08-27", "2026-08-25"),
@@ -3130,7 +3270,9 @@ check(
 );
 
 console.log(
-  failures === 0 ? "\nAll report utility checks passed." : `\n${failures} FAILURE(S)`,
+  failures === 0
+    ? "\nAll report utility checks passed."
+    : `\n${failures} FAILURE(S)`,
 );
 process.exit(failures === 0 ? 0 : 1);
 ```
@@ -3148,9 +3290,11 @@ Expected: 16 `PASS` lines. The CSV escaping case is the one that silently corrup
 ### Task 8: Report queries
 
 **Files:**
+
 - Create: `src/server/reports/reports-queries.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, `bills`, `billItems`, `users`, `withConnectionRetry`, `getShopTimezone`, report types
 - Produces:
   - `getDashboardStats(): Promise<DashboardStats>`
@@ -3396,10 +3540,16 @@ async function main() {
     days,
   );
 
-  const payments = await getPaymentBreakdown(stats.businessDate, stats.businessDate);
+  const payments = await getPaymentBreakdown(
+    stats.businessDate,
+    stats.businessDate,
+  );
   check(
     "payment breakdown sums to the day's net",
-    compare(payments.reduce((sum, p) => add(sum, p.net), ZERO), stats.net) === 0,
+    compare(
+      payments.reduce((sum, p) => add(sum, p.net), ZERO),
+      stats.net,
+    ) === 0,
     payments,
   );
 
@@ -3437,7 +3587,9 @@ async function main() {
   }
 
   console.log(
-    failures === 0 ? "\nAll report query checks passed." : `\n${failures} FAILURE(S)`,
+    failures === 0
+      ? "\nAll report query checks passed."
+      : `\n${failures} FAILURE(S)`,
   );
   process.exit(failures === 0 ? 0 : 1);
 }
@@ -3463,11 +3615,13 @@ Expected: all `PASS`. The void test is the one that matters — if voiding a bil
 ### Task 9: Dashboard
 
 **Files:**
+
 - Create: `src/components/pages/dashboard/DashboardPage.tsx`
 - Create: `src/components/pages/dashboard/components/StatCard.tsx`, `SalesTrendChart.tsx`, `TopItemsCard.tsx`
 - Create: `src/app/(app)/dashboard/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `getDashboardStats`, `getSalesTrend`, `getItemSales`, `presetRange`, `eachDateInRange`, `formatINR`
 - Produces: a working `/dashboard` route
 
@@ -3498,13 +3652,15 @@ export function StatCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-muted-foreground text-sm font-medium">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
           {label}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-3xl font-bold tabular-nums">{value}</p>
-        {hint ? <p className="text-muted-foreground mt-1 text-xs">{hint}</p> : null}
+        {hint ? (
+          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -3588,17 +3744,19 @@ export function TopItemsCard({ items }: { items: ItemSalesRow[] }) {
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No sales yet today.</p>
+          <p className="text-sm text-muted-foreground">No sales yet today.</p>
         ) : (
           <ol className="space-y-3">
             {items.slice(0, 5).map((item, index) => (
               <li key={item.itemName} className="flex items-center gap-3">
-                <span className="text-muted-foreground w-4 text-sm tabular-nums">
+                <span className="w-4 text-sm text-muted-foreground tabular-nums">
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{item.itemName}</p>
-                  <p className="text-muted-foreground text-xs">
+                  <p className="truncate text-sm font-medium">
+                    {item.itemName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     {item.quantity} sold · {item.sharePercent}% of takings
                   </p>
                 </div>
@@ -3622,7 +3780,11 @@ export function TopItemsCard({ items }: { items: ItemSalesRow[] }) {
 ```tsx
 import { formatBillDate } from "@/lib/utils/dates";
 import { formatINR } from "@/lib/utils/money";
-import type { DashboardStats, ItemSalesRow, SalesByDayRow } from "@/types/report.types";
+import type {
+  DashboardStats,
+  ItemSalesRow,
+  SalesByDayRow,
+} from "@/types/report.types";
 
 import { SalesTrendChart } from "./components/SalesTrendChart";
 import { StatCard } from "./components/StatCard";
@@ -3652,7 +3814,7 @@ export function DashboardPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Today</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           {formatBillDate(stats.businessDate)}
         </p>
       </div>
@@ -3751,19 +3913,17 @@ export default function Page() {
 `src/proxy.ts` — the already-signed-in redirect:
 
 ```ts
-  if (isLoggedIn && isPublic) {
-    return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
-  }
+if (isLoggedIn && isPublic) {
+  return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
+}
 ```
 
 `src/components/pages/login/components/LoginForm.tsx` — the fallback when there
 is no `?next=`:
 
 ```tsx
-        const destination =
-          next && next.startsWith("/") && !next.startsWith("//")
-            ? next
-            : "/dashboard";
+const destination =
+  next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 ```
 
 The `?next=` handling is unchanged, so a cashier who was sent to `/login` from
@@ -3799,11 +3959,13 @@ npx tsc --noEmit && npm run lint
 ### Task 10: Shared report controls and CSV export
 
 **Files:**
+
 - Create: `src/components/pages/reports/components/ReportDateRangeBar.tsx`, `ExportCsvButton.tsx`
 - Create: `src/server/reports/reports-actions.ts`
 - Create: `src/app/(app)/reports/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: `RANGE_PRESETS`, `presetRange`, `toCsv`, `csvAmount`, report queries
 - Produces:
   - `<ReportDateRangeBar from to />` — pushes `?from=&to=` into the URL
@@ -3864,7 +4026,8 @@ export function ReportDateRangeBar({
   function apply(nextFrom: string, nextTo: string) {
     if (!isValidIsoDate(nextFrom) || !isValidIsoDate(nextTo)) return;
     // Swap rather than reject — the user clearly meant the range between them.
-    const [start, end] = nextFrom <= nextTo ? [nextFrom, nextTo] : [nextTo, nextFrom];
+    const [start, end] =
+      nextFrom <= nextTo ? [nextFrom, nextTo] : [nextTo, nextFrom];
     startTransition(() => {
       router.push(`${pathname}?from=${start}&to=${end}`);
     });
@@ -3943,7 +4106,10 @@ function validateRange(input: {
     return fail<null>("VALIDATION", "Choose a valid date range.");
   }
   if (input.from > input.to) {
-    return fail<null>("VALIDATION", "The start date must be before the end date.");
+    return fail<null>(
+      "VALIDATION",
+      "The start date must be before the end date.",
+    );
   }
   return null;
 }
@@ -4070,10 +4236,12 @@ Deferred to Task 11 Step 3, where a real export can be downloaded and opened.
 ### Task 11: Sales report
 
 **Files:**
+
 - Create: `src/components/pages/reports/sales/SalesReportTab.tsx`, `SalesReportColumns.tsx`
 - Create: `src/app/(app)/reports/sales/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `getSalesByDay`, `getPaymentBreakdown`, `ReportDateRangeBar`, `ExportCsvButton`, `exportSalesCsvAction`
 - Produces: a working `/reports/sales` route
 
@@ -4087,7 +4255,13 @@ import { formatBillDate } from "@/lib/utils/dates";
 import { formatINR } from "@/lib/utils/money";
 import type { SalesByDayRow } from "@/types/report.types";
 
-export const SALES_HEADERS = ["Date", "Bills", "Gross", "Discount", "Net"] as const;
+export const SALES_HEADERS = [
+  "Date",
+  "Bills",
+  "Gross",
+  "Discount",
+  "Net",
+] as const;
 
 export function SalesReportRow({ row }: { row: SalesByDayRow }) {
   return (
@@ -4161,7 +4335,7 @@ export function SalesReportTab({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Sales</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Takings per day. Voided bills are excluded.
           </p>
         </div>
@@ -4177,7 +4351,7 @@ export function SalesReportTab({
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Net takings
             </CardTitle>
           </CardHeader>
@@ -4189,17 +4363,19 @@ export function SalesReportTab({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Bills
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold tabular-nums">{totals.billCount}</p>
+            <p className="text-2xl font-bold tabular-nums">
+              {totals.billCount}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Discounts given
             </CardTitle>
           </CardHeader>
@@ -4219,13 +4395,13 @@ export function SalesReportTab({
           <CardContent className="flex flex-wrap gap-6">
             {payments.map((payment) => (
               <div key={payment.paymentMethod}>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   {PAYMENT_METHOD_LABELS[payment.paymentMethod]}
                 </p>
                 <p className="text-lg font-semibold tabular-nums">
                   {formatINR(payment.net)}
                 </p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   {payment.billCount} bill{payment.billCount === 1 ? "" : "s"}
                 </p>
               </div>
@@ -4307,7 +4483,9 @@ export const metadata = {
   description: "Takings per day over any date range.",
 };
 
-export default async function Page({ searchParams }: PageProps<"/reports/sales">) {
+export default async function Page({
+  searchParams,
+}: PageProps<"/reports/sales">) {
   const params = await searchParams;
   const timeZone = await getShopTimezone();
 
@@ -4364,10 +4542,12 @@ At `/reports/sales`:
 ### Task 12: Item-wise report
 
 **Files:**
+
 - Create: `src/components/pages/reports/items/ItemReportTab.tsx`, `ItemReportColumns.tsx`
 - Create: `src/app/(app)/reports/items/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `getItemSales`, `ReportDateRangeBar`, `ExportCsvButton`, `exportItemsCsvAction`
 - Produces: a working `/reports/items` route — **this is the client's "what is selling"**
 
@@ -4402,13 +4582,15 @@ export function ItemReportRow({ row }: { row: ItemSalesRow }) {
       </TableCell>
       <TableCell className="tabular-nums">
         <div className="flex items-center gap-2">
-          <div className="bg-muted h-2 w-16 overflow-hidden rounded-full">
+          <div className="h-2 w-16 overflow-hidden rounded-full bg-muted">
             <div
-              className="bg-primary h-full"
+              className="h-full bg-primary"
               style={{ width: `${Math.min(row.sharePercent, 100)}%` }}
             />
           </div>
-          <span className="text-muted-foreground text-xs">{row.sharePercent}%</span>
+          <span className="text-xs text-muted-foreground">
+            {row.sharePercent}%
+          </span>
         </div>
       </TableCell>
     </TableRow>
@@ -4455,7 +4637,7 @@ export function ItemReportTab({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">What is selling</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Ranked by revenue. Names and prices are as they were at the time of
             sale.
           </p>
@@ -4485,7 +4667,10 @@ export function ItemReportTab({
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <ItemReportRow key={`${row.categoryName}-${row.itemName}`} row={row} />
+              <ItemReportRow
+                key={`${row.categoryName}-${row.itemName}`}
+                row={row}
+              />
             ))}
           </TableBody>
         </Table>
@@ -4513,7 +4698,9 @@ export const metadata = {
   description: "Which items are selling.",
 };
 
-export default async function Page({ searchParams }: PageProps<"/reports/items">) {
+export default async function Page({
+  searchParams,
+}: PageProps<"/reports/items">) {
   const params = await searchParams;
   const timeZone = await getShopTimezone();
 
@@ -4553,6 +4740,7 @@ That is spec §6 Principle 2 working. If the row changed, a query is joining to 
 ### Task 13: Bills ledger
 
 **Files:**
+
 - Modify: `src/server/bills/bills-queries.ts` (append `listBills`, `listCashiers`)
 - Create: `src/components/pages/bills/BillsTab.tsx`, `BillsColumns.tsx`
 - Create: `src/components/pages/bills/components/BillsTableToolbar.tsx`
@@ -4560,6 +4748,7 @@ That is spec §6 Principle 2 working. If the row changed, a query is joining to 
 - Create: `src/app/(app)/bills/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `db`, `bills`, `billItems`, `users`, `useUrlPagination`, report types
 - Produces:
   - `listBills(filters: BillLedgerFilters, page: number, pageSize: number): Promise<BillLedgerPage>`
@@ -4580,7 +4769,9 @@ import type {
   BillLedgerRow,
 } from "@/types/report.types";
 
-export async function listCashiers(): Promise<Array<{ id: string; name: string }>> {
+export async function listCashiers(): Promise<
+  Array<{ id: string; name: string }>
+> {
   return withConnectionRetry(async () =>
     db
       .select({ id: users.id, name: users.name })
@@ -4604,7 +4795,8 @@ export async function listBills(
       lte(bills.businessDate, filters.to),
     ];
 
-    if (filters.cashierId) conditions.push(eq(bills.createdBy, filters.cashierId));
+    if (filters.cashierId)
+      conditions.push(eq(bills.createdBy, filters.cashierId));
     if (filters.paymentMethod) {
       conditions.push(eq(bills.paymentMethod, filters.paymentMethod));
     }
@@ -4792,7 +4984,9 @@ export function BillsTableToolbar({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <Label htmlFor="bills-from" className="text-xs font-normal">From</Label>
+        <Label htmlFor="bills-from" className="text-xs font-normal">
+          From
+        </Label>
         <Input
           id="bills-from"
           type="date"
@@ -4803,7 +4997,9 @@ export function BillsTableToolbar({
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="bills-to" className="text-xs font-normal">To</Label>
+        <Label htmlFor="bills-to" className="text-xs font-normal">
+          To
+        </Label>
         <Input
           id="bills-to"
           type="date"
@@ -4821,7 +5017,9 @@ export function BillsTableToolbar({
           disabled={disabled}
           onValueChange={(value) => onFilterChange("cashierId", value)}
         >
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All cashiers</SelectItem>
             {cashiers.map((cashier) => (
@@ -4840,7 +5038,9 @@ export function BillsTableToolbar({
           disabled={disabled}
           onValueChange={(value) => onFilterChange("paymentMethod", value)}
         >
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-36">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All methods</SelectItem>
             {PAYMENT_METHODS.map((method) => (
@@ -4853,7 +5053,9 @@ export function BillsTableToolbar({
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="bills-number" className="text-xs font-normal">Bill #</Label>
+        <Label htmlFor="bills-number" className="text-xs font-normal">
+          Bill #
+        </Label>
         <Input
           id="bills-number"
           inputMode="numeric"
@@ -4914,14 +5116,15 @@ export function BillsTab({
   const tab = useBillsTab();
 
   const lastPage = Math.max(1, Math.ceil(ledger.total / ledger.pageSize));
-  const firstRow = ledger.total === 0 ? 0 : (ledger.page - 1) * ledger.pageSize + 1;
+  const firstRow =
+    ledger.total === 0 ? 0 : (ledger.page - 1) * ledger.pageSize + 1;
   const lastRow = Math.min(ledger.page * ledger.pageSize, ledger.total);
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Bills</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Every bill ever issued, including voided ones.
         </p>
       </div>
@@ -4956,7 +5159,7 @@ export function BillsTab({
           </Table>
 
           <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Showing {firstRow}–{lastRow} of {ledger.total}
             </p>
             <div className="flex gap-2">
@@ -4990,7 +5193,10 @@ export function BillsTab({
 ```tsx
 import { Container } from "@/components/layout/Container";
 import { BillsTab } from "@/components/pages/bills/BillsTab";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/constants/payment-methods";
+import {
+  PAYMENT_METHODS,
+  type PaymentMethod,
+} from "@/constants/payment-methods";
 import { requireUser } from "@/lib/auth/guard";
 import { isValidIsoDate, presetRange } from "@/lib/utils/date-range";
 import { listBills, listCashiers } from "@/server/bills/bills-queries";
@@ -5028,7 +5234,13 @@ export default async function Page({ searchParams }: PageProps<"/bills">) {
 
   const [ledger, cashiers] = await Promise.all([
     listBills(
-      { from, to, cashierId: cashierId || undefined, paymentMethod, billNumber },
+      {
+        from,
+        to,
+        cashierId: cashierId || undefined,
+        paymentMethod,
+        billNumber,
+      },
       page,
       PAGE_SIZE,
     ),
@@ -5097,11 +5309,13 @@ Then at `/bills`:
 ### Task 14: Bill detail and reprint
 
 **Files:**
+
 - Modify: `src/server/bills/bills-actions.ts` (append `reprintBillAction`)
 - Create: `src/components/pages/bills/bill-details/BillDetails.tsx`
 - Create: `src/app/(app)/bills/[billId]/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `getReceipt`, `writeAuditLog`, `guarded`, `requireUser`
 - Produces:
   - `reprintBillAction({ billId }): Promise<ActionResult<null>>` — logs `BILL_REPRINTED`
@@ -5354,7 +5568,11 @@ export default async function Page({ params }: PageProps<"/bills/[billId]">) {
 
   return (
     <Container className="py-6">
-      <BillDetails billId={billId} receipt={receipt} status={statusRow.status} />
+      <BillDetails
+        billId={billId}
+        receipt={receipt}
+        status={statusRow.status}
+      />
     </Container>
   );
 }
@@ -5396,11 +5614,13 @@ npx tsc --noEmit && npm run lint && npm run build
 ### Task 15: User queries and actions
 
 **Files:**
+
 - Create: `src/server/users/users-queries.ts`, `users-actions.ts`
 - Modify: `src/lib/validation/user-schema.ts` (append create/reset schemas)
 - Create: `src/types/user.types.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, `users`, `hashPassword`, `guarded`, `requireSuperadmin`, `writeAuditLog`
 - Produces:
   - `listUsers(): Promise<UserRow[]>`
@@ -5575,9 +5795,13 @@ export async function createUserAction(
       .limit(1);
 
     if (existing) {
-      return fail<{ id: string }>("CONFLICT", "That username is already taken.", {
-        username: "Already taken",
-      });
+      return fail<{ id: string }>(
+        "CONFLICT",
+        "That username is already taken.",
+        {
+          username: "Already taken",
+        },
+      );
     }
 
     const [created] = await db
@@ -5617,10 +5841,7 @@ export async function setUserActiveAction(payload: {
     const actor = await requireSuperadmin();
 
     if (payload.id === actor.id && !payload.isActive) {
-      return fail<null>(
-        "CONFLICT",
-        "You cannot deactivate your own account.",
-      );
+      return fail<null>("CONFLICT", "You cannot deactivate your own account.");
     }
 
     const before = await db.query.users.findFirst({
@@ -5734,7 +5955,11 @@ function check(label: string, condition: boolean, detail?: unknown) {
 
 async function main() {
   const activeOwners = await countActiveSuperadmins();
-  check("at least one active superadmin exists", activeOwners >= 1, activeOwners);
+  check(
+    "at least one active superadmin exists",
+    activeOwners >= 1,
+    activeOwners,
+  );
 
   check(
     "excluding the only owner leaves zero",
@@ -5746,7 +5971,8 @@ async function main() {
           .where(eq(users.role, "SUPERADMIN"))
           .limit(1)
       )[0].id,
-    )) === activeOwners - 1,
+    )) ===
+      activeOwners - 1,
   );
 
   // A deactivated user must not be counted.
@@ -5772,16 +5998,16 @@ async function main() {
   );
 
   // A reset must actually change the hash and invalidate the old password.
-  const oldHash = (
-    await db.query.users.findFirst({ where: eq(users.id, probe.id) })
-  )!.passwordHash;
+  const oldHash = (await db.query.users.findFirst({
+    where: eq(users.id, probe.id),
+  }))!.passwordHash;
   await db
     .update(users)
     .set({ passwordHash: await hashPassword("NewProbe@123") })
     .where(eq(users.id, probe.id));
-  const newHash = (
-    await db.query.users.findFirst({ where: eq(users.id, probe.id) })
-  )!.passwordHash;
+  const newHash = (await db.query.users.findFirst({
+    where: eq(users.id, probe.id),
+  }))!.passwordHash;
 
   check("a password reset changes the stored hash", oldHash !== newHash);
   check(
@@ -5820,6 +6046,7 @@ Expected: six `PASS` lines.
 ### Task 16: User management UI
 
 **Files:**
+
 - Create: `src/components/pages/administration/users/UsersTab.tsx`, `UsersColumns.tsx`
 - Create: `src/components/pages/administration/users/create-user-dialog/CreateUserDialog.tsx`
 - Create: `src/components/pages/administration/users/reset-password-dialog/ResetPasswordDialog.tsx`
@@ -5827,6 +6054,7 @@ Expected: six `PASS` lines.
 - Create: `src/app/(app)/administration/users/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `listUsers`, the three user actions, `ConfirmDialog`
 - Produces: a working `/administration/users` route
 
@@ -6007,7 +6235,7 @@ export function UserTableRow({
       <TableCell className="font-medium">
         {row.name}
         {isSelf ? (
-          <span className="text-muted-foreground ml-2 text-xs">(you)</span>
+          <span className="ml-2 text-xs text-muted-foreground">(you)</span>
         ) : null}
       </TableCell>
       <TableCell className="font-mono text-sm">{row.username}</TableCell>
@@ -6046,7 +6274,7 @@ export function UserTableRow({
           onClick={() => onToggle(row)}
         >
           {row.isActive ? (
-            <UserX className="text-destructive size-4" />
+            <UserX className="size-4 text-destructive" />
           ) : (
             <UserCheck className="size-4" />
           )}
@@ -6129,13 +6357,15 @@ export function CreateUserDialog({
               autoFocus
               disabled={isPending}
               aria-invalid={Boolean(fieldErrors.name)}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Printed on every receipt this person creates.
             </p>
             {fieldErrors.name ? (
-              <p className="text-destructive text-sm">{fieldErrors.name}</p>
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
             ) : null}
           </div>
 
@@ -6152,7 +6382,7 @@ export function CreateUserDialog({
               }
             />
             {fieldErrors.username ? (
-              <p className="text-destructive text-sm">{fieldErrors.username}</p>
+              <p className="text-sm text-destructive">{fieldErrors.username}</p>
             ) : null}
           </div>
 
@@ -6161,9 +6391,13 @@ export function CreateUserDialog({
             <Select
               value={form.role}
               disabled={isPending}
-              onValueChange={(value) => setForm({ ...form, role: value as Role })}
+              onValueChange={(value) =>
+                setForm({ ...form, role: value as Role })
+              }
             >
-              <SelectTrigger id="user-role"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="user-role">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {ROLES.map((role) => (
                   <SelectItem key={role} value={role}>
@@ -6172,7 +6406,7 @@ export function CreateUserDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Cashiers can bill and view reports. Owners can also change the
               menu, prices and accounts.
             </p>
@@ -6192,7 +6426,7 @@ export function CreateUserDialog({
               }
             />
             {fieldErrors.password ? (
-              <p className="text-destructive text-sm">{fieldErrors.password}</p>
+              <p className="text-sm text-destructive">{fieldErrors.password}</p>
             ) : null}
           </div>
 
@@ -6282,7 +6516,7 @@ export function ResetPasswordDialog({
               onChange={(event) => setPassword(event.target.value)}
             />
             {fieldErrors.password ? (
-              <p className="text-destructive text-sm">{fieldErrors.password}</p>
+              <p className="text-sm text-destructive">{fieldErrors.password}</p>
             ) : null}
           </div>
 
@@ -6345,7 +6579,7 @@ export function UsersTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Accounts</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Who can sign in. Accounts are deactivated, never deleted — bills
             reference them.
           </p>
@@ -6362,7 +6596,9 @@ export function UsersTab({
             {USER_HEADERS.map((header, index) => (
               <TableHead
                 key={header || `col-${index}`}
-                className={index === USER_HEADERS.length - 1 ? "text-right" : ""}
+                className={
+                  index === USER_HEADERS.length - 1 ? "text-right" : ""
+                }
               >
                 {header}
               </TableHead>
@@ -6488,6 +6724,7 @@ Expected: entries exist, and **no `password` or `passwordHash` field appears any
 ### Task 17: Shop settings
 
 **Files:**
+
 - Create: `src/server/settings/settings-actions.ts`
 - Create: `src/lib/validation/settings-schema.ts`
 - Create: `src/components/pages/administration/settings/ShopSettingsTab.tsx`
@@ -6496,6 +6733,7 @@ Expected: entries exist, and **no `password` or `passwordHash` field appears any
 - Create: `src/app/(app)/administration/settings/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `getShopSettings`, `guarded`, `requireSuperadmin`, `writeAuditLog`, `Receipt80mm`
 - Produces:
   - `updateSettingsAction(input): Promise<ActionResult<null>>`
@@ -6646,7 +6884,12 @@ function sampleReceipt(shop: ReceiptData["shop"]): ReceiptData {
     createdAt: new Date("2026-08-26T14:12:00Z"),
     cashierName: "Ravi",
     lines: [
-      { itemName: "Veg Burger", quantity: 2, unitPrice: 6000, lineTotal: 12000 },
+      {
+        itemName: "Veg Burger",
+        quantity: 2,
+        unitPrice: 6000,
+        lineTotal: 12000,
+      },
       { itemName: "Coke Small", quantity: 1, unitPrice: 3000, lineTotal: 3000 },
     ],
     subtotal: 15000,
@@ -6692,7 +6935,7 @@ export function ReceiptPreview({
         <div className="flex justify-center rounded-md border bg-white p-4">
           <Receipt80mm receipt={receipt} narrow={printerWidth === "MM_58"} />
         </div>
-        <p className="text-muted-foreground mt-3 text-xs">
+        <p className="mt-3 text-xs text-muted-foreground">
           A sample bill, not real data. Print settings are configured on the
           till — see docs/printer-setup.md.
         </p>
@@ -6794,7 +7037,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Shop settings</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           These appear on every printed receipt.
         </p>
       </div>
@@ -6824,7 +7067,9 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                   }
                 />
                 {fieldErrors.shopName ? (
-                  <p className="text-destructive text-sm">{fieldErrors.shopName}</p>
+                  <p className="text-sm text-destructive">
+                    {fieldErrors.shopName}
+                  </p>
                 ) : null}
               </div>
 
@@ -6863,7 +7108,7 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     setForm({ ...form, receiptFooter: event.target.value })
                   }
                 />
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   The thank-you line at the bottom of every receipt.
                 </p>
               </div>
@@ -6878,7 +7123,9 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                       setForm({ ...form, printerWidth: value as PrinterWidth })
                     }
                   >
-                    <SelectTrigger id="shop-printer"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="shop-printer">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {PRINTER_WIDTHS.map((width) => (
                         <SelectItem key={width} value={width}>
@@ -6901,14 +7148,14 @@ export function ShopSettingsTab({ initial }: { initial: SettingsFormState }) {
                     }
                   />
                   {fieldErrors.timezone ? (
-                    <p className="text-destructive text-sm">
+                    <p className="text-sm text-destructive">
                       {fieldErrors.timezone}
                     </p>
                   ) : null}
                 </div>
               </div>
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-muted-foreground">
                 Changing the timezone affects which day future bills are counted
                 against. Bills already issued keep the date they were given.
               </p>
@@ -6983,6 +7230,7 @@ At `/administration/settings`:
 ### Task 18: Audit log viewer
 
 **Files:**
+
 - Create: `src/server/audit/audit-queries.ts`
 - Create: `src/components/pages/administration/audit/AuditLogTab.tsx`, `AuditLogColumns.tsx`
 - Create: `src/components/pages/administration/audit/components/AuditDiffDialog.tsx`
@@ -6990,6 +7238,7 @@ At `/administration/settings`:
 - Create: `src/types/audit.types.ts`
 
 **Interfaces:**
+
 - Consumes: `db`, `auditLog`, `users`, `AUDIT_ACTION_LABELS`
 - Produces:
   - `listAuditLog(filters, page, pageSize): Promise<AuditLogPage>`
@@ -7090,16 +7339,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AUDIT_ACTION_LABELS, type AuditAction } from "@/constants/audit-actions";
+import {
+  AUDIT_ACTION_LABELS,
+  type AuditAction,
+} from "@/constants/audit-actions";
 import type { AuditLogEntry } from "@/types/audit.types";
 
 function Snapshot({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="space-y-1">
-      <p className="text-muted-foreground text-xs font-medium uppercase">
+      <p className="text-xs font-medium text-muted-foreground uppercase">
         {label}
       </p>
-      <pre className="bg-muted max-h-64 overflow-auto rounded-md p-3 text-xs">
+      <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
         {value === null || value === undefined
           ? "—"
           : JSON.stringify(value, null, 2)}
@@ -7121,7 +7373,8 @@ export function AuditDiffDialog({
         <DialogHeader>
           <DialogTitle>
             {entry
-              ? (AUDIT_ACTION_LABELS[entry.action as AuditAction] ?? entry.action)
+              ? (AUDIT_ACTION_LABELS[entry.action as AuditAction] ??
+                entry.action)
               : ""}
           </DialogTitle>
           <DialogDescription>
@@ -7148,7 +7401,10 @@ export function AuditDiffDialog({
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { AUDIT_ACTION_LABELS, type AuditAction } from "@/constants/audit-actions";
+import {
+  AUDIT_ACTION_LABELS,
+  type AuditAction,
+} from "@/constants/audit-actions";
 import type { AuditLogEntry } from "@/types/audit.types";
 
 export const AUDIT_HEADERS = ["When", "Who", "What", "Entity", ""] as const;
@@ -7172,16 +7428,20 @@ export function AuditTableRow({
 
   return (
     <TableRow>
-      <TableCell className="whitespace-nowrap text-sm">
+      <TableCell className="text-sm whitespace-nowrap">
         {row.createdAt.toLocaleString("en-GB")}
       </TableCell>
       <TableCell>{row.actorName ?? "—"}</TableCell>
       <TableCell>
-        <Badge variant={DESTRUCTIVE_ACTIONS.has(row.action) ? "destructive" : "secondary"}>
+        <Badge
+          variant={
+            DESTRUCTIVE_ACTIONS.has(row.action) ? "destructive" : "secondary"
+          }
+        >
           {label}
         </Badge>
       </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
+      <TableCell className="text-sm text-muted-foreground">
         {row.entityType}
       </TableCell>
       <TableCell className="text-right">
@@ -7257,7 +7517,7 @@ export function AuditLogTab({
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Audit log</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Every change to the menu, prices, accounts and settings — plus failed
           sign-ins and reprints.
         </p>
@@ -7290,7 +7550,9 @@ export function AuditLogTab({
                 {AUDIT_HEADERS.map((header, index) => (
                   <TableHead
                     key={header || `col-${index}`}
-                    className={index === AUDIT_HEADERS.length - 1 ? "text-right" : ""}
+                    className={
+                      index === AUDIT_HEADERS.length - 1 ? "text-right" : ""
+                    }
                   >
                     {header}
                   </TableHead>
@@ -7299,13 +7561,17 @@ export function AuditLogTab({
             </TableHeader>
             <TableBody>
               {log.rows.map((row) => (
-                <AuditTableRow key={row.id} row={row} onInspect={setInspecting} />
+                <AuditTableRow
+                  key={row.id}
+                  row={row}
+                  onInspect={setInspecting}
+                />
               ))}
             </TableBody>
           </Table>
 
           <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Page {log.page} of {lastPage} · {log.total} entries
             </p>
             <div className="flex gap-2">
@@ -7411,10 +7677,12 @@ npm run verify:users && npx tsc --noEmit && npm run lint
 ### Task 19: Export all data
 
 **Files:**
+
 - Create: `src/server/reports/export-all-action.ts`
 - Modify: `src/components/pages/administration/settings/ShopSettingsTab.tsx` (add the export card)
 
 **Interfaces:**
+
 - Consumes: `db`, `bills`, `billItems`, `items`, `users`, `toCsv`, `csvAmount`, `requireSuperadmin`
 - Produces: `exportAllDataAction(): Promise<ActionResult<{ bills: string; billItems: string; items: string }>>`
 
@@ -7445,7 +7713,9 @@ export type ExportBundle = {
  * The owner's monthly safety net. Neon's free plan keeps only a short restore
  * window, and this database is the shop's entire sales ledger. See spec §16.1.
  */
-export async function exportAllDataAction(): Promise<ActionResult<ExportBundle>> {
+export async function exportAllDataAction(): Promise<
+  ActionResult<ExportBundle>
+> {
   return guarded(async () => {
     await requireSuperadmin();
 
@@ -7569,7 +7839,7 @@ function ExportAllCard() {
         <CardTitle>Export all data</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Downloads every bill, every sold line and the current menu as three
           CSV files. <strong>Do this once a month</strong> and keep the files
           somewhere other than this computer — the free database plan keeps only
@@ -7616,11 +7886,13 @@ process.exit(0);
 ### Task 20: Navigation, error pages and mobile
 
 **Files:**
+
 - Modify: `src/components/layout/AppNavbar.tsx`
 - Create: `src/app/(app)/error.tsx`, `src/app/global-error.tsx`, `src/app/not-found.tsx`
 - Create: `src/app/(app)/administration/error.tsx`
 
 **Interfaces:**
+
 - Consumes: `SessionUser`, `ADMIN_ROUTES`, `REPORT_ROUTES`
 - Produces: role-aware navigation and friendly error pages
 
@@ -7668,7 +7940,7 @@ export function AppNavbar({ user }: { user: SessionUser }) {
     user.role === "SUPERADMIN" ? [...BASE_LINKS, ...OWNER_LINKS] : BASE_LINKS;
 
   return (
-    <header className="bg-background sticky top-0 z-40 border-b">
+    <header className="sticky top-0 z-40 border-b bg-background">
       <Container className="flex h-14 items-center justify-between gap-4">
         <nav className="hidden items-center gap-1 lg:flex">
           {links.map((link) => (
@@ -7679,7 +7951,7 @@ export function AppNavbar({ user }: { user: SessionUser }) {
                 "rounded-md px-3 py-2 text-sm font-medium",
                 pathname === link.href
                   ? "bg-muted text-foreground"
-                  : "hover:bg-muted text-muted-foreground",
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               {link.label}
@@ -7746,20 +8018,18 @@ export default function AppError({
       <h1 className="text-2xl font-semibold">
         {isForbidden ? "Not allowed" : "Something went wrong"}
       </h1>
-      <p className="text-muted-foreground max-w-md text-sm">
+      <p className="max-w-md text-sm text-muted-foreground">
         {isForbidden
           ? "Only the owner account can open that page. Ask the owner if you need access."
           : "The page could not load. Try again — if it keeps happening, note the reference below."}
       </p>
       {error.digest && !isForbidden ? (
-        <p className="text-muted-foreground font-mono text-xs">
+        <p className="font-mono text-xs text-muted-foreground">
           Reference: {error.digest}
         </p>
       ) : null}
       <div className="flex gap-2">
-        {!isForbidden ? (
-          <Button onClick={reset}>Try again</Button>
-        ) : null}
+        {!isForbidden ? <Button onClick={reset}>Try again</Button> : null}
         <Button variant="outline" asChild>
           <Link href="/bill">Back to billing</Link>
         </Button>
@@ -7782,7 +8052,7 @@ export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
       <h1 className="text-2xl font-semibold">Page not found</h1>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         That page does not exist, or the bill you are looking for was removed.
       </p>
       <Button asChild>
@@ -7862,11 +8132,13 @@ Expected: all three exit 0.
 ### Task 21: Handover
 
 **Files:**
+
 - Create: `scripts/reset-bills.ts`
 - Modify: `docs/deployment.md`, `CLAUDE.md`
 - Modify: `package.json`
 
 **Interfaces:**
+
 - Consumes: everything
 - Produces: a clean production database, updated docs, a deployed app
 
@@ -7903,15 +8175,21 @@ async function main() {
   );
   console.table(before.rows);
 
-  await db.execute(sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
-  await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_restrict_update`);
+  await db.execute(
+    sql`ALTER TABLE bills DISABLE TRIGGER bills_restrict_update`,
+  );
 
   await db.execute(sql`DELETE FROM bill_items`);
   await db.execute(sql`DELETE FROM bills`);
   await db.execute(sql`DELETE FROM bill_counters`);
 
-  await db.execute(sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_restrict_update`);
 
@@ -8017,21 +8295,21 @@ Confirm the Netlify environment has the **pooled** `DATABASE_URL` (the host must
 
 Run every one of these against the production URL, not localhost:
 
-| # | Check | Expected |
-|---|---|---|
-| 1 | Sign in as the owner | Lands on `/bill` |
-| 2 | Ring up three items, apply a ₹10 discount, pay cash with change | Totals correct on screen |
-| 3 | Save & Print | Receipt opens and auto-prints on the thermal printer |
-| 4 | Check the paper | Columns aligned, nothing clipped, no URL header |
-| 5 | Ring up two more bills | Numbers run 1, 2, 3 with no gaps |
-| 6 | `/dashboard` | Today's sales match what you rang up |
-| 7 | `/reports/items` | Shows what you sold |
-| 8 | `/bills` → open one → **Reprint** | Prints again; `/administration/audit` shows the reprint |
-| 9 | Change an item's price | `/administration/audit` shows before and after |
-| 10 | Re-open an older bill | Still shows the OLD price |
-| 11 | Settings → Export all data | Three CSVs download and open cleanly |
-| 12 | Sign in as a cashier | No admin links; `/administration/items` shows "Not allowed" |
-| 13 | Turn off the shop's wi-fi, try to save a bill | Red offline banner; **Retry** after reconnecting creates exactly ONE bill |
+| #   | Check                                                           | Expected                                                                  |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | Sign in as the owner                                            | Lands on `/bill`                                                          |
+| 2   | Ring up three items, apply a ₹10 discount, pay cash with change | Totals correct on screen                                                  |
+| 3   | Save & Print                                                    | Receipt opens and auto-prints on the thermal printer                      |
+| 4   | Check the paper                                                 | Columns aligned, nothing clipped, no URL header                           |
+| 5   | Ring up two more bills                                          | Numbers run 1, 2, 3 with no gaps                                          |
+| 6   | `/dashboard`                                                    | Today's sales match what you rang up                                      |
+| 7   | `/reports/items`                                                | Shows what you sold                                                       |
+| 8   | `/bills` → open one → **Reprint**                               | Prints again; `/administration/audit` shows the reprint                   |
+| 9   | Change an item's price                                          | `/administration/audit` shows before and after                            |
+| 10  | Re-open an older bill                                           | Still shows the OLD price                                                 |
+| 11  | Settings → Export all data                                      | Three CSVs download and open cleanly                                      |
+| 12  | Sign in as a cashier                                            | No admin links; `/administration/items` shows "Not allowed"               |
+| 13  | Turn off the shop's wi-fi, try to save a bill                   | Red offline banner; **Retry** after reconnecting creates exactly ONE bill |
 
 Check 13 is the one to insist on. It is the failure the shop will actually hit, and the idempotency key is what makes it safe.
 
@@ -8050,12 +8328,12 @@ Give the client:
 
 Recorded so nothing is discovered by surprise. All were scoped out deliberately in spec §3.
 
-| Gap | Status |
-|---|---|
-| Bill void / cancel **UI** | Schema, triggers and reports all support it. Only the UI is missing. ~half a day. |
-| Tax / GST invoicing | Out of scope. Would need HSN codes, per-item tax slabs and CGST/SGST split. |
-| Inventory / stock tracking | Out of scope. |
-| Customer records | Out of scope. |
-| Offline mode | Out of scope. The offline banner prevents the dangerous failure; it does not queue bills. |
-| Table / dine-in orders | Out of scope. The schema does not model open orders. |
-| Multi-outlet | Out of scope. Everything assumes one shop. |
+| Gap                        | Status                                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Bill void / cancel **UI**  | Schema, triggers and reports all support it. Only the UI is missing. ~half a day.         |
+| Tax / GST invoicing        | Out of scope. Would need HSN codes, per-item tax slabs and CGST/SGST split.               |
+| Inventory / stock tracking | Out of scope.                                                                             |
+| Customer records           | Out of scope.                                                                             |
+| Offline mode               | Out of scope. The offline banner prevents the dangerous failure; it does not queue bills. |
+| Table / dine-in orders     | Out of scope. The schema does not model open orders.                                      |
+| Multi-outlet               | Out of scope. Everything assumes one shop.                                                |

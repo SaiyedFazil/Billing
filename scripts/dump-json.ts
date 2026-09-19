@@ -40,7 +40,11 @@ async function main() {
 
   writeFileSync(
     target,
-    JSON.stringify({ dumpedAt: new Date().toISOString(), tables: dump }, null, 2),
+    JSON.stringify(
+      { dumpedAt: new Date().toISOString(), tables: dump },
+      null,
+      2,
+    ),
   );
   console.log(`\nWritten to ${target}`);
   process.exit(0);

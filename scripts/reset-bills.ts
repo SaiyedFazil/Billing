@@ -26,15 +26,21 @@ async function main() {
   );
   console.table(before.rows);
 
-  await db.execute(sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
-  await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_restrict_update`);
+  await db.execute(
+    sql`ALTER TABLE bills DISABLE TRIGGER bills_restrict_update`,
+  );
 
   await db.execute(sql`DELETE FROM bill_items`);
   await db.execute(sql`DELETE FROM bills`);
   await db.execute(sql`DELETE FROM bill_counters`);
 
-  await db.execute(sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`);
+  await db.execute(
+    sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_restrict_update`);
 

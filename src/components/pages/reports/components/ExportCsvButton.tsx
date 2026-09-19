@@ -35,7 +35,6 @@ export function ExportCsvButton({
     <Button
       type="button"
       variant="outline"
-      size="sm"
       disabled={disabled || isPending}
       onClick={handleClick}
     >
