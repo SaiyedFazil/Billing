@@ -3,11 +3,12 @@
 import { Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { thumbnailUrl } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+import { type CategoryTone, categoryTone } from "@/lib/utils/category-tone";
 import { formatINR } from "@/lib/utils/money";
 import type { AdminItemRow } from "@/types/item.types";
 
@@ -23,12 +24,14 @@ export const ITEM_HEADERS = [
 
 export function ItemTableRow({
   row,
+  tone = categoryTone(0),
   onEdit,
   onDelete,
   onToggleAvailability,
   disabled,
 }: {
   row: AdminItemRow;
+  tone?: CategoryTone;
   onEdit: (row: AdminItemRow) => void;
   onDelete: (row: AdminItemRow) => void;
   onToggleAvailability: (row: AdminItemRow) => void;
@@ -36,28 +39,48 @@ export function ItemTableRow({
 }) {
   return (
     <TableRow>
-      <TableCell>
-        <div className="bg-muted relative size-10 overflow-hidden rounded">
+      <TableCell className="w-16">
+        <div
+          className={cn(
+            "relative size-11 overflow-hidden rounded-[11px]",
+            tone.tile,
+          )}
+        >
           {row.imageUrl ? (
             <Image
-              src={thumbnailUrl(row.imageUrl, 80)}
+              src={thumbnailUrl(row.imageUrl, 88)}
               alt=""
               fill
-              sizes="40px"
+              sizes="44px"
               className="object-cover"
             />
           ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-sm font-semibold">
+            <div
+              className={cn(
+                "font-heading flex h-full items-center justify-center text-lg font-bold",
+                tone.ink,
+              )}
+            >
               {row.name.charAt(0)}
             </div>
           )}
         </div>
       </TableCell>
-      <TableCell className="font-medium">{row.name}</TableCell>
+      <TableCell className="font-semibold">{row.name}</TableCell>
       <TableCell>
-        <Badge variant="secondary">{row.categoryName}</Badge>
+        <span
+          className={cn(
+            "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold",
+            tone.tile,
+            tone.ink,
+          )}
+        >
+          {row.categoryName}
+        </span>
       </TableCell>
-      <TableCell className="tabular-nums">{formatINR(row.price)}</TableCell>
+      <TableCell className="font-semibold tabular-nums">
+        {formatINR(row.price)}
+      </TableCell>
       <TableCell>
         <Switch
           checked={row.isAvailable}
@@ -66,7 +89,9 @@ export function ItemTableRow({
           onCheckedChange={() => onToggleAvailability(row)}
         />
       </TableCell>
-      <TableCell className="tabular-nums">{row.sortOrder}</TableCell>
+      <TableCell className="text-muted-foreground tabular-nums">
+        {row.sortOrder}
+      </TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -83,8 +108,9 @@ export function ItemTableRow({
           disabled={disabled}
           aria-label={`Remove ${row.name}`}
           onClick={() => onDelete(row)}
+          className="text-destructive hover:bg-destructive-soft hover:text-destructive"
         >
-          <Trash2 className="text-destructive size-4" />
+          <Trash2 className="size-4" />
         </Button>
       </TableCell>
     </TableRow>

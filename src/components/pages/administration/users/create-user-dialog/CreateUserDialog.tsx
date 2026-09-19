@@ -103,7 +103,7 @@ export function CreateUserDialog({
                 setForm({ ...form, role: value as Role })
               }
             >
-              <SelectTrigger id="user-role">
+              <SelectTrigger id="user-role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

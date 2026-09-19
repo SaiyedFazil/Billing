@@ -83,8 +83,8 @@ export function ItemImageUploader({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-md border">
+    <div className="flex items-center gap-4">
+      <div className="bg-muted/60 relative size-20 shrink-0 overflow-hidden rounded-2xl border border-dashed">
         {imageUrl ? (
           <Image
             src={thumbnailUrl(imageUrl, 160)}

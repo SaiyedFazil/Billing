@@ -1,9 +1,12 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { TableCard } from "@/components/custom/TableCard";
 import { TableEmptyState } from "@/components/custom/TableEmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -52,20 +55,20 @@ export function AuditLogTab({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Audit log</h1>
-        <p className="text-muted-foreground text-sm">
-          Every change to the menu, prices, accounts and settings — plus failed
-          sign-ins and reprints.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Audit log"
+        description="Every change to the menu, prices, accounts and settings — plus failed sign-ins and reprints."
+      />
 
       <Select
         value={action || "ALL"}
         onValueChange={(value) => navigate({ action: value, page: "1" })}
       >
-        <SelectTrigger className="w-64">
+        <SelectTrigger
+          aria-label="Filter by activity"
+          className="shadow-card w-72 data-[size=default]:h-11"
+        >
           <SelectValue placeholder="All activity" />
         </SelectTrigger>
         <SelectContent>
@@ -79,9 +82,41 @@ export function AuditLogTab({
       </Select>
 
       {log.rows.length === 0 ? (
-        <TableEmptyState title="Nothing logged yet" />
+        <TableEmptyState icon={ShieldCheck} title="Nothing logged yet" />
       ) : (
-        <>
+        <TableCard
+          footer={
+            <>
+              <p className="text-muted-foreground text-sm">
+                Page{" "}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {log.page}
+                </span>{" "}
+                of {lastPage} · {log.total} entries
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={log.page <= 1 || isPending}
+                  onClick={() => navigate({ page: String(log.page - 1) })}
+                >
+                  <ChevronLeft />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={log.page >= lastPage || isPending}
+                  onClick={() => navigate({ page: String(log.page + 1) })}
+                >
+                  Next
+                  <ChevronRight />
+                </Button>
+              </div>
+            </>
+          }
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -107,31 +142,7 @@ export function AuditLogTab({
               ))}
             </TableBody>
           </Table>
-
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-sm">
-              Page {log.page} of {lastPage} · {log.total} entries
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={log.page <= 1 || isPending}
-                onClick={() => navigate({ page: String(log.page - 1) })}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={log.page >= lastPage || isPending}
-                onClick={() => navigate({ page: String(log.page + 1) })}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </>
+        </TableCard>
       )}
 
       <AuditDiffDialog

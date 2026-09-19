@@ -1,7 +1,13 @@
 "use client";
 
 import { Receipt80mm } from "@/components/pages/print/components/Receipt80mm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { PrinterWidth } from "@/lib/validation/settings-schema";
 import type { ReceiptData } from "@/types/bill.types";
 
@@ -66,10 +72,13 @@ export function ReceiptPreview({
     <Card>
       <CardHeader>
         <CardTitle>Receipt preview</CardTitle>
+        <CardDescription>Updates as you type.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex justify-center rounded-md border bg-white p-4">
-          <Receipt80mm receipt={receipt} narrow={printerWidth === "MM_58"} />
+        <div className="bg-muted/70 flex justify-center rounded-2xl border border-dashed px-4 py-8">
+          <div className="shadow-lift">
+            <Receipt80mm receipt={receipt} narrow={printerWidth === "MM_58"} />
+          </div>
         </div>
         <p className="text-muted-foreground mt-3 text-xs">
           A sample bill, not real data. Print settings are configured on the

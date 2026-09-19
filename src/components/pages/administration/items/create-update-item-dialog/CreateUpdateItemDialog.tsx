@@ -44,7 +44,7 @@ export function CreateUpdateItemDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{form.id ? "Edit item" : "New item"}</DialogTitle>
         </DialogHeader>
@@ -89,7 +89,7 @@ export function CreateUpdateItemDialog({
                   setForm({ ...form, categoryId: value })
                 }
               >
-                <SelectTrigger id="item-category">
+                <SelectTrigger id="item-category" className="w-full">
                   <SelectValue placeholder="Choose a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,7 +139,7 @@ export function CreateUpdateItemDialog({
               />
             </div>
 
-            <div className="flex items-center gap-2 pb-2">
+            <div className="flex h-10 items-center gap-2.5">
               <Switch
                 id="item-available"
                 checked={form.isAvailable}

@@ -4,26 +4,48 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import type { CategoryTone } from "@/lib/utils/category-tone";
 import type { CategoryRow } from "@/types/category.types";
 
 export const CATEGORY_HEADERS = ["Name", "Order", "Items", ""] as const;
 
 export function CategoryTableRow({
   row,
+  tone,
   onEdit,
   onDelete,
   disabled,
 }: {
   row: CategoryRow;
+  tone: CategoryTone;
   onEdit: (row: CategoryRow) => void;
   onDelete: (row: CategoryRow) => void;
   disabled: boolean;
 }) {
   return (
     <TableRow>
-      <TableCell className="font-medium">{row.name}</TableCell>
-      <TableCell className="tabular-nums">{row.sortOrder}</TableCell>
-      <TableCell className="tabular-nums">{row.itemCount}</TableCell>
+      <TableCell>
+        <span className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className={cn(
+              "font-heading flex size-9 items-center justify-center rounded-[10px] text-base font-bold",
+              tone.tile,
+              tone.ink,
+            )}
+          >
+            {row.name.charAt(0)}
+          </span>
+          <span className="font-semibold">{row.name}</span>
+        </span>
+      </TableCell>
+      <TableCell className="text-muted-foreground tabular-nums">
+        {row.sortOrder}
+      </TableCell>
+      <TableCell className="tabular-nums">
+        {row.itemCount} item{row.itemCount === 1 ? "" : "s"}
+      </TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -40,8 +62,9 @@ export function CategoryTableRow({
           disabled={disabled}
           aria-label={`Remove ${row.name}`}
           onClick={() => onDelete(row)}
+          className="text-destructive hover:bg-destructive-soft hover:text-destructive"
         >
-          <Trash2 className="text-destructive size-4" />
+          <Trash2 className="size-4" />
         </Button>
       </TableCell>
     </TableRow>

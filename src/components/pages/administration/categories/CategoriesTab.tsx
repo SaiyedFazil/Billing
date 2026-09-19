@@ -1,9 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { LayoutGrid, Plus } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/custom/ConfirmDialog";
+import { TableCard } from "@/components/custom/TableCard";
 import { TableEmptyState } from "@/components/custom/TableEmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { categoryTone } from "@/lib/utils/category-tone";
 import type { CategoryRow } from "@/types/category.types";
 
 import { CATEGORY_HEADERS, CategoryTableRow } from "./CategoriesColumns";
@@ -22,54 +25,56 @@ export function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
   const tab = useCategoriesTab();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Categories</h1>
-          <p className="text-muted-foreground text-sm">
-            Groups the billing screen uses for its tabs.
-          </p>
-        </div>
-        <Button onClick={tab.openCreate}>
-          <Plus className="size-4" />
-          New category
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Categories"
+        description="Groups the billing screen uses for its tabs."
+        actions={
+          <Button onClick={tab.openCreate}>
+            <Plus className="size-4.5" strokeWidth={2.25} />
+            New category
+          </Button>
+        }
+      />
 
       {categories.length === 0 ? (
         <TableEmptyState
+          icon={LayoutGrid}
           title="No categories yet"
           description="Add a category before adding items — every item belongs to one."
           action={<Button onClick={tab.openCreate}>New category</Button>}
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {CATEGORY_HEADERS.map((header, index) => (
-                <TableHead
-                  key={header || `actions-${index}`}
-                  className={
-                    index === CATEGORY_HEADERS.length - 1 ? "text-right" : ""
-                  }
-                >
-                  {header}
-                </TableHead>
+        <TableCard>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {CATEGORY_HEADERS.map((header, index) => (
+                  <TableHead
+                    key={header || `actions-${index}`}
+                    className={
+                      index === CATEGORY_HEADERS.length - 1 ? "text-right" : ""
+                    }
+                  >
+                    {header}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categories.map((row, index) => (
+                <CategoryTableRow
+                  key={row.id}
+                  row={row}
+                  tone={categoryTone(index)}
+                  onEdit={tab.openEdit}
+                  onDelete={tab.setPendingDelete}
+                  disabled={tab.isPending}
+                />
               ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {categories.map((row) => (
-              <CategoryTableRow
-                key={row.id}
-                row={row}
-                onEdit={tab.openEdit}
-                onDelete={tab.setPendingDelete}
-                disabled={tab.isPending}
-              />
-            ))}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </TableCard>
       )}
 
       <CreateUpdateCategoryDialog

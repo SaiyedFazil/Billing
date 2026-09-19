@@ -1,9 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { LayoutGrid, Plus, SearchX } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/custom/ConfirmDialog";
+import { TableCard } from "@/components/custom/TableCard";
 import { TableEmptyState } from "@/components/custom/TableEmptyState";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -29,22 +31,21 @@ export function ItemsTab({
   const tab = useItemsTab({ items, categories });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Items</h1>
-          <p className="text-muted-foreground text-sm">
-            Everything the till can sell.
-          </p>
-        </div>
-        <Button onClick={tab.openCreate} disabled={categories.length === 0}>
-          <Plus className="size-4" />
-          New item
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Items"
+        description="Everything the till can sell."
+        actions={
+          <Button onClick={tab.openCreate} disabled={categories.length === 0}>
+            <Plus className="size-4.5" strokeWidth={2.25} />
+            New item
+          </Button>
+        }
+      />
 
       {categories.length === 0 ? (
         <TableEmptyState
+          icon={LayoutGrid}
           title="Add a category first"
           description="Every item belongs to a category. Create one under Categories, then come back."
         />
@@ -60,38 +61,42 @@ export function ItemsTab({
 
           {tab.visibleItems.length === 0 ? (
             <TableEmptyState
+              icon={SearchX}
               title="No items match"
               description="Try a different search term or category."
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {ITEM_HEADERS.map((header, index) => (
-                    <TableHead
-                      key={header || `col-${index}`}
-                      className={
-                        index === ITEM_HEADERS.length - 1 ? "text-right" : ""
-                      }
-                    >
-                      {header}
-                    </TableHead>
+            <TableCard>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {ITEM_HEADERS.map((header, index) => (
+                      <TableHead
+                        key={header || `col-${index}`}
+                        className={
+                          index === ITEM_HEADERS.length - 1 ? "text-right" : ""
+                        }
+                      >
+                        {header}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tab.visibleItems.map((row) => (
+                    <ItemTableRow
+                      key={row.id}
+                      row={row}
+                      tone={tab.toneByCategoryId.get(row.categoryId)}
+                      onEdit={tab.openEdit}
+                      onDelete={tab.setPendingDelete}
+                      onToggleAvailability={tab.toggleAvailability}
+                      disabled={tab.isPending}
+                    />
                   ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tab.visibleItems.map((row) => (
-                  <ItemTableRow
-                    key={row.id}
-                    row={row}
-                    onEdit={tab.openEdit}
-                    onDelete={tab.setPendingDelete}
-                    onToggleAvailability={tab.toggleAvailability}
-                    disabled={tab.isPending}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </TableCard>
           )}
         </>
       )}
