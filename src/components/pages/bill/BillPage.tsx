@@ -1,5 +1,8 @@
 "use client";
 
+import { UtensilsCrossed } from "lucide-react";
+
+import { TableEmptyState } from "@/components/custom/TableEmptyState";
 import type { MenuCategory } from "@/types/item.types";
 
 import { CartPanel } from "./components/CartPanel";
@@ -13,17 +16,20 @@ export function BillPage({ menu }: { menu: MenuCategory[] }) {
   // Hooks have already run, so an early return here is safe.
   if (menu.length === 0) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center p-4">
-        <p className="text-muted-foreground max-w-sm text-center">
-          No items on the menu yet. The owner needs to add categories and items
-          before billing can start.
-        </p>
+      <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center p-6 lg:min-h-dvh">
+        <TableEmptyState
+          icon={UtensilsCrossed}
+          title="No items on the menu yet"
+          description="The owner needs to add categories and items before billing can start."
+        />
       </div>
     );
   }
 
+  // Desktop pins the till to the viewport so the cart never scrolls away;
+  // phones scroll the page naturally instead.
   return (
-    <div className="grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-5 p-4 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_404px] xl:px-6">
       <MenuGrid
         categories={bill.categories}
         activeCategoryId={bill.activeCategoryId}
@@ -33,10 +39,13 @@ export function BillPage({ menu }: { menu: MenuCategory[] }) {
         onSearchEnter={bill.addBySearch}
         items={bill.visibleItems}
         onSelect={bill.addItem}
+        quantityByItemId={bill.quantityByItemId}
+        toneByCategoryId={bill.toneByCategoryId}
       />
 
       <CartPanel
         lines={bill.lines}
+        itemCount={bill.itemCount}
         onSetQuantity={bill.setQuantity}
         onRemove={bill.removeItem}
         subtotal={bill.subtotal}

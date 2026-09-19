@@ -1,8 +1,15 @@
 "use client";
 
+import {
+  AlertCircle,
+  Loader2,
+  Printer,
+  ReceiptText,
+  ShoppingBag,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import type { PaymentMethod } from "@/constants/payment-methods";
 import { formatINR } from "@/lib/utils/money";
 import type { CartLine as CartLineType } from "@/types/bill.types";
@@ -13,6 +20,7 @@ import { PaymentPanel } from "./PaymentPanel";
 
 export function CartPanel({
   lines,
+  itemCount,
   onSetQuantity,
   onRemove,
   subtotal,
@@ -31,6 +39,7 @@ export function CartPanel({
   onSave,
 }: {
   lines: CartLineType[];
+  itemCount: number;
   onSetQuantity: (itemId: string, quantity: number) => void;
   onRemove: (itemId: string) => void;
   subtotal: string;
@@ -49,18 +58,38 @@ export function CartPanel({
   onSave: () => void;
 }) {
   return (
-    <aside className="bg-card flex h-full min-h-0 flex-col rounded-lg border">
-      <header className="border-b px-4 py-3">
-        <h2 className="font-semibold">Current bill</h2>
+    <aside
+      aria-label="Current bill"
+      className="bg-card shadow-lift relative flex min-h-0 flex-col overflow-hidden rounded-3xl border lg:h-full"
+    >
+      <header className="flex items-center gap-3 px-5 pt-5 pb-2">
+        <span className="bg-brand-soft text-primary flex size-10 items-center justify-center rounded-xl">
+          <ReceiptText className="size-5" />
+        </span>
+        <div>
+          <h2 className="font-heading text-xl leading-tight font-bold">
+            Current bill
+          </h2>
+          <p className="text-muted-foreground text-[13px]">
+            {itemCount === 0
+              ? "No items yet"
+              : `${itemCount} item${itemCount === 1 ? "" : "s"}`}
+          </p>
+        </div>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1 px-4">
+      <ScrollArea className="min-h-0 flex-1 px-5">
         {lines.length === 0 ? (
-          <p className="text-muted-foreground py-12 text-center text-sm">
-            Tap an item to start the bill.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl">
+              <ShoppingBag className="size-5" />
+            </span>
+            <p className="text-muted-foreground text-sm">
+              Tap an item to start the bill.
+            </p>
+          </div>
         ) : (
-          <ul className="divide-y">
+          <ul>
             {lines.map((line) => (
               <CartLine
                 key={line.itemId}
@@ -74,10 +103,20 @@ export function CartPanel({
         )}
       </ScrollArea>
 
-      <div className="space-y-3 border-t px-4 py-3">
+      {/* The ticket stub: a perforated edge with a notch cut from each side. */}
+      <div className="relative space-y-3.5 border-t-2 border-dashed border-[#e6ded3] bg-[#fffcf9] px-5 pt-5 pb-5">
+        <span
+          aria-hidden
+          className="bg-background absolute -top-3 -left-3 size-6 rounded-full border"
+        />
+        <span
+          aria-hidden
+          className="bg-background absolute -top-3 -right-3 size-6 rounded-full border"
+        />
+
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium tabular-nums">{formatINR(subtotal)}</span>
+          <span className="font-semibold tabular-nums">{formatINR(subtotal)}</span>
         </div>
 
         <DiscountInput
@@ -87,11 +126,11 @@ export function CartPanel({
           disabled={isSaving}
         />
 
-        <Separator />
-
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-semibold">Total</span>
-          <span className="text-2xl font-bold tabular-nums">
+        <div className="flex items-end justify-between border-t pt-3">
+          <span className="text-foreground/80 pb-1 text-[15px] font-semibold">
+            Total
+          </span>
+          <span className="font-heading text-[38px] leading-none font-extrabold tracking-tight tabular-nums">
             {formatINR(total)}
           </span>
         </div>
@@ -106,11 +145,11 @@ export function CartPanel({
         />
 
         {error ? (
-          <div
-            role="alert"
-            className="bg-destructive/10 space-y-2 rounded-md px-3 py-2"
-          >
-            <p className="text-destructive text-sm">{error}</p>
+          <div role="alert" className="bg-destructive-soft space-y-2 rounded-xl p-3">
+            <p className="text-destructive-ink flex gap-2 text-sm font-medium">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              {error}
+            </p>
             {/* Retry reuses the same idempotency key, so pressing it after a
                 timeout cannot create a second bill. See spec §11.2. */}
             <Button
@@ -129,11 +168,21 @@ export function CartPanel({
         <Button
           type="button"
           size="lg"
-          className="h-14 w-full text-base"
+          className="h-15 w-full rounded-2xl text-[17px]"
           disabled={!canSave}
           onClick={onSave}
         >
-          {isSaving ? "Saving…" : "Save & Print"}
+          {isSaving ? (
+            <>
+              <Loader2 className="size-5 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Printer className="size-5" />
+              Save &amp; Print
+            </>
+          )}
         </Button>
       </div>
     </aside>

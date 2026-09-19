@@ -12,6 +12,7 @@ import {
   subtract,
   ZERO,
 } from "@/lib/utils/money";
+import { categoryTone } from "@/lib/utils/category-tone";
 import { createBillAction } from "@/server/bills/bills-actions";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
 
@@ -42,6 +43,18 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
     () => filterItems(menu, activeCategoryId, search),
     [menu, activeCategoryId, search],
   );
+
+  // Display only: lets a menu card show "×2" once it is on the bill.
+  const quantityByItemId = useMemo(
+    () => new Map(lines.map((line) => [line.itemId, line.quantity])),
+    [lines],
+  );
+  const toneByCategoryId = useMemo(
+    () =>
+      new Map(menu.map((category, index) => [category.id, categoryTone(index)])),
+    [menu],
+  );
+  const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
 
   const rawDiscount = parseRupeesOrZero(discountInput);
   const { subtotal, discount, total } = billTotal(lines, rawDiscount);
@@ -152,8 +165,11 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
     setSearch,
     addBySearch,
     visibleItems,
+    quantityByItemId,
+    toneByCategoryId,
 
     lines,
+    itemCount,
     addItem: (item: MenuItem) => addItem(item),
     setQuantity,
     removeItem,

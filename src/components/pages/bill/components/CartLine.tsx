@@ -2,9 +2,11 @@
 
 import { Minus, Plus, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { formatINR, lineTotal } from "@/lib/utils/money";
 import type { CartLine as CartLineType } from "@/types/bill.types";
+
+const STEP_BUTTON =
+  "bg-card text-foreground flex size-8.5 cursor-pointer items-center justify-center rounded-full shadow-[0_1px_2px_rgb(28_23_20/0.1)] transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50";
 
 export function CartLine({
   line,
@@ -18,57 +20,55 @@ export function CartLine({
   disabled: boolean;
 }) {
   return (
-    <li className="flex items-start gap-2 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{line.name}</p>
-        <p className="text-muted-foreground text-xs">
-          {formatINR(line.unitPrice)} each
-        </p>
-      </div>
-
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="size-7"
-          disabled={disabled}
-          aria-label={`Decrease ${line.name}`}
-          onClick={() => onSetQuantity(line.itemId, line.quantity - 1)}
-        >
-          <Minus className="size-3" />
-        </Button>
-        <span className="w-7 text-center text-sm font-semibold tabular-nums">
-          {line.quantity}
+    <li className="border-border/70 space-y-2 border-b py-3 last:border-b-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="min-w-0 truncate text-[15px] font-semibold">{line.name}</p>
+        <span className="text-[15px] font-bold tabular-nums">
+          {formatINR(lineTotal(line.unitPrice, line.quantity))}
         </span>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="size-7"
-          disabled={disabled}
-          aria-label={`Increase ${line.name}`}
-          onClick={() => onSetQuantity(line.itemId, line.quantity + 1)}
-        >
-          <Plus className="size-3" />
-        </Button>
       </div>
 
-      <span className="w-20 text-right text-sm font-semibold tabular-nums">
-        {formatINR(lineTotal(line.unitPrice, line.quantity))}
-      </span>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground text-[13px] tabular-nums">
+          {formatINR(line.unitPrice)} each
+        </span>
 
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="text-muted-foreground size-7"
-        disabled={disabled}
-        aria-label={`Remove ${line.name}`}
-        onClick={() => onRemove(line.itemId)}
-      >
-        <X className="size-3" />
-      </Button>
+        <div className="flex items-center gap-1.5">
+          <div className="bg-muted flex items-center gap-0.5 rounded-full p-0.75">
+            <button
+              type="button"
+              className={STEP_BUTTON}
+              disabled={disabled}
+              aria-label={`Decrease ${line.name}`}
+              onClick={() => onSetQuantity(line.itemId, line.quantity - 1)}
+            >
+              <Minus className="size-4" strokeWidth={2.25} />
+            </button>
+            <span className="w-7 text-center text-[15px] font-bold tabular-nums">
+              {line.quantity}
+            </span>
+            <button
+              type="button"
+              className={STEP_BUTTON}
+              disabled={disabled}
+              aria-label={`Increase ${line.name}`}
+              onClick={() => onSetQuantity(line.itemId, line.quantity + 1)}
+            >
+              <Plus className="size-4" strokeWidth={2.25} />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={`Remove ${line.name}`}
+            onClick={() => onRemove(line.itemId)}
+            className="text-muted-foreground hover:bg-destructive-soft hover:text-destructive flex size-8.5 cursor-pointer items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
     </li>
   );
 }

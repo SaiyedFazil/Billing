@@ -16,18 +16,26 @@ export function DiscountInput({
 }) {
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor="discount" className="text-sm font-normal">
-          Discount ₹
+      <div className="flex items-center justify-between gap-3">
+        <Label
+          htmlFor="discount"
+          className="text-muted-foreground text-sm font-normal"
+        >
+          Discount
         </Label>
-        <MoneyInput
-          id="discount"
-          value={value}
-          onChange={onChange}
-          invalid={invalid}
-          disabled={disabled}
-          className="w-28"
-        />
+        <div className="relative w-32">
+          <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+            ₹
+          </span>
+          <MoneyInput
+            id="discount"
+            value={value}
+            onChange={onChange}
+            invalid={invalid}
+            disabled={disabled}
+            className="pl-7 font-semibold"
+          />
+        </div>
       </div>
       {invalid ? (
         <p className="text-destructive text-right text-xs">
