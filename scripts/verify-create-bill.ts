@@ -171,6 +171,32 @@ async function main() {
     sql`UPDATE items SET is_available = true WHERE id = ${first.id}::uuid`,
   );
 
+  // --- a switched-off payment method is rejected -------------------------
+  // The till never draws the button, but a server action is a public endpoint.
+  await db.execute(
+    sql`UPDATE shop_settings SET payment_methods = '{CASH}'::payment_method[]`,
+  );
+  const disabledMethod = await createBill(
+    {
+      idempotencyKey: crypto.randomUUID(),
+      lines: [{ itemId: first.id, quantity: 1 }],
+      discount: "0.00",
+      paymentMethod: "UPI",
+      tendered: null,
+      expectedTotal: first.price,
+    },
+    userId,
+  );
+  check(
+    "a switched-off payment method is rejected with CONFLICT",
+    !disabledMethod.ok && disabledMethod.error.code === "CONFLICT",
+    disabledMethod,
+  );
+  await db.execute(
+    sql`UPDATE shop_settings
+        SET payment_methods = '{CASH,UPI,CARD,OTHER}'::payment_method[]`,
+  );
+
   // --- snapshots ---------------------------------------------------------
   const linesRow = await db.execute(sql`
     SELECT item_name, category_name, unit_price, quantity, line_total

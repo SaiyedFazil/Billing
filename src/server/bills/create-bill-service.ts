@@ -1,6 +1,9 @@
 import { eq, inArray, sql } from "drizzle-orm";
 
-import { collectsTender } from "@/constants/payment-methods";
+import {
+  collectsTender,
+  PAYMENT_METHOD_LABELS,
+} from "@/constants/payment-methods";
 import { db } from "@/db";
 import { billCounters, billItems, bills, categories, items } from "@/db/schema";
 import { businessDate } from "@/lib/utils/dates";
@@ -14,7 +17,10 @@ import {
 } from "@/lib/utils/money";
 import { isUniqueViolation } from "@/lib/utils/parse-db-error";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
-import { getShopTimezone } from "@/server/settings/settings-queries";
+import {
+  getEnabledPaymentMethods,
+  getShopTimezone,
+} from "@/server/settings/settings-queries";
 import type { CreateBillInput, CreatedBill } from "@/types/bill.types";
 
 const CREATED_BILL_COLUMNS = {
@@ -127,6 +133,22 @@ export async function createBill(
     );
   }
 
+  // Both settings the rest of this function needs, in one round trip.
+  const [timeZone, enabledMethods] = await Promise.all([
+    getShopTimezone(),
+    getEnabledPaymentMethods(),
+  ]);
+
+  // The till only draws buttons for enabled methods, but a server action is a
+  // publicly callable endpoint — hiding a button is not enforcement, so the
+  // method is checked here too. See spec §8.2.
+  if (!enabledMethods.includes(input.paymentMethod)) {
+    return fail(
+      "CONFLICT",
+      `${PAYMENT_METHOD_LABELS[input.paymentMethod]} is no longer accepted at this shop. Pick another payment method.`,
+    );
+  }
+
   let tendered: string | null = null;
   let changeDue: string | null = null;
 
@@ -142,7 +164,7 @@ export async function createBill(
     changeDue = subtract(tendered, total);
   }
 
-  const timeZone = await getShopTimezone();
+  // Stamped as late as possible, so the date reflects when the bill was saved.
   const date = businessDate(new Date(), timeZone);
 
   // ---- 3. Write phase -----------------------------------------------

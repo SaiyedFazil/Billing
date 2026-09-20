@@ -8,7 +8,10 @@ import { guarded, requireSuperadmin } from "@/lib/auth/guard";
 import { ADMIN_ROUTES } from "@/lib/routes/administration-routes";
 import { fieldErrors } from "@/lib/utils/field-errors";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
-import { settingsSchema } from "@/lib/validation/settings-schema";
+import {
+  paymentMethodsSchema,
+  settingsSchema,
+} from "@/lib/validation/settings-schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
 import { getShopSettings } from "@/server/settings/settings-queries";
 
@@ -64,6 +67,49 @@ export async function updateSettingsAction(
     revalidatePath("/print", "layout");
     // The sidebar shows the shop name on every page.
     revalidatePath("/", "layout");
+    return ok(null);
+  });
+}
+
+/**
+ * Saved on its own, separately from the receipt details above, so toggling a
+ * payment method cannot also commit a half-typed shop name.
+ */
+export async function updatePaymentMethodsAction(
+  payload: unknown,
+): Promise<ActionResult<null>> {
+  return guarded(async () => {
+    const actor = await requireSuperadmin();
+
+    const parsed = paymentMethodsSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail<null>(
+        "VALIDATION",
+        "Keep at least one payment method switched on.",
+        fieldErrors(parsed.error),
+      );
+    }
+
+    const before = await getShopSettings();
+
+    // No WHERE clause: shop_settings holds exactly one row.
+    await db.update(shopSettings).set({
+      paymentMethods: parsed.data.paymentMethods,
+      updatedBy: actor.id,
+      updatedAt: new Date(),
+    });
+
+    await writeAuditLog({
+      actorId: actor.id,
+      action: "SETTINGS_UPDATED",
+      entityType: "shop_settings",
+      before: { paymentMethods: before.paymentMethods },
+      after: { paymentMethods: parsed.data.paymentMethods },
+    });
+
+    revalidatePath(ADMIN_ROUTES.settings);
+    // The till renders one button per enabled method.
+    revalidatePath("/bill");
     return ok(null);
   });
 }
