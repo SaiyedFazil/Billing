@@ -88,7 +88,7 @@ export function PaymentMethodsCard({ initial }: { initial: PaymentMethod[] }) {
         <Button
           type="button"
           className="w-full"
-          disabled={card.isPending}
+          disabled={card.isPending || !card.isDirty}
           onClick={card.submit}
         >
           {card.isPending ? "Saving…" : "Save payment methods"}

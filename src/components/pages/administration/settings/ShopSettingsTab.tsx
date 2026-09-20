@@ -222,7 +222,11 @@ export function ShopSettingsTab({
                 </p>
               </div>
 
-              <Button type="submit" size="lg" disabled={isPending}>
+              <Button
+                type="submit"
+                size="lg"
+                disabled={isPending || !tab.isDirty}
+              >
                 {isPending ? "Saving…" : "Save settings"}
               </Button>
             </form>
