@@ -84,6 +84,7 @@ async function main() {
       receiptFooter: "Thank you! Visit again",
       printerWidth: "MM_80",
       timezone: "Asia/Kolkata",
+      paymentMethods: ["CASH", "UPI", "CARD", "OTHER"],
     });
     console.log("Created shop settings.");
   }

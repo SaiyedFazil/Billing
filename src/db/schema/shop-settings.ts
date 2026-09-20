@@ -8,7 +8,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { printerWidthEnum } from "./enums";
+import { paymentMethodEnum, printerWidthEnum } from "./enums";
 import { users } from "./users";
 
 /**
@@ -27,6 +27,12 @@ export const shopSettings = pgTable(
     receiptFooter: text("receipt_footer"),
     printerWidth: printerWidthEnum("printer_width").notNull().default("MM_80"),
     currencyCode: text("currency_code").notNull().default("INR"),
+    // Which payment buttons the till offers. History is never filtered by it:
+    // a bill keeps the method it was paid with even after it is switched off.
+    paymentMethods: paymentMethodEnum("payment_methods")
+      .array()
+      .notNull()
+      .default(["CASH", "UPI", "CARD", "OTHER"]),
     // Drives business_date and every "today" report.
     timezone: text("timezone").notNull().default("Asia/Kolkata"),
     updatedBy: uuid("updated_by").references(() => users.id),
@@ -34,7 +40,19 @@ export const shopSettings = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [check("shop_settings_singleton", sql`${table.id}`)],
+  (table) => [
+    check("shop_settings_singleton", sql`${table.id}`),
+    // The till must always have at least one button to press. Enforced here as
+    // well as in Zod, so no path can leave the shop unable to take money.
+    //
+    // cardinality(), not array_length(): array_length('{}', 1) returns NULL,
+    // and a CHECK that evaluates to NULL is treated as satisfied — so the
+    // obvious spelling would let the empty array straight through.
+    check(
+      "shop_settings_payment_methods_not_empty",
+      sql`cardinality(${table.paymentMethods}) >= 1`,
+    ),
+  ],
 );
 
 export type ShopSettings = typeof shopSettings.$inferSelect;
