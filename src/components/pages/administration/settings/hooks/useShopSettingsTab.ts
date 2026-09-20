@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import {
+  useCallback,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
 import type { PrinterWidth } from "@/lib/validation/settings-schema";
@@ -16,11 +21,36 @@ export type SettingsFormState = {
   timezone: string;
 };
 
+/** The till's own timezone is a browser fact, so it has no server snapshot. */
+const subscribeToNothing = () => () => {};
+
+function readDeviceTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    // A locked-down browser can throw here; the shop setting still stands.
+    return null;
+  }
+}
+
 export function useShopSettingsTab(initial: SettingsFormState) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // The server cannot know the till's timezone, so it renders null and the
+  // browser fills it in after hydration — reading it during render would
+  // mismatch. The string is stable, so this never re-renders in a loop.
+  const deviceTimezone = useSyncExternalStore(
+    subscribeToNothing,
+    readDeviceTimezone,
+    () => null,
+  );
+
+  const useDeviceTimezone = useCallback(() => {
+    if (!deviceTimezone) return;
+    setForm((previous) => ({ ...previous, timezone: deviceTimezone }));
+  }, [deviceTimezone]);
 
   const submit = useCallback(() => {
     setFieldErrors({});
@@ -44,5 +74,16 @@ export function useShopSettingsTab(initial: SettingsFormState) {
     });
   }, [form, router]);
 
-  return { form, setForm, fieldErrors, submit, isPending };
+  return {
+    form,
+    setForm,
+    fieldErrors,
+    submit,
+    isPending,
+    deviceTimezone,
+    useDeviceTimezone,
+    /** The saved zone and this device disagree — worth pointing out, not an error. */
+    timezoneDiffersFromDevice:
+      deviceTimezone !== null && deviceTimezone !== form.timezone,
+  };
 }

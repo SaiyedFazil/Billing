@@ -2,12 +2,12 @@
 
 import { Receipt80mm } from "@/components/pages/print/components/Receipt80mm";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PrinterWidth } from "@/lib/validation/settings-schema";
 import type { ReceiptData } from "@/types/bill.types";
 
@@ -44,7 +44,9 @@ function sampleReceipt(shop: ReceiptData["shop"]): ReceiptData {
   };
 }
 
-export function ReceiptPreview({
+export function ReceiptPreviewDialog({
+  open,
+  onOpenChange,
   shopName,
   addressLine,
   phone,
@@ -52,6 +54,8 @@ export function ReceiptPreview({
   printerWidth,
   timezone,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   shopName: string;
   addressLine: string;
   phone: string;
@@ -69,22 +73,26 @@ export function ReceiptPreview({
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Receipt preview</CardTitle>
-        <CardDescription>Updates as you type.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-center rounded-2xl border border-dashed bg-muted/70 px-4 py-8">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Receipt preview</DialogTitle>
+          <DialogDescription>
+            A sample bill, not real data. It follows whatever is typed in the
+            form, including changes not yet saved.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex max-h-[60vh] justify-center overflow-y-auto rounded-2xl border border-dashed bg-muted/70 px-4 py-8">
           <div className="shadow-lift">
             <Receipt80mm receipt={receipt} narrow={printerWidth === "MM_58"} />
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          A sample bill, not real data. Print settings are configured on the
-          till — see docs/printer-setup.md.
+
+        <p className="text-xs text-muted-foreground">
+          Print settings are configured on the till — see docs/printer-setup.md.
         </p>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
