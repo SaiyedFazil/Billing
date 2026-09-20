@@ -28,6 +28,7 @@ export function CartPanel({
   onDiscountChange,
   discountExceedsSubtotal,
   total,
+  paymentMethods,
   paymentMethod,
   onPaymentMethodChange,
   tenderedInput,
@@ -47,6 +48,7 @@ export function CartPanel({
   onDiscountChange: (value: string) => void;
   discountExceedsSubtotal: boolean;
   total: string;
+  paymentMethods: PaymentMethod[];
   paymentMethod: PaymentMethod;
   onPaymentMethodChange: (method: PaymentMethod) => void;
   tenderedInput: string;
@@ -138,6 +140,7 @@ export function CartPanel({
         </div>
 
         <PaymentPanel
+          paymentMethods={paymentMethods}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={onPaymentMethodChange}
           tenderedInput={tenderedInput}
