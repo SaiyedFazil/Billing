@@ -22,7 +22,13 @@ import type { MenuCategory, MenuItem } from "@/types/item.types";
 import { filterItems, topSearchMatch } from "../utils/cart";
 import { useCartReducer } from "./useCartReducer";
 
-export function useBillPage({ menu }: { menu: MenuCategory[] }) {
+export function useBillPage({
+  menu,
+  paymentMethods,
+}: {
+  menu: MenuCategory[];
+  paymentMethods: PaymentMethod[];
+}) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
 
@@ -32,7 +38,17 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
   const [search, setSearch] = useState("");
   const [discountInput, setDiscountInput] = useState("");
   const [tenderedInput, setTenderedInput] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  // The owner chooses which methods the till offers; the first enabled one is
+  // the default. getEnabledPaymentMethods() never returns an empty list.
+  const defaultMethod = paymentMethods[0];
+  const [selectedMethod, setPaymentMethod] =
+    useState<PaymentMethod>(defaultMethod);
+  // If the owner switches off the selected method while this till is open, a
+  // refresh drops it from the list — fall back rather than leave a button
+  // highlighted that is no longer there. The server rejects it either way.
+  const paymentMethod = paymentMethods.includes(selectedMethod)
+    ? selectedMethod
+    : defaultMethod;
   const [error, setError] = useState<string | null>(null);
   const [priceChange, setPriceChange] = useState<string | null>(null);
 
@@ -92,12 +108,12 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
     clear();
     setDiscountInput("");
     setTenderedInput("");
-    setPaymentMethod("CASH");
+    setPaymentMethod(defaultMethod);
     setSearch("");
     setError(null);
     setPriceChange(null);
     setIdempotencyKey(globalThis.crypto.randomUUID());
-  }, [clear]);
+  }, [clear, defaultMethod]);
 
   const submit = useCallback(
     (expectedTotal: string) => {
@@ -186,6 +202,7 @@ export function useBillPage({ menu }: { menu: MenuCategory[] }) {
     discountExceedsSubtotal,
     total,
 
+    paymentMethods,
     paymentMethod,
     setPaymentMethod,
     tenderedInput,

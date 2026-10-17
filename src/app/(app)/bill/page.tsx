@@ -1,6 +1,7 @@
 import { BillPage } from "@/components/pages/bill/BillPage";
 import { requireUser } from "@/lib/auth/guard";
 import { getMenu } from "@/server/items/items-queries";
+import { getEnabledPaymentMethods } from "@/server/settings/settings-queries";
 
 export const metadata = {
   title: "New Bill",
@@ -12,7 +13,10 @@ export default async function Page() {
 
   // Fetched server-side once per load and passed down — no client fetching,
   // no loading spinner on the till.
-  const menu = await getMenu();
+  const [menu, paymentMethods] = await Promise.all([
+    getMenu(),
+    getEnabledPaymentMethods(),
+  ]);
 
-  return <BillPage menu={menu} />;
+  return <BillPage menu={menu} paymentMethods={paymentMethods} />;
 }

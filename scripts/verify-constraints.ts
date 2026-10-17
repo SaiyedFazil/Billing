@@ -86,6 +86,13 @@ async function main() {
     sql`INSERT INTO shop_settings (id, shop_name) VALUES (false, 'Second Row')`,
   );
 
+  // --- shop_settings payment methods ----------------------------------
+  // The shop must always have at least one way to take money.
+  await expectRejection(
+    "switching off every payment method is refused",
+    sql`UPDATE shop_settings SET payment_methods = '{}'::payment_method[]`,
+  );
+
   // --- cleanup --------------------------------------------------------
   await db.execute(
     sql`DELETE FROM categories WHERE name = 'Constraint Probe Category'`,

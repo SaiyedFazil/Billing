@@ -15,8 +15,10 @@ import {
 } from "@/components/ui/table";
 import type { BillLedgerPage } from "@/types/report.types";
 
-import { BILL_HEADERS, BillTableRow } from "./BillsColumns";
+import { BILL_COLUMNS, BillTableRow } from "./BillsColumns";
+import { BillPreviewDialog } from "./components/BillPreviewDialog";
 import { BillsTableToolbar } from "./components/BillsTableToolbar";
+import { useBillPreview } from "./hooks/useBillPreview";
 import { useBillsTab } from "./hooks/useBillsTab";
 
 export function BillsTab({
@@ -35,6 +37,7 @@ export function BillsTab({
   cashiers: Array<{ id: string; name: string }>;
 }) {
   const tab = useBillsTab();
+  const preview = useBillPreview();
 
   const lastPage = Math.max(1, Math.ceil(ledger.total / ledger.pageSize));
   const firstRow =
@@ -101,24 +104,36 @@ export function BillsTab({
           <Table>
             <TableHeader>
               <TableRow>
-                {BILL_HEADERS.map((header) => (
-                  <TableHead
-                    key={header}
-                    className={header === "Total" ? "text-right" : ""}
-                  >
-                    {header}
+                {BILL_COLUMNS.map((column) => (
+                  <TableHead key={column.label} className={column.width}>
+                    {"srOnly" in column ? (
+                      <span className="sr-only">{column.label}</span>
+                    ) : (
+                      column.label
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {ledger.rows.map((row) => (
-                <BillTableRow key={row.id} row={row} />
+                <BillTableRow key={row.id} row={row} onPreview={preview.open} />
               ))}
             </TableBody>
           </Table>
         </TableCard>
       )}
+
+      <BillPreviewDialog
+        bill={preview.bill}
+        receipt={preview.receipt}
+        error={preview.error}
+        isLoading={preview.isLoading}
+        isReprinting={preview.isReprinting}
+        isOpen={preview.isOpen}
+        onClose={preview.close}
+        onReprint={preview.reprint}
+      />
     </div>
   );
 }

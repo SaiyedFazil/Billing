@@ -4,14 +4,25 @@ import { MoneyInput } from "@/components/custom/MoneyInput";
 import {
   collectsTender,
   PAYMENT_METHOD_LABELS,
-  PAYMENT_METHODS,
   type PaymentMethod,
 } from "@/constants/payment-methods";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils/money";
 import { PAYMENT_METHOD_ICONS } from "@/lib/utils/payment-method-style";
 
+/**
+ * Written out in full because Tailwind scans for literal class names — a
+ * template string like `grid-cols-${n}` produces no CSS.
+ */
+const GRID_COLUMNS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
+
 export function PaymentPanel({
+  paymentMethods,
   paymentMethod,
   onPaymentMethodChange,
   tenderedInput,
@@ -19,6 +30,7 @@ export function PaymentPanel({
   changeDue,
   disabled,
 }: {
+  paymentMethods: PaymentMethod[];
   paymentMethod: PaymentMethod;
   onPaymentMethodChange: (method: PaymentMethod) => void;
   tenderedInput: string;
@@ -31,9 +43,12 @@ export function PaymentPanel({
       <div
         role="group"
         aria-label="Payment method"
-        className="grid grid-cols-4 gap-2"
+        className={cn(
+          "grid gap-2",
+          GRID_COLUMNS[paymentMethods.length] ?? "grid-cols-4",
+        )}
       >
-        {PAYMENT_METHODS.map((method) => {
+        {paymentMethods.map((method) => {
           const Icon = PAYMENT_METHOD_ICONS[method];
           const selected = paymentMethod === method;
           return (

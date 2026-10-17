@@ -1,8 +1,9 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import { auditLog, categories, items } from "../src/db/schema";
 import { compare } from "../src/lib/utils/money";
+import { renumberCategory } from "../src/server/items/item-order-service";
 
 let failures = 0;
 
@@ -99,6 +100,92 @@ async function main() {
     negativeRejected = true;
   }
   check("a negative price is rejected", negativeRejected);
+
+  // --- display order ------------------------------------------------------
+  await db.execute(sql`DELETE FROM items WHERE name LIKE 'Order Probe%'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name = 'Order Probe Category'`,
+  );
+
+  const [orderCategory] = await db
+    .insert(categories)
+    .values({ name: "Order Probe Category", sortOrder: 900 })
+    .returning({ id: categories.id });
+
+  const probeIds: Record<string, string> = {};
+  for (const [index, label] of ["A", "B", "C", "D"].entries()) {
+    const [row] = await db
+      .insert(items)
+      .values({
+        categoryId: orderCategory.id,
+        name: `Order Probe ${label}`,
+        price: "10.00",
+        sortOrder: index === 3 ? 20 : index,
+      })
+      .returning({ id: items.id });
+    probeIds[label] = row.id;
+  }
+
+  async function currentOrder(categoryId = orderCategory.id) {
+    const rows = await db
+      .select({ name: items.name, sortOrder: items.sortOrder })
+      .from(items)
+      .where(and(eq(items.categoryId, categoryId), eq(items.isActive, true)))
+      .orderBy(asc(items.sortOrder), asc(items.name));
+    return rows.map((row) => `${row.name.slice(-1)}${row.sortOrder}`).join(" ");
+  }
+
+  check("probe starts A0 B1 C2 D20", (await currentOrder()) === "A0 B1 C2 D20");
+
+  // The case from the report: send the far item to position 1.
+  await db.transaction((tx) =>
+    renumberCategory(tx, orderCategory.id, { itemId: probeIds.D, position: 1 }),
+  );
+  check(
+    "moving D to 1 pushes B and C down and closes the gap",
+    (await currentOrder()) === "A0 D1 B2 C3",
+    await currentOrder(),
+  );
+
+  // Moving DOWN must pull the items in between up, not push them further.
+  await db.transaction((tx) =>
+    renumberCategory(tx, orderCategory.id, { itemId: probeIds.A, position: 2 }),
+  );
+  check(
+    "moving A down to 2 pulls D and B up",
+    (await currentOrder()) === "D0 B1 A2 C3",
+    await currentOrder(),
+  );
+
+  // A number past the end means "last", not a gap.
+  const clamped = await db.transaction((tx) =>
+    renumberCategory(tx, orderCategory.id, {
+      itemId: probeIds.D,
+      position: 9999,
+    }),
+  );
+  check(
+    "an out-of-range position lands last, still contiguous",
+    (await currentOrder()) === "B0 A1 C2 D3" && clamped === 3,
+    { order: await currentOrder(), clamped },
+  );
+
+  // Retiring an item must not leave a hole behind.
+  await db
+    .update(items)
+    .set({ isActive: false })
+    .where(eq(items.id, probeIds.A));
+  await db.transaction((tx) => renumberCategory(tx, orderCategory.id));
+  check(
+    "retiring an item closes its gap",
+    (await currentOrder()) === "B0 C1 D2",
+    await currentOrder(),
+  );
+
+  await db.execute(sql`DELETE FROM items WHERE name LIKE 'Order Probe%'`);
+  await db.execute(
+    sql`DELETE FROM categories WHERE name = 'Order Probe Category'`,
+  );
 
   await db.execute(sql`DELETE FROM audit_log WHERE entity_type = 'item-probe'`);
   await db.execute(

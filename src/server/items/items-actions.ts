@@ -13,6 +13,7 @@ import { compare } from "@/lib/utils/money";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { itemSchema, updateItemSchema } from "@/lib/validation/item-schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
+import { renumberCategory } from "@/server/items/item-order-service";
 
 async function nameIsTaken(
   categoryId: string,
@@ -81,17 +82,32 @@ export async function createItemAction(
       );
     }
 
-    const [created] = await db
-      .insert(items)
-      .values({ ...parsed.data, createdBy: user.id })
-      .returning({ id: items.id });
+    // Every failure path is above; from here it is writes only, so returning
+    // from the callback is the commit we want. See spec §13.1 rule 6.
+    const { created, placedAt } = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(items)
+        .values({ ...parsed.data, createdBy: user.id })
+        .returning({ id: items.id });
+
+      // A new item claims its position and pushes the rest of the category
+      // down, rather than quietly tying with whatever already sits there.
+      const position = await renumberCategory(tx, parsed.data.categoryId, {
+        itemId: row.id,
+        position: parsed.data.sortOrder,
+      });
+
+      return { created: row, placedAt: position };
+    });
 
     await writeAuditLog({
       actorId: user.id,
       action: "ITEM_CREATED",
       entityType: "item",
       entityId: created.id,
-      after: parsed.data,
+      // The position it landed at, which is the requested one clamped to the
+      // size of the category.
+      after: { ...parsed.data, sortOrder: placedAt ?? parsed.data.sortOrder },
     });
 
     revalidateItemSurfaces();
@@ -135,10 +151,25 @@ export async function updateItemAction(
       );
     }
 
-    await db
-      .update(items)
-      .set({ ...values, updatedAt: new Date() })
-      .where(eq(items.id, id));
+    const placedAt = await db.transaction(async (tx) => {
+      await tx
+        .update(items)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(items.id, id));
+
+      const position = await renumberCategory(tx, values.categoryId, {
+        itemId: id,
+        position: values.sortOrder,
+      });
+
+      // Moved to a different category: the old one is left with a hole where
+      // this item was, so close it.
+      if (before.categoryId !== values.categoryId) {
+        await renumberCategory(tx, before.categoryId);
+      }
+
+      return position;
+    });
 
     // A price change is logged as its own action so price history stays
     // directly queryable without a separate table. See spec §6.8.
@@ -166,7 +197,7 @@ export async function updateItemAction(
         isAvailable: before.isAvailable,
         sortOrder: before.sortOrder,
       },
-      after: values,
+      after: { ...values, sortOrder: placedAt ?? values.sortOrder },
     });
 
     // Replacing the image orphans the old file in ImageKit; remove it.
@@ -201,11 +232,17 @@ export async function deleteItemAction(payload: {
       return fail<null>("NOT_FOUND", "That item no longer exists.");
     }
 
-    // Soft delete only. A hard delete would orphan or cascade sales history.
-    await db
-      .update(items)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(items.id, payload.id));
+    await db.transaction(async (tx) => {
+      // Soft delete only. A hard delete would orphan or cascade sales history.
+      await tx
+        .update(items)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(items.id, payload.id));
+
+      // Retiring an item leaves a hole in its category's numbering; close it
+      // so the remaining items stay 0, 1, 2, …
+      await renumberCategory(tx, before.categoryId);
+    });
 
     await writeAuditLog({
       actorId: user.id,

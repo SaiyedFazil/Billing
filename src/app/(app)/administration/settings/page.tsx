@@ -23,6 +23,7 @@ export default async function Page() {
         printerWidth: settings.printerWidth,
         timezone: settings.timezone,
       }}
+      paymentMethods={settings.paymentMethods}
     />
   );
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "shop_settings" ADD COLUMN "payment_methods" "payment_method"[] DEFAULT '{"CASH","UPI","CARD","OTHER"}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "shop_settings" ADD CONSTRAINT "shop_settings_payment_methods_not_empty" CHECK (cardinality("shop_settings"."payment_methods") >= 1);
