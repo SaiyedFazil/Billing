@@ -114,6 +114,7 @@ function UpdateStockForm({
                 key={mode.value}
                 value={mode.value}
                 disabled={dialog.isPending}
+                className="cursor-pointer"
               >
                 {mode.label}
               </TabsTrigger>
