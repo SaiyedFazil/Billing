@@ -74,7 +74,11 @@ export async function deductStockForBill(
     .from(items)
     .where(inArray(items.id, [...wanted.keys()]))
     .orderBy(asc(items.id))
-    .for("update");
+    // NO KEY UPDATE, not UPDATE: the bill's lines already hold FOR KEY SHARE
+    // on these rows through their foreign key, and FOR UPDATE conflicts with
+    // that — two bills on different days (different counter rows) would
+    // deadlock. verify:stock pins this.
+    .for("no key update");
 
   for (const item of locked) {
     if (!item.trackStock) continue;

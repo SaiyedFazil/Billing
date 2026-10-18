@@ -359,6 +359,51 @@ async function main() {
       );
     check("each adjustment is audited", audited.n === 2, audited);
 
+    // --- two bills on different days cannot deadlock --------------------
+    // Inserting a bill line takes FOR KEY SHARE on its item (the foreign
+    // key). Two bills around midnight use different counter rows, so nothing
+    // else queues them: both hold KEY SHARE, then both lock the item for the
+    // deduction. That lock must not conflict with KEY SHARE, or Postgres
+    // aborts one bill with a deadlock.
+    const existingBillId = sale.ok ? sale.data.id : "";
+    const rollBack = new Error("roll back the deadlock probe");
+    let arrived = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const midnight = await Promise.allSettled(
+      [1, 2].map(() =>
+        db.transaction(async (tx) => {
+          await tx.execute(
+            sql`SELECT id FROM items WHERE id = ${tracked.id}::uuid FOR KEY SHARE`,
+          );
+          arrived += 1;
+          if (arrived === 2) release();
+          await barrier;
+          await deductStockForBill(tx, {
+            billId: existingBillId,
+            userId: userId!,
+            lines: [{ itemId: tracked.id, quantity: 1 }],
+          });
+          throw rollBack;
+        }),
+      ),
+    );
+    check(
+      "two bills on different days cannot deadlock",
+      midnight.every(
+        (result) => result.status === "rejected" && result.reason === rollBack,
+      ),
+      midnight.map((result) =>
+        result.status === "rejected"
+          ? String(
+              (result.reason as { cause?: unknown }).cause ?? result.reason,
+            ).split("\n")[0]
+          : "fulfilled",
+      ),
+    );
+
     // --- turning tracking on --------------------------------------------
     await db.transaction(async (tx) => {
       await tx
