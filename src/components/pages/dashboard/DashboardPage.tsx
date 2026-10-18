@@ -18,8 +18,10 @@ import type {
   ItemSalesRow,
   SalesByDayRow,
 } from "@/types/report.types";
+import type { StockAlerts } from "@/types/stock.types";
 
 import { SalesTrendChart } from "./components/SalesTrendChart";
+import { StockAlertsCard } from "./components/StockAlertsCard";
 import { TopItemsCard } from "./components/TopItemsCard";
 
 export function DashboardPage({
@@ -27,12 +29,17 @@ export function DashboardPage({
   trend,
   topItems,
   chartDates,
+  stockAlerts,
+  canManageStock,
 }: {
   stats: DashboardStats;
   trend: SalesByDayRow[];
   topItems: ItemSalesRow[];
   /** Every date in the window, so a closed day renders as a zero bar. */
   chartDates: string[];
+  stockAlerts: StockAlerts;
+  /** Only the owner gets a link through to the Items page. */
+  canManageStock: boolean;
 }) {
   // Without this, a day with no sales is simply absent and the chart silently
   // compresses — making a closed Monday look like it never existed.
@@ -98,7 +105,15 @@ export function DashboardPage({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <SalesTrendChart data={chartData} />
-        <TopItemsCard items={topItems} />
+        {/* Nothing tracked: the right column is exactly as before stock. */}
+        {stockAlerts.trackedCount === 0 ? (
+          <TopItemsCard items={topItems} />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <TopItemsCard items={topItems} />
+            <StockAlertsCard alerts={stockAlerts} canManage={canManageStock} />
+          </div>
+        )}
       </div>
     </div>
   );

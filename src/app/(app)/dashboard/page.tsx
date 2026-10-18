@@ -8,6 +8,7 @@ import {
   getSalesTrend,
 } from "@/server/reports/reports-queries";
 import { getShopTimezone } from "@/server/settings/settings-queries";
+import { getStockAlerts } from "@/server/stock/stock-queries";
 
 export const metadata = {
   title: "Dashboard",
@@ -16,16 +17,17 @@ export const metadata = {
 
 export default async function Page() {
   // Both roles may view reports — see spec §7.1.
-  await requireUser();
+  const user = await requireUser();
 
   const timeZone = await getShopTimezone();
   const week = presetRange("LAST_7", timeZone);
   const today = presetRange("TODAY", timeZone);
 
-  const [stats, trend, topItems] = await Promise.all([
+  const [stats, trend, topItems, stockAlerts] = await Promise.all([
     getDashboardStats(),
     getSalesTrend(week.from, week.to),
     getItemSales(today.from, today.to),
+    getStockAlerts(),
   ]);
 
   return (
@@ -35,6 +37,8 @@ export default async function Page() {
         trend={trend}
         topItems={topItems}
         chartDates={eachDateInRange(week.from, week.to)}
+        stockAlerts={stockAlerts}
+        canManageStock={user.role === "SUPERADMIN"}
       />
     </Container>
   );
