@@ -8,6 +8,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { categoryTone } from "@/lib/utils/category-tone";
 import { formatINR, parseRupees } from "@/lib/utils/money";
 import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  parseWholeQuantity,
+  startsTracking,
+} from "@/lib/utils/stock";
+import {
   createItemAction,
   deleteItemAction,
   toggleItemAvailabilityAction,
@@ -24,6 +29,13 @@ export type ItemFormState = {
   imageFileId: string | null;
   isAvailable: boolean;
   sortOrder: string;
+  trackStock: boolean;
+  lowStockInput: string;
+  openingStockInput: string;
+  /** Whether the saved item tracks stock — decides if an opening count is asked. */
+  wasTracked: boolean;
+  /** The saved count, shown read-only once tracking is on. */
+  stockQuantity: number;
 };
 
 function emptyForm(categoryId: string): ItemFormState {
@@ -36,6 +48,11 @@ function emptyForm(categoryId: string): ItemFormState {
     imageFileId: null,
     isAvailable: true,
     sortOrder: "0",
+    trackStock: false,
+    lowStockInput: String(DEFAULT_LOW_STOCK_THRESHOLD),
+    openingStockInput: "",
+    wasTracked: false,
+    stockQuantity: 0,
   };
 }
 
@@ -100,6 +117,11 @@ export function useItemsTab({
       imageFileId: row.imageFileId,
       isAvailable: row.isAvailable,
       sortOrder: String(row.sortOrder),
+      trackStock: row.trackStock,
+      lowStockInput: String(row.lowStockThreshold),
+      openingStockInput: "",
+      wasTracked: row.trackStock,
+      stockQuantity: row.stockQuantity,
     });
     setFieldErrors({});
     setDialogOpen(true);
@@ -116,6 +138,27 @@ export function useItemsTab({
       return;
     }
 
+    // Stock fields are only checked while tracking is on; a stale value in a
+    // hidden field must not block saving an untracked item.
+    const lowStockThreshold = parseWholeQuantity(form.lowStockInput);
+    const asksOpening = startsTracking(form.wasTracked, form.trackStock);
+    const openingStock = asksOpening
+      ? parseWholeQuantity(form.openingStockInput)
+      : null;
+    const stockErrors: Record<string, string> = {};
+    if (form.trackStock && lowStockThreshold === null) {
+      stockErrors.lowStockThreshold = "Enter a whole number";
+    }
+    if (asksOpening && openingStock === null) {
+      stockErrors.openingStock = form.openingStockInput.trim()
+        ? "Enter a whole number"
+        : "Enter the count on the shelf";
+    }
+    if (Object.keys(stockErrors).length > 0) {
+      setFieldErrors(stockErrors);
+      return;
+    }
+
     startTransition(async () => {
       const payload = {
         name: form.name,
@@ -125,6 +168,9 @@ export function useItemsTab({
         imageFileId: form.imageFileId,
         isAvailable: form.isAvailable,
         sortOrder: Number(form.sortOrder) || 0,
+        trackStock: form.trackStock,
+        lowStockThreshold: lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+        openingStock,
       };
 
       const result = form.id

@@ -47,6 +47,17 @@ export function maxSellable(level: StockLevel): number {
     : MAX_LINE_QUANTITY;
 }
 
+/**
+ * True when a save switches tracking on. Only then does the owner enter an
+ * opening count — the item would otherwise read "Out of stock" at once.
+ */
+export function startsTracking(
+  wasTracked: boolean,
+  trackStock: boolean,
+): boolean {
+  return !wasTracked && trackStock;
+}
+
 /** A whole number from a form field, or null for anything else. */
 export function parseWholeQuantity(input: string): number | null {
   const value = input.trim();

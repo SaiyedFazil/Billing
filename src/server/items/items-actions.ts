@@ -10,10 +10,14 @@ import { ADMIN_ROUTES } from "@/lib/routes/administration-routes";
 import { deleteFile } from "@/lib/storage";
 import { fieldErrors } from "@/lib/utils/field-errors";
 import { compare } from "@/lib/utils/money";
+import { startsTracking } from "@/lib/utils/stock";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { itemSchema, updateItemSchema } from "@/lib/validation/item-schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
 import { renumberCategory } from "@/server/items/item-order-service";
+import { applyTrackingChange } from "@/server/stock/stock-service";
+
+const OPENING_STOCK_REQUIRED = "Enter the count on the shelf";
 
 async function nameIsTaken(
   categoryId: string,
@@ -82,13 +86,33 @@ export async function createItemAction(
       );
     }
 
+    const { openingStock, ...values } = parsed.data;
+    if (startsTracking(false, values.trackStock) && openingStock === null) {
+      return fail<{ id: string }>(
+        "VALIDATION",
+        "Check the highlighted fields.",
+        {
+          openingStock: OPENING_STOCK_REQUIRED,
+        },
+      );
+    }
+
     // Every failure path is above; from here it is writes only, so returning
     // from the callback is the commit we want. See spec §13.1 rule 6.
     const { created, placedAt } = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(items)
-        .values({ ...parsed.data, createdBy: user.id })
+        .values({ ...values, createdBy: user.id })
         .returning({ id: items.id });
+
+      await applyTrackingChange(tx, {
+        itemId: row.id,
+        userId: user.id,
+        wasTracked: false,
+        storedQuantity: 0,
+        trackStock: values.trackStock,
+        openingStock,
+      });
 
       // A new item claims its position and pushes the rest of the category
       // down, rather than quietly tying with whatever already sits there.
@@ -107,7 +131,11 @@ export async function createItemAction(
       entityId: created.id,
       // The position it landed at, which is the requested one clamped to the
       // size of the category.
-      after: { ...parsed.data, sortOrder: placedAt ?? parsed.data.sortOrder },
+      after: {
+        ...values,
+        sortOrder: placedAt ?? values.sortOrder,
+        ...(values.trackStock ? { openingStock } : {}),
+      },
     });
 
     revalidateItemSurfaces();
@@ -130,7 +158,7 @@ export async function updateItemAction(
       );
     }
 
-    const { id, ...values } = parsed.data;
+    const { id, openingStock, ...values } = parsed.data;
 
     const before = await db.query.items.findFirst({ where: eq(items.id, id) });
     if (!before || !before.isActive) {
@@ -151,11 +179,30 @@ export async function updateItemAction(
       );
     }
 
+    if (
+      startsTracking(before.trackStock, values.trackStock) &&
+      openingStock === null
+    ) {
+      return fail<null>("VALIDATION", "Check the highlighted fields.", {
+        openingStock: OPENING_STOCK_REQUIRED,
+      });
+    }
+
     const placedAt = await db.transaction(async (tx) => {
+      // The count itself is never written here; see applyTrackingChange.
       await tx
         .update(items)
         .set({ ...values, updatedAt: new Date() })
         .where(eq(items.id, id));
+
+      await applyTrackingChange(tx, {
+        itemId: id,
+        userId: user.id,
+        wasTracked: before.trackStock,
+        storedQuantity: before.stockQuantity,
+        trackStock: values.trackStock,
+        openingStock,
+      });
 
       const position = await renumberCategory(tx, values.categoryId, {
         itemId: id,
@@ -196,8 +243,16 @@ export async function updateItemAction(
         imageUrl: before.imageUrl,
         isAvailable: before.isAvailable,
         sortOrder: before.sortOrder,
+        trackStock: before.trackStock,
+        lowStockThreshold: before.lowStockThreshold,
       },
-      after: { ...values, sortOrder: placedAt ?? values.sortOrder },
+      after: {
+        ...values,
+        sortOrder: placedAt ?? values.sortOrder,
+        ...(startsTracking(before.trackStock, values.trackStock)
+          ? { openingStock }
+          : {}),
+      },
     });
 
     // Replacing the image orphans the old file in ImageKit; remove it.

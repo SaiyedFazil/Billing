@@ -31,4 +31,7 @@ export type AdminItemRow = {
   imageFileId: string | null;
   isAvailable: boolean;
   sortOrder: number;
+  trackStock: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
 };

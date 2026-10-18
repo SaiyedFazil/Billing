@@ -81,6 +81,9 @@ export async function listItemsForAdmin(): Promise<AdminItemRow[]> {
         imageFileId: items.imageFileId,
         isAvailable: items.isAvailable,
         sortOrder: items.sortOrder,
+        trackStock: items.trackStock,
+        stockQuantity: items.stockQuantity,
+        lowStockThreshold: items.lowStockThreshold,
       })
       .from(items)
       .innerJoin(categories, eq(items.categoryId, categories.id))

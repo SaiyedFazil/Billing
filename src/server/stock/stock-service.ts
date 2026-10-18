@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { items, stockMovements } from "@/db/schema";
 import type { Transaction } from "@/db/transaction";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
-import { planAdjustment } from "@/lib/utils/stock";
+import { planAdjustment, startsTracking } from "@/lib/utils/stock";
 import type { AdjustStockInput } from "@/lib/validation/stock-schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
 
@@ -210,7 +210,7 @@ export async function applyTrackingChange(
     openingStock: number | null;
   },
 ): Promise<void> {
-  if (args.wasTracked || !args.trackStock) return;
+  if (!startsTracking(args.wasTracked, args.trackStock)) return;
   if (args.openingStock === null) {
     // The actions check this before the transaction opens.
     throw new Error("An opening count is required to start tracking stock");

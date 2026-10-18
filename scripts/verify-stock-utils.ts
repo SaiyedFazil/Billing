@@ -4,6 +4,7 @@ import {
   parseWholeQuantity,
   planAdjustment,
   sellability,
+  startsTracking,
   type StockLevel,
   stockStatus,
 } from "../src/lib/utils/stock";
@@ -89,6 +90,12 @@ check(
   parseWholeQuantity("99999"),
   99999,
 );
+
+// --- startsTracking ---------------------------------------------------
+check("off → on needs an opening count", startsTracking(false, true), true);
+check("on → on does not", startsTracking(true, true), false);
+check("on → off does not", startsTracking(true, false), false);
+check("off → off does not", startsTracking(false, false), false);
 
 // --- planAdjustment ---------------------------------------------------
 check("add", planAdjustment(10, "ADD", 5), { ok: true, after: 15, delta: 5 });

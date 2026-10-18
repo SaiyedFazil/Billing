@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 
 import type { ItemFormState } from "../hooks/useItemsTab";
 import { ItemImageUploader } from "./components/ItemImageUploader";
+import { StockTrackingSection } from "./components/StockTrackingSection";
 
 export function CreateUpdateItemDialog({
   open,
@@ -153,6 +154,13 @@ export function CreateUpdateItemDialog({
               </Label>
             </div>
           </div>
+
+          <StockTrackingSection
+            form={form}
+            setForm={setForm}
+            fieldErrors={fieldErrors}
+            disabled={isPending}
+          />
 
           <DialogFooter>
             <Button
