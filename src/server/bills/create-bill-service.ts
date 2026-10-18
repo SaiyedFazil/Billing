@@ -21,6 +21,11 @@ import {
   getEnabledPaymentMethods,
   getShopTimezone,
 } from "@/server/settings/settings-queries";
+import {
+  deductStockForBill,
+  InsufficientStockError,
+  quantityByItem,
+} from "@/server/stock/stock-service";
 import type { CreateBillInput, CreatedBill } from "@/types/bill.types";
 
 const CREATED_BILL_COLUMNS = {
@@ -37,6 +42,19 @@ async function findByIdempotencyKey(key: string): Promise<CreatedBill | null> {
     .where(eq(bills.idempotencyKey, key))
     .limit(1);
   return existing ?? null;
+}
+
+/**
+ * A retry can pass the idempotency check while its original is still
+ * committing, then find the stock that original just took. If the original
+ * landed, the retry must return it — not report the bill as failed.
+ */
+async function outOfStock(
+  idempotencyKey: string,
+  message: string,
+): Promise<ActionResult<CreatedBill>> {
+  const saved = await findByIdempotencyKey(idempotencyKey);
+  return saved ? ok(saved) : fail("OUT_OF_STOCK", message);
 }
 
 /**
@@ -69,6 +87,8 @@ export async function createBill(
       price: items.price,
       isActive: items.isActive,
       isAvailable: items.isAvailable,
+      trackStock: items.trackStock,
+      stockQuantity: items.stockQuantity,
       categoryName: categories.name,
     })
     .from(items)
@@ -97,6 +117,20 @@ export async function createBill(
         `"${item.name}" is marked sold out. Remove it from the bill.`,
       );
     }
+  }
+
+  // Friendly messages for the common case. This read is not locked, so it
+  // cannot stop two tills racing for the last unit — deductStockForBill()
+  // does that inside the transaction. See the stock spec §7.2.
+  for (const [itemId, quantity] of quantityByItem(input.lines)) {
+    const item = byId.get(itemId)!;
+    if (!item.trackStock || item.stockQuantity >= quantity) continue;
+    return outOfStock(
+      input.idempotencyKey,
+      item.stockQuantity === 0
+        ? `"${item.name}" is out of stock. Remove it from the bill.`
+        : `Only ${item.stockQuantity} "${item.name}" left. Reduce the quantity.`,
+    );
   }
 
   // Prices come from the database, never from the browser.
@@ -211,11 +245,25 @@ export async function createBill(
         })),
       );
 
+      // Last write: a shortage throws, rolling back the bill and its number.
+      await deductStockForBill(tx, {
+        billId: bill.id,
+        userId,
+        lines: input.lines,
+      });
+
       return bill;
     });
 
     return ok(created);
   } catch (error) {
+    // Another till took the last of an item after validation passed.
+    if (error instanceof InsufficientStockError) {
+      return outOfStock(
+        input.idempotencyKey,
+        `"${error.itemName}" just sold out. Remove it from the bill.`,
+      );
+    }
     // Two requests raced with the same key. The other one won; return its bill.
     if (isUniqueViolation(error, "bills_idempotency_key_idx")) {
       const raced = await findByIdempotencyKey(input.idempotencyKey);
