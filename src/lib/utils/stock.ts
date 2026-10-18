@@ -26,6 +26,56 @@ export function stockStatus(level: StockLevel): StockStatus {
   return "IN_STOCK";
 }
 
+/** The Items page's stock filter. Lives here so the page can parse the URL. */
+export type StockFilter = "ALL" | StockStatus;
+
+export const STOCK_FILTER_PARAM = "stock";
+
+const FILTER_BY_PARAM: Record<string, StockFilter> = {
+  in: "IN_STOCK",
+  low: "LOW",
+  out: "OUT",
+  untracked: "UNTRACKED",
+};
+
+export const PARAM_BY_FILTER: Record<Exclude<StockFilter, "ALL">, string> = {
+  IN_STOCK: "in",
+  LOW: "low",
+  OUT: "out",
+  UNTRACKED: "untracked",
+};
+
+/** `?stock=low` → "LOW". Anything unrecognised shows everything. */
+export function parseStockFilter(
+  param: string | string[] | undefined,
+): StockFilter {
+  return typeof param === "string" ? (FILTER_BY_PARAM[param] ?? "ALL") : "ALL";
+}
+
+export function matchesStockFilter(
+  level: StockLevel,
+  filter: StockFilter,
+): boolean {
+  return filter === "ALL" || stockStatus(level) === filter;
+}
+
+/** The Items page's summary tiles. Untracked items are not counted. */
+export function countByStatus(levels: StockLevel[]): {
+  IN_STOCK: number;
+  LOW: number;
+  OUT: number;
+  tracked: number;
+} {
+  const counts = { IN_STOCK: 0, LOW: 0, OUT: 0, tracked: 0 };
+  for (const level of levels) {
+    const status = stockStatus(level);
+    if (status === "UNTRACKED") continue;
+    counts[status] += 1;
+    counts.tracked += 1;
+  }
+  return counts;
+}
+
 export type Sellability = "SELLABLE" | "SOLD_OUT" | "OUT_OF_STOCK";
 
 /**

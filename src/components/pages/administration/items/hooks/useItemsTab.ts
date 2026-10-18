@@ -8,9 +8,14 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { categoryTone } from "@/lib/utils/category-tone";
 import { formatINR, parseRupees } from "@/lib/utils/money";
 import {
+  countByStatus,
   DEFAULT_LOW_STOCK_THRESHOLD,
+  matchesStockFilter,
+  PARAM_BY_FILTER,
   parseWholeQuantity,
   startsTracking,
+  STOCK_FILTER_PARAM,
+  type StockFilter,
 } from "@/lib/utils/stock";
 import {
   createItemAction,
@@ -59,16 +64,42 @@ function emptyForm(categoryId: string): ItemFormState {
 export function useItemsTab({
   items,
   categories,
+  initialStockFilter,
 }: {
   items: AdminItemRow[];
   categories: Array<{ id: string; name: string }>;
+  initialStockFilter: StockFilter;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [stockFilter, setStockFilterState] =
+    useState<StockFilter>(initialStockFilter);
   const debouncedSearch = useDebounce(search);
+
+  // Kept in the URL so the Dashboard can link to a filtered view and a reload
+  // keeps it. replaceState updates the address without a server round trip.
+  const setStockFilter = useCallback((next: StockFilter) => {
+    setStockFilterState(next);
+    const url = new URL(window.location.href);
+    if (next === "ALL") url.searchParams.delete(STOCK_FILTER_PARAM);
+    else url.searchParams.set(STOCK_FILTER_PARAM, PARAM_BY_FILTER[next]);
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  // Tracked by id, not by row: a refresh after a save hands back new rows,
+  // and the dialog must show the fresh count.
+  const [stockTargetId, setStockTargetId] = useState<string | null>(null);
+  const stockTarget = items.find((item) => item.id === stockTargetId) ?? null;
+  const openUpdateStock = useCallback(
+    (row: AdminItemRow) => setStockTargetId(row.id),
+    [],
+  );
+  const closeUpdateStock = useCallback(() => setStockTargetId(null), []);
+
+  const stockCounts = useMemo(() => countByStatus(items), [items]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ItemFormState>(() =>
@@ -83,13 +114,14 @@ export function useItemsTab({
       if (categoryFilter !== "ALL" && item.categoryId !== categoryFilter) {
         return false;
       }
+      if (!matchesStockFilter(item, stockFilter)) return false;
       if (!term) return true;
       return (
         item.name.toLowerCase().includes(term) ||
         item.categoryName.toLowerCase().includes(term)
       );
     });
-  }, [items, categoryFilter, debouncedSearch]);
+  }, [items, categoryFilter, stockFilter, debouncedSearch]);
 
   // Display only: the same tint per category as its tiles on the till.
   const toneByCategoryId = useMemo(
@@ -236,6 +268,9 @@ export function useItemsTab({
     setSearch,
     categoryFilter,
     setCategoryFilter,
+    stockFilter,
+    setStockFilter,
+    stockCounts,
     visibleItems,
     categories,
     toneByCategoryId,
@@ -253,6 +288,10 @@ export function useItemsTab({
     setPendingDelete,
     confirmDelete,
     toggleAvailability,
+
+    stockTarget,
+    openUpdateStock,
+    closeUpdateStock,
 
     isPending,
   };

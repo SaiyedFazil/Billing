@@ -1,8 +1,13 @@
 "use client";
 
+import { StockBadge } from "@/components/custom/StockBadge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  parseWholeQuantity,
+} from "@/lib/utils/stock";
 
 import type { ItemFormState } from "../../hooks/useItemsTab";
 
@@ -51,8 +56,18 @@ export function StockTrackingSection({
           {form.wasTracked ? (
             <div className="space-y-2">
               <span className="text-sm leading-none font-medium">In stock</span>
-              <p className="flex h-10 items-center font-heading text-lg font-bold tabular-nums">
+              <p className="flex h-10 items-center gap-2.5 font-heading text-lg font-bold tabular-nums">
                 {form.stockQuantity}
+                <StockBadge
+                  level={{
+                    trackStock: true,
+                    stockQuantity: form.stockQuantity,
+                    lowStockThreshold:
+                      parseWholeQuantity(form.lowStockInput) ??
+                      DEFAULT_LOW_STOCK_THRESHOLD,
+                  }}
+                  className="font-sans"
+                />
               </p>
               <p className="text-xs text-muted-foreground">
                 Change it with Update stock.

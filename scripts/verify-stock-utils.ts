@@ -1,13 +1,19 @@
+import { describeMovement } from "../src/components/pages/administration/items/update-stock-dialog/utils/describe-movement";
 import { clampLinesToMenu } from "../src/components/pages/bill/utils/cart";
 import {
+  countByStatus,
+  matchesStockFilter,
   maxSellable,
+  parseStockFilter,
   parseWholeQuantity,
   planAdjustment,
   sellability,
   startsTracking,
+  STOCK_FILTER_PARAM,
   type StockLevel,
   stockStatus,
 } from "../src/lib/utils/stock";
+import type { StockMovementRow } from "../src/types/stock.types";
 import { adjustStockSchema } from "../src/lib/validation/stock-schema";
 import type { CartLine } from "../src/types/bill.types";
 import type { MenuCategory, MenuItem } from "../src/types/item.types";
@@ -177,6 +183,74 @@ check(
     reason: "CORRECTION",
   }).success,
   true,
+);
+
+// --- stock filter (Items page, ?stock=) -------------------------------
+check("the filter's URL key", STOCK_FILTER_PARAM, "stock");
+check("?stock=low", parseStockFilter("low"), "LOW");
+check("?stock=out", parseStockFilter("out"), "OUT");
+check("?stock=in", parseStockFilter("in"), "IN_STOCK");
+check("?stock=untracked", parseStockFilter("untracked"), "UNTRACKED");
+check("a missing param is ALL", parseStockFilter(undefined), "ALL");
+check("junk is ALL", parseStockFilter("LOW; drop"), "ALL");
+check("a repeated param is ALL", parseStockFilter(["low", "out"]), "ALL");
+check("ALL matches anything", matchesStockFilter(untracked, "ALL"), true);
+check("LOW matches a low item", matchesStockFilter(tracked(2), "LOW"), true);
+check("LOW skips an out item", matchesStockFilter(tracked(0), "LOW"), false);
+check(
+  "UNTRACKED matches only untracked",
+  [
+    matchesStockFilter(untracked, "UNTRACKED"),
+    matchesStockFilter(tracked(50), "UNTRACKED"),
+  ],
+  [true, false],
+);
+check(
+  "countByStatus counts tracked items only",
+  countByStatus([tracked(50), tracked(5), tracked(0), tracked(0), untracked]),
+  { IN_STOCK: 1, LOW: 1, OUT: 2, tracked: 4 },
+);
+
+// --- describeMovement (Recent changes list) ---------------------------
+const movement = (patch: Partial<StockMovementRow>): StockMovementRow => ({
+  id: "m",
+  type: "RESTOCK",
+  quantityDelta: 24,
+  quantityAfter: 48,
+  note: null,
+  createdAt: "2026-10-19T04:30:00.000Z",
+  createdByName: "Shop Owner",
+  billNumber: null,
+  ...patch,
+});
+check("a restock reads as a gain", describeMovement(movement({})), {
+  label: "Restock",
+  change: "+24",
+  tone: "up",
+});
+check(
+  "a sale names its bill",
+  describeMovement(
+    movement({ type: "SALE", quantityDelta: -2, billNumber: 41 }),
+  ),
+  { label: "Bill #41", change: "−2", tone: "down" },
+);
+check(
+  "an opening count is not shown as a jump",
+  describeMovement(
+    movement({ type: "OPENING", quantityDelta: 25, quantityAfter: 30 }),
+  ),
+  { label: "Opening count", change: "30", tone: "neutral" },
+);
+check(
+  "wastage reads as a loss",
+  describeMovement(movement({ type: "WASTAGE", quantityDelta: -3 })),
+  { label: "Wastage", change: "−3", tone: "down" },
+);
+check(
+  "a correction keeps its sign",
+  describeMovement(movement({ type: "CORRECTION", quantityDelta: -6 })),
+  { label: "Count correction", change: "−6", tone: "down" },
 );
 
 // --- clampLinesToMenu -------------------------------------------------
