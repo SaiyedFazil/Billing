@@ -9,6 +9,7 @@ Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 | -------------------------------------------------------------- | ------------------------------------------- |
 | `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)  |
 | `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                     |
+| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                     |
 | `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work |
 | `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups   |
 | `docs/printer-setup.md`                                        | One-time thermal printer setup on the till  |
@@ -69,6 +70,12 @@ Database: `db:generate` (after a schema change) · `db:migrate` · `db:seed` ·
    cannot do interactive transactions, which bill creation depends on.
 8. **`db` is a lazy Proxy.** It connects on first property access, so importing
    it during `next build` needs no DATABASE_URL and opens no connection.
+9. **Stock changes only through `src/server/stock/stock-service.ts`**, and
+   always together with a `stock_movements` row in the same transaction. That
+   table is append-only (a trigger rejects UPDATE and DELETE); fix a mistake
+   with a new `CORRECTION` row. Stock is a whole-unit `integer`, not money.
+   An untracked item (`track_stock = false`) must bill exactly as before
+   stock existed. See `docs/superpowers/specs/2026-10-18-stock-management-design.md`.
 
 ## Structure
 
@@ -209,6 +216,8 @@ npm run build            # the production build
 | `db:verify`                                           | CHECK constraints reject impossible bills                   |
 | `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding         |
 | `verify:bill`                                         | idempotency, price-change detection, gapless numbering      |
+| `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)       |
+| `verify:stock`                                        | sale deduction, last-unit race, adjustments, history        |
 | `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                              |
 | `verify:report-queries`                               | report SQL against real data                                |
 | `verify:imagekit`                                     | image upload credentials                                    |

@@ -40,7 +40,9 @@ pay for upgrades.
 Explicitly out of scope, recorded here so scope creep stays visible:
 
 - Tax / GST invoicing (no GSTIN, HSN codes, or CGST/SGST split)
-- Inventory and stock tracking
+- ~~Inventory and stock tracking~~ — per-item stock for countable items was
+  added later; see `2026-10-18-stock-management-design.md`. Ingredient and
+  recipe inventory remain out of scope.
 - Bill void / refund **user interface** (the schema supports it; the UI is v2)
 - Customer records and repeat-customer history
 - Offline mode / PWA / sync queue
