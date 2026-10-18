@@ -2,6 +2,11 @@ import { maxSellable, sellability } from "@/lib/utils/stock";
 import type { CartLine } from "@/types/bill.types";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
 
+/** True when the bill already holds every unit of a tracked item. */
+export function atStockCap(item: MenuItem, inCart: number): boolean {
+  return item.trackStock && inCart >= maxSellable(item);
+}
+
 /**
  * Brings a cart in line with a freshly loaded menu: each line's cap is taken
  * from the current stock, a line above it is cut down, and a line whose item
@@ -57,7 +62,7 @@ export function filterItems(
  *
  * Searches the WHOLE menu rather than the active category, so the cashier does
  * not have to think about tabs while typing. Prefix matches win over substring
- * matches, and sold-out items are never auto-added.
+ * matches, and sold-out or out-of-stock items are never auto-added.
  */
 export function topSearchMatch(
   categories: MenuCategory[],
@@ -66,16 +71,14 @@ export function topSearchMatch(
   const term = search.trim().toLowerCase();
   if (!term) return null;
 
-  const all = categories.flatMap((category) => category.items);
+  const all = categories
+    .flatMap((category) => category.items)
+    .filter((item) => sellability(item) === "SELLABLE");
 
-  const startsWith = all.find(
-    (item) => item.isAvailable && item.name.toLowerCase().startsWith(term),
+  const startsWith = all.find((item) =>
+    item.name.toLowerCase().startsWith(term),
   );
   if (startsWith) return startsWith;
 
-  return (
-    all.find(
-      (item) => item.isAvailable && item.name.toLowerCase().includes(term),
-    ) ?? null
-  );
+  return all.find((item) => item.name.toLowerCase().includes(term)) ?? null;
 }

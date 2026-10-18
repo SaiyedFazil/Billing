@@ -1,5 +1,10 @@
 import { describeMovement } from "../src/components/pages/administration/items/update-stock-dialog/utils/describe-movement";
-import { clampLinesToMenu } from "../src/components/pages/bill/utils/cart";
+import { cartReducer } from "../src/components/pages/bill/hooks/useCartReducer";
+import {
+  atStockCap,
+  clampLinesToMenu,
+  topSearchMatch,
+} from "../src/components/pages/bill/utils/cart";
 import {
   countByStatus,
   matchesStockFilter,
@@ -313,6 +318,51 @@ check(
     menu([menuItem("b", "Fries", untracked)]),
   ),
   { lines: [line("b", "Fries", 4)], changed: [] },
+);
+
+// --- the till's cart --------------------------------------------------
+const coke = menuItem("a", "Coke", tracked(2));
+const added = cartReducer(cartReducer([], { type: "ADD", item: coke }), {
+  type: "ADD",
+  item: coke,
+});
+check("adding up to the stock works", added[0]?.quantity, 2);
+check(
+  "adding past the stock is refused",
+  cartReducer(added, { type: "ADD", item: coke }),
+  added,
+);
+check(
+  "typing a quantity above the stock clamps to it",
+  cartReducer(added, { type: "SET_QUANTITY", itemId: "a", quantity: 9 })[0]
+    ?.quantity,
+  2,
+);
+check(
+  "SYNC_MENU applies clampLinesToMenu",
+  cartReducer(added, {
+    type: "SYNC_MENU",
+    menu: menu([menuItem("a", "Coke", tracked(1))]),
+  }),
+  [{ ...line("a", "Coke", 1), maxQuantity: 1 }],
+);
+check("at the cap", atStockCap(coke, 2), true);
+check("below the cap", atStockCap(coke, 1), false);
+check(
+  "an untracked item is never at a stock cap",
+  atStockCap(menuItem("b", "Fries", untracked), 50),
+  false,
+);
+check(
+  "Enter never auto-adds an out-of-stock item",
+  topSearchMatch(
+    menu([
+      menuItem("x", "Coke Small", tracked(0)),
+      menuItem("y", "Coke Large", tracked(4)),
+    ]),
+    "coke",
+  )?.id,
+  "y",
 );
 
 console.log(
