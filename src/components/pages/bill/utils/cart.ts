@@ -1,4 +1,39 @@
+import { maxSellable, sellability } from "@/lib/utils/stock";
+import type { CartLine } from "@/types/bill.types";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
+
+/**
+ * Brings a cart in line with a freshly loaded menu: each line's cap is taken
+ * from the current stock, a line above it is cut down, and a line whose item
+ * can no longer be sold is dropped. Without this, a cashier whose save failed
+ * on stock would re-submit the same doomed bill.
+ *
+ * `changed` names every line that moved, so the till can say so.
+ */
+export function clampLinesToMenu(
+  lines: CartLine[],
+  menu: MenuCategory[],
+): { lines: CartLine[]; changed: string[] } {
+  const byId = new Map(
+    menu.flatMap((category) => category.items).map((item) => [item.id, item]),
+  );
+  const changed: string[] = [];
+  const next: CartLine[] = [];
+
+  for (const line of lines) {
+    const item = byId.get(line.itemId);
+    if (!item || sellability(item) !== "SELLABLE") {
+      changed.push(line.name);
+      continue;
+    }
+    const maxQuantity = maxSellable(item);
+    const quantity = Math.min(line.quantity, maxQuantity);
+    if (quantity !== line.quantity) changed.push(line.name);
+    next.push({ ...line, quantity, maxQuantity });
+  }
+
+  return { lines: next, changed };
+}
 
 /** Items visible in the grid for the current tab and search term. */
 export function filterItems(

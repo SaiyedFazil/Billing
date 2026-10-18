@@ -2,6 +2,7 @@
 
 import { useCallback, useReducer } from "react";
 
+import { maxSellable } from "@/lib/utils/stock";
 import { MAX_LINE_QUANTITY } from "@/lib/validation/bill-schema";
 import type { CartLine } from "@/types/bill.types";
 import type { MenuItem } from "@/types/item.types";
@@ -31,6 +32,7 @@ function reducer(state: CartLine[], action: CartAction): CartLine[] {
           name: action.item.name,
           unitPrice: action.item.price,
           quantity: 1,
+          maxQuantity: maxSellable(action.item),
         },
       ];
     }

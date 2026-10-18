@@ -24,6 +24,9 @@ export async function getMenu(): Promise<MenuCategory[]> {
         price: items.price,
         imageUrl: items.imageUrl,
         isAvailable: items.isAvailable,
+        trackStock: items.trackStock,
+        stockQuantity: items.stockQuantity,
+        lowStockThreshold: items.lowStockThreshold,
       })
       .from(categories)
       .innerJoin(items, eq(items.categoryId, categories.id))
@@ -51,6 +54,9 @@ export async function getMenu(): Promise<MenuCategory[]> {
         price: toAmount(row.price),
         imageUrl: row.imageUrl,
         isAvailable: row.isAvailable,
+        trackStock: row.trackStock,
+        stockQuantity: row.stockQuantity,
+        lowStockThreshold: row.lowStockThreshold,
       });
     }
 
