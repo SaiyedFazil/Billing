@@ -2,6 +2,7 @@ import { and, count, eq, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import {
+  auditLog,
   billCounters,
   bills,
   categories,
@@ -11,7 +12,15 @@ import {
 import { businessDate } from "../src/lib/utils/dates";
 import { createBill } from "../src/server/bills/create-bill-service";
 import { getShopTimezone } from "../src/server/settings/settings-queries";
-import { deductStockForBill } from "../src/server/stock/stock-service";
+import {
+  getStockAlerts,
+  getStockHistory,
+} from "../src/server/stock/stock-queries";
+import {
+  adjustStock,
+  applyTrackingChange,
+  deductStockForBill,
+} from "../src/server/stock/stock-service";
 
 /**
  * Stock against a real database. Works on its own probe category and items so
@@ -272,6 +281,156 @@ async function main() {
         none.error.message ===
           `"${TRACKED}" is out of stock. Remove it from the bill.`,
       none,
+    );
+
+    // --- owner adjustments ----------------------------------------------
+    // The count is 0 from the setup above; from here every change goes
+    // through the service, so history must explain the count again.
+    const adjust = (
+      mode: "ADD" | "REMOVE" | "SET",
+      quantity: number,
+      reason: "RESTOCK" | "WASTAGE" | "CORRECTION",
+      itemId = tracked.id,
+    ) =>
+      adjustStock({ itemId, mode, quantity, reason, note: "probe" }, userId!);
+
+    const added = await adjust("ADD", 13, "RESTOCK");
+    const restock = (await movementsOf(tracked.id)).at(-1);
+    check(
+      "add writes a RESTOCK movement",
+      added.ok &&
+        added.data.before === 0 &&
+        added.data.after === 13 &&
+        restock?.type === "RESTOCK" &&
+        restock.quantityDelta === 13 &&
+        restock.note === "probe",
+      { added, restock },
+    );
+
+    const tooMany = await adjust("REMOVE", 14, "WASTAGE");
+    check(
+      "remove below zero is rejected with the count",
+      !tooMany.ok &&
+        tooMany.error.code === "VALIDATION" &&
+        tooMany.error.fields?.quantity === "Only 13 in stock",
+      tooMany,
+    );
+
+    const counted = await adjust("SET", 7, "CORRECTION");
+    const correction = (await movementsOf(tracked.id)).at(-1);
+    check(
+      "set count writes a CORRECTION",
+      counted.ok &&
+        correction?.type === "CORRECTION" &&
+        correction.quantityDelta === -6 &&
+        (await stockOf(tracked.id)) === 7,
+      { counted, correction },
+    );
+
+    const same = await adjust("SET", 7, "CORRECTION");
+    check(
+      "set to the same count is refused",
+      !same.ok && same.error.code === "VALIDATION",
+      same,
+    );
+
+    const notTracked = await adjust("ADD", 1, "RESTOCK", untracked.id);
+    check(
+      "an adjustment on an untracked item is refused",
+      !notTracked.ok && notTracked.error.code === "CONFLICT",
+      notTracked,
+    );
+
+    const missing = await adjust("ADD", 1, "RESTOCK", crypto.randomUUID());
+    check(
+      "an adjustment on a missing item is NOT_FOUND",
+      !missing.ok && missing.error.code === "NOT_FOUND",
+      missing,
+    );
+
+    const [audited] = await db
+      .select({ n: count() })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.entityId, tracked.id),
+          eq(auditLog.action, "STOCK_ADJUSTED"),
+        ),
+      );
+    check("each adjustment is audited", audited.n === 2, audited);
+
+    // --- turning tracking on --------------------------------------------
+    await db.transaction(async (tx) => {
+      await tx
+        .update(items)
+        .set({ trackStock: true })
+        .where(eq(items.id, untracked.id));
+      await applyTrackingChange(tx, {
+        itemId: untracked.id,
+        userId: userId!,
+        wasTracked: false,
+        storedQuantity: 0,
+        trackStock: true,
+        openingStock: 0,
+      });
+    });
+    const opening = await movementsOf(untracked.id);
+    check(
+      "turning tracking on records an OPENING movement",
+      opening.length === 1 &&
+        opening[0].type === "OPENING" &&
+        opening[0].quantityDelta === 0 &&
+        opening[0].quantityAfter === 0,
+      opening,
+    );
+
+    await db.transaction(async (tx) => {
+      await applyTrackingChange(tx, {
+        itemId: untracked.id,
+        userId: userId!,
+        wasTracked: true,
+        storedQuantity: 0,
+        trackStock: true,
+        openingStock: 50,
+      });
+    });
+    check(
+      "an item already tracked ignores an opening count",
+      (await movementsOf(untracked.id)).length === 1 &&
+        (await stockOf(untracked.id)) === 0,
+    );
+
+    for (const itemId of [tracked.id, untracked.id]) {
+      const latest = (await movementsOf(itemId)).at(-1);
+      check(
+        "the stock count matches its latest movement",
+        latest?.quantityAfter === (await stockOf(itemId)),
+        { itemId, latest },
+      );
+    }
+
+    // --- reads -----------------------------------------------------------
+    const history = await getStockHistory(tracked.id);
+    check(
+      "history is newest first, with who and which bill",
+      history[0]?.type === "CORRECTION" &&
+        history[0].createdByName.length > 0 &&
+        history.some((row) => row.type === "SALE" && row.billNumber !== null),
+      history.slice(0, 3),
+    );
+
+    const alerts = await getStockAlerts();
+    const probeRows = alerts.items.filter((row) =>
+      [tracked.id, untracked.id].includes(row.id),
+    );
+    check(
+      "alerts list out of stock before low",
+      probeRows.length === 2 &&
+        probeRows[0].id === untracked.id &&
+        probeRows[1].id === tracked.id &&
+        alerts.out >= 1 &&
+        alerts.low >= 1,
+      { probeRows, low: alerts.low, out: alerts.out },
     );
   } finally {
     await retireProbes();
