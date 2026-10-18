@@ -19,6 +19,7 @@ import {
   stockStatus,
 } from "../src/lib/utils/stock";
 import type { StockMovementRow } from "../src/types/stock.types";
+import { stockMovementsCsv } from "../src/lib/utils/stock-export";
 import { adjustStockSchema } from "../src/lib/validation/stock-schema";
 import type { CartLine } from "../src/types/bill.types";
 import type { MenuCategory, MenuItem } from "../src/types/item.types";
@@ -318,6 +319,36 @@ check(
     menu([menuItem("b", "Fries", untracked)]),
   ),
   { lines: [line("b", "Fries", 4)], changed: [] },
+);
+
+// --- backup export ------------------------------------------------------
+check(
+  "the stock history CSV has its header and escapes notes",
+  stockMovementsCsv([
+    {
+      createdAt: new Date("2026-10-19T04:30:00.000Z"),
+      itemName: "Coke Small",
+      type: "RESTOCK",
+      quantityDelta: 24,
+      quantityAfter: 48,
+      billNumber: null,
+      createdByName: "Shop Owner",
+      note: 'Invoice 12, "urgent"',
+    },
+    {
+      createdAt: new Date("2026-10-19T05:00:00.000Z"),
+      itemName: "Coke Small",
+      type: "SALE",
+      quantityDelta: -2,
+      quantityAfter: 46,
+      billNumber: 7,
+      createdByName: "Cashier",
+      note: null,
+    },
+  ]),
+  "﻿Date,Item,Type,Change,After,Bill No,By,Note\r\n" +
+    '2026-10-19T04:30:00.000Z,Coke Small,RESTOCK,24,48,,Shop Owner,"Invoice 12, ""urgent"""\r\n' +
+    "2026-10-19T05:00:00.000Z,Coke Small,SALE,-2,46,7,Cashier,\r\n",
 );
 
 // --- the till's cart --------------------------------------------------

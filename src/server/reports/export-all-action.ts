@@ -3,15 +3,24 @@
 import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { billItems, bills, categories, items, users } from "@/db/schema";
+import {
+  billItems,
+  bills,
+  categories,
+  items,
+  stockMovements,
+  users,
+} from "@/db/schema";
 import { guarded, requireSuperadmin } from "@/lib/auth/guard";
 import { csvAmount, toCsv } from "@/lib/utils/csv";
+import { stockMovementsCsv } from "@/lib/utils/stock-export";
 import { type ActionResult, ok } from "@/lib/utils/result";
 
 export type ExportBundle = {
   bills: string;
   billItems: string;
   items: string;
+  stockMovements: string;
 };
 
 /**
@@ -63,10 +72,30 @@ export async function exportAllDataAction(): Promise<
         price: items.price,
         isActive: items.isActive,
         isAvailable: items.isAvailable,
+        trackStock: items.trackStock,
+        stockQuantity: items.stockQuantity,
+        lowStockThreshold: items.lowStockThreshold,
       })
       .from(items)
       .innerJoin(categories, eq(categories.id, items.categoryId))
       .orderBy(asc(categories.name), asc(items.name));
+
+    const movementRows = await db
+      .select({
+        createdAt: stockMovements.createdAt,
+        itemName: items.name,
+        type: stockMovements.type,
+        quantityDelta: stockMovements.quantityDelta,
+        quantityAfter: stockMovements.quantityAfter,
+        billNumber: bills.billNumber,
+        createdByName: users.name,
+        note: stockMovements.note,
+      })
+      .from(stockMovements)
+      .innerJoin(items, eq(items.id, stockMovements.itemId))
+      .innerJoin(users, eq(users.id, stockMovements.createdBy))
+      .leftJoin(bills, eq(bills.id, stockMovements.billId))
+      .orderBy(asc(stockMovements.createdAt), asc(stockMovements.id));
 
     return ok({
       bills: toCsv(billRows, [
@@ -97,7 +126,11 @@ export async function exportAllDataAction(): Promise<
         { header: "Current Price", value: (r) => csvAmount(r.price) },
         { header: "On menu", value: (r) => (r.isActive ? "Yes" : "No") },
         { header: "Available", value: (r) => (r.isAvailable ? "Yes" : "No") },
+        { header: "Tracked", value: (r) => (r.trackStock ? "Yes" : "No") },
+        { header: "In stock", value: (r) => r.stockQuantity },
+        { header: "Low-stock alert at", value: (r) => r.lowStockThreshold },
       ]),
+      stockMovements: stockMovementsCsv(movementRows),
     });
   });
 }
