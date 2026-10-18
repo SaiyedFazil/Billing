@@ -7,6 +7,10 @@ export type MenuItem = {
   imageUrl: string | null;
   /** false = temporarily sold out: shown greyed out, cannot be billed. */
   isAvailable: boolean;
+  /** Whole units. Ignored unless trackStock — see lib/utils/stock.ts. */
+  trackStock: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
 };
 
 export type MenuCategory = {
@@ -27,4 +31,7 @@ export type AdminItemRow = {
   imageFileId: string | null;
   isAvailable: boolean;
   sortOrder: number;
+  trackStock: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
 };

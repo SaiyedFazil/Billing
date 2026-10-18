@@ -5,6 +5,7 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "PRICE_CHANGED"
+  | "OUT_OF_STOCK"
   | "DB_UNAVAILABLE"
   | "UNKNOWN";
 

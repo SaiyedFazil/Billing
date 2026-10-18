@@ -52,7 +52,7 @@ export function CartLine({
             <button
               type="button"
               className={STEP_BUTTON}
-              disabled={disabled}
+              disabled={disabled || line.quantity >= line.maxQuantity}
               aria-label={`Increase ${line.name}`}
               onClick={() => onSetQuantity(line.itemId, line.quantity + 1)}
             >

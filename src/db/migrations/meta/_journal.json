@@ -22,6 +22,20 @@
       "when": 1789938767604,
       "tag": "0002_empty_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792357478198,
+      "tag": "0003_clever_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792357478199,
+      "tag": "0004_stock_movements_immutable",
+      "breakpoints": true
     }
   ]
 }

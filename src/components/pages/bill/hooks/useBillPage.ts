@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 
 import {
@@ -16,10 +22,11 @@ import {
   ZERO,
 } from "@/lib/utils/money";
 import { categoryTone } from "@/lib/utils/category-tone";
+import { MAX_LINE_QUANTITY } from "@/lib/validation/bill-schema";
 import { createBillAction } from "@/server/bills/bills-actions";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
 
-import { filterItems, topSearchMatch } from "../utils/cart";
+import { atStockCap, filterItems, topSearchMatch } from "../utils/cart";
 import { useCartReducer } from "./useCartReducer";
 
 export function useBillPage({
@@ -32,7 +39,24 @@ export function useBillPage({
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
 
-  const { lines, addItem, setQuantity, removeItem, clear } = useCartReducer();
+  const {
+    lines,
+    addItem: addToCart,
+    setQuantity: setCartQuantity,
+    removeItem,
+    clear,
+    syncMenu,
+  } = useCartReducer();
+
+  // A fresh menu (after a refresh, or a failed save) may hold less stock than
+  // the cart: cut the cart down to it and say so, rather than let the cashier
+  // re-submit a bill the server will refuse.
+  useEffect(() => {
+    const changed = syncMenu(menu);
+    if (changed.length > 0) {
+      toast.warning(`Updated to current stock: ${changed.join(", ")}`);
+    }
+  }, [menu, syncMenu]);
 
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -97,6 +121,33 @@ export function useBillPage({
       !tenderedInput.trim() ||
       compare(tendered ?? ZERO, total) >= 0);
 
+  const addItem = useCallback(
+    (item: MenuItem) => {
+      const inCart = lines.find((line) => line.itemId === item.id);
+      if (atStockCap(item, inCart?.quantity ?? 0)) {
+        toast(`Only ${item.stockQuantity} ${item.name} in stock`);
+        return;
+      }
+      addToCart(item);
+    },
+    [addToCart, lines],
+  );
+
+  const setQuantity = useCallback(
+    (itemId: string, quantity: number) => {
+      const line = lines.find((candidate) => candidate.itemId === itemId);
+      if (
+        line &&
+        quantity > line.maxQuantity &&
+        line.maxQuantity < MAX_LINE_QUANTITY
+      ) {
+        toast(`Only ${line.maxQuantity} ${line.name} in stock`);
+      }
+      setCartQuantity(itemId, quantity);
+    },
+    [lines, setCartQuantity],
+  );
+
   const addBySearch = useCallback(() => {
     const match = topSearchMatch(menu, search);
     if (!match) return;
@@ -148,6 +199,13 @@ export function useBillPage({
           return;
         }
 
+        if (result.error.code === "OUT_OF_STOCK") {
+          // Pull the real counts; the effect above then trims the cart.
+          setError(result.error.message);
+          router.refresh();
+          return;
+        }
+
         setError(result.error.message);
       });
     },
@@ -191,7 +249,7 @@ export function useBillPage({
 
     lines,
     itemCount,
-    addItem: (item: MenuItem) => addItem(item),
+    addItem,
     setQuantity,
     removeItem,
 

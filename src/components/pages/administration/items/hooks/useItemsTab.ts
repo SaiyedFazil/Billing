@@ -8,6 +8,16 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { categoryTone } from "@/lib/utils/category-tone";
 import { formatINR, parseRupees } from "@/lib/utils/money";
 import {
+  countByStatus,
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  matchesStockFilter,
+  PARAM_BY_FILTER,
+  parseWholeQuantity,
+  startsTracking,
+  STOCK_FILTER_PARAM,
+  type StockFilter,
+} from "@/lib/utils/stock";
+import {
   createItemAction,
   deleteItemAction,
   toggleItemAvailabilityAction,
@@ -24,6 +34,13 @@ export type ItemFormState = {
   imageFileId: string | null;
   isAvailable: boolean;
   sortOrder: string;
+  trackStock: boolean;
+  lowStockInput: string;
+  openingStockInput: string;
+  /** Whether the saved item tracks stock — decides if an opening count is asked. */
+  wasTracked: boolean;
+  /** The saved count, shown read-only once tracking is on. */
+  stockQuantity: number;
 };
 
 function emptyForm(categoryId: string): ItemFormState {
@@ -36,22 +53,53 @@ function emptyForm(categoryId: string): ItemFormState {
     imageFileId: null,
     isAvailable: true,
     sortOrder: "0",
+    trackStock: false,
+    lowStockInput: String(DEFAULT_LOW_STOCK_THRESHOLD),
+    openingStockInput: "",
+    wasTracked: false,
+    stockQuantity: 0,
   };
 }
 
 export function useItemsTab({
   items,
   categories,
+  initialStockFilter,
 }: {
   items: AdminItemRow[];
   categories: Array<{ id: string; name: string }>;
+  initialStockFilter: StockFilter;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [stockFilter, setStockFilterState] =
+    useState<StockFilter>(initialStockFilter);
   const debouncedSearch = useDebounce(search);
+
+  // Kept in the URL so the Dashboard can link to a filtered view and a reload
+  // keeps it. replaceState updates the address without a server round trip.
+  const setStockFilter = useCallback((next: StockFilter) => {
+    setStockFilterState(next);
+    const url = new URL(window.location.href);
+    if (next === "ALL") url.searchParams.delete(STOCK_FILTER_PARAM);
+    else url.searchParams.set(STOCK_FILTER_PARAM, PARAM_BY_FILTER[next]);
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  // Tracked by id, not by row: a refresh after a save hands back new rows,
+  // and the dialog must show the fresh count.
+  const [stockTargetId, setStockTargetId] = useState<string | null>(null);
+  const stockTarget = items.find((item) => item.id === stockTargetId) ?? null;
+  const openUpdateStock = useCallback(
+    (row: AdminItemRow) => setStockTargetId(row.id),
+    [],
+  );
+  const closeUpdateStock = useCallback(() => setStockTargetId(null), []);
+
+  const stockCounts = useMemo(() => countByStatus(items), [items]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<ItemFormState>(() =>
@@ -66,13 +114,14 @@ export function useItemsTab({
       if (categoryFilter !== "ALL" && item.categoryId !== categoryFilter) {
         return false;
       }
+      if (!matchesStockFilter(item, stockFilter)) return false;
       if (!term) return true;
       return (
         item.name.toLowerCase().includes(term) ||
         item.categoryName.toLowerCase().includes(term)
       );
     });
-  }, [items, categoryFilter, debouncedSearch]);
+  }, [items, categoryFilter, stockFilter, debouncedSearch]);
 
   // Display only: the same tint per category as its tiles on the till.
   const toneByCategoryId = useMemo(
@@ -100,6 +149,11 @@ export function useItemsTab({
       imageFileId: row.imageFileId,
       isAvailable: row.isAvailable,
       sortOrder: String(row.sortOrder),
+      trackStock: row.trackStock,
+      lowStockInput: String(row.lowStockThreshold),
+      openingStockInput: "",
+      wasTracked: row.trackStock,
+      stockQuantity: row.stockQuantity,
     });
     setFieldErrors({});
     setDialogOpen(true);
@@ -116,6 +170,27 @@ export function useItemsTab({
       return;
     }
 
+    // Stock fields are only checked while tracking is on; a stale value in a
+    // hidden field must not block saving an untracked item.
+    const lowStockThreshold = parseWholeQuantity(form.lowStockInput);
+    const asksOpening = startsTracking(form.wasTracked, form.trackStock);
+    const openingStock = asksOpening
+      ? parseWholeQuantity(form.openingStockInput)
+      : null;
+    const stockErrors: Record<string, string> = {};
+    if (form.trackStock && lowStockThreshold === null) {
+      stockErrors.lowStockThreshold = "Enter a whole number";
+    }
+    if (asksOpening && openingStock === null) {
+      stockErrors.openingStock = form.openingStockInput.trim()
+        ? "Enter a whole number"
+        : "Enter the count on the shelf";
+    }
+    if (Object.keys(stockErrors).length > 0) {
+      setFieldErrors(stockErrors);
+      return;
+    }
+
     startTransition(async () => {
       const payload = {
         name: form.name,
@@ -125,6 +200,9 @@ export function useItemsTab({
         imageFileId: form.imageFileId,
         isAvailable: form.isAvailable,
         sortOrder: Number(form.sortOrder) || 0,
+        trackStock: form.trackStock,
+        lowStockThreshold: lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+        openingStock,
       };
 
       const result = form.id
@@ -190,6 +268,9 @@ export function useItemsTab({
     setSearch,
     categoryFilter,
     setCategoryFilter,
+    stockFilter,
+    setStockFilter,
+    stockCounts,
     visibleItems,
     categories,
     toneByCategoryId,
@@ -207,6 +288,10 @@ export function useItemsTab({
     setPendingDelete,
     confirmDelete,
     toggleAvailability,
+
+    stockTarget,
+    openUpdateStock,
+    closeUpdateStock,
 
     isPending,
   };

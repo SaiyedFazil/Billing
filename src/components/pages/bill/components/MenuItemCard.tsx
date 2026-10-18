@@ -6,7 +6,10 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { type CategoryTone, categoryTone } from "@/lib/utils/category-tone";
 import { formatINR } from "@/lib/utils/money";
+import { sellability, stockStatus } from "@/lib/utils/stock";
 import type { MenuItem } from "@/types/item.types";
+
+import { atStockCap } from "../utils/cart";
 
 export function MenuItemCard({
   item,
@@ -20,8 +23,13 @@ export function MenuItemCard({
   quantity: number;
   tone?: CategoryTone;
 }) {
-  const soldOut = !item.isAvailable;
+  // "Sold out" is the owner's switch; "Out of stock" is the count hitting 0.
+  const status = sellability(item);
+  const soldOut = status !== "SELLABLE";
   const inCart = quantity > 0;
+  const low = !soldOut && stockStatus(item) === "LOW";
+  // Still clickable: a tap explains why nothing was added.
+  const atCap = !soldOut && atStockCap(item, quantity);
 
   return (
     <button
@@ -66,7 +74,11 @@ export function MenuItemCard({
 
         {soldOut ? (
           <span className="absolute bottom-2 left-2 rounded-full bg-foreground px-2.5 py-1 text-[10px] font-semibold tracking-wider text-background uppercase">
-            Sold out
+            {status === "OUT_OF_STOCK" ? "Out of stock" : "Sold out"}
+          </span>
+        ) : low ? (
+          <span className="absolute bottom-2 left-2 rounded-full bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning-ink tabular-nums shadow-card">
+            {item.stockQuantity} left
           </span>
         ) : null}
 
@@ -91,8 +103,13 @@ export function MenuItemCard({
           >
             {formatINR(item.price)}
           </span>
+          {atCap ? (
+            <span className="block text-xs font-medium text-warning-ink">
+              No more in stock
+            </span>
+          ) : null}
         </span>
-        {soldOut ? null : (
+        {soldOut || atCap ? null : (
           <span
             aria-hidden
             className={cn(

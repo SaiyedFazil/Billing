@@ -11,6 +11,8 @@ export type CartLine = {
   name: string;
   unitPrice: string;
   quantity: number;
+  /** The most this line may hold: the line limit, or the stock left. */
+  maxQuantity: number;
 };
 
 /**

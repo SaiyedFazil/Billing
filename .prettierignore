@@ -9,3 +9,6 @@ src/db/migrations/meta/
 
 # Local agent settings.
 .claude/
+
+# Agent plan workspaces (git-ignored scratch).
+.superpowers/

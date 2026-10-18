@@ -14,21 +14,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { StockFilter } from "@/lib/utils/stock";
 import type { AdminItemRow } from "@/types/item.types";
 
 import { ItemsTableToolbar } from "./components/ItemsTableToolbar";
+import { StockSummaryTiles } from "./components/StockSummaryTiles";
 import { CreateUpdateItemDialog } from "./create-update-item-dialog/CreateUpdateItemDialog";
 import { useItemsTab } from "./hooks/useItemsTab";
 import { ITEM_HEADERS, ItemTableRow } from "./ItemsColumns";
+import { UpdateStockDialog } from "./update-stock-dialog/UpdateStockDialog";
 
 export function ItemsTab({
   items,
   categories,
+  initialStockFilter,
 }: {
   items: AdminItemRow[];
   categories: Array<{ id: string; name: string }>;
+  initialStockFilter: StockFilter;
 }) {
-  const tab = useItemsTab({ items, categories });
+  const tab = useItemsTab({ items, categories, initialStockFilter });
 
   return (
     <div className="space-y-6">
@@ -57,13 +62,24 @@ export function ItemsTab({
             categoryFilter={tab.categoryFilter}
             onCategoryFilterChange={tab.setCategoryFilter}
             categories={tab.categories}
+            stockFilter={tab.stockFilter}
+            onStockFilterChange={tab.setStockFilter}
           />
+
+          {/* Hidden until something is tracked: the page reads as before. */}
+          {tab.stockCounts.tracked > 0 ? (
+            <StockSummaryTiles
+              counts={tab.stockCounts}
+              filter={tab.stockFilter}
+              onFilterChange={tab.setStockFilter}
+            />
+          ) : null}
 
           {tab.visibleItems.length === 0 ? (
             <TableEmptyState
               icon={SearchX}
               title="No items match"
-              description="Try a different search term or category."
+              description="Try a different search term, category or stock filter."
             />
           ) : (
             <TableCard>
@@ -91,6 +107,7 @@ export function ItemsTab({
                       onEdit={tab.openEdit}
                       onDelete={tab.setPendingDelete}
                       onToggleAvailability={tab.toggleAvailability}
+                      onUpdateStock={tab.openUpdateStock}
                       disabled={tab.isPending}
                     />
                   ))}
@@ -110,6 +127,11 @@ export function ItemsTab({
         fieldErrors={tab.fieldErrors}
         onSubmit={tab.submit}
         isPending={tab.isPending}
+      />
+
+      <UpdateStockDialog
+        item={tab.stockTarget}
+        onClose={tab.closeUpdateStock}
       />
 
       <ConfirmDialog

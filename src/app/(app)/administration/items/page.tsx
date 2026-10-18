@@ -1,6 +1,7 @@
 import { ItemsTab } from "@/components/pages/administration/items/ItemsTab";
 import { requireSuperadmin } from "@/lib/auth/guard";
 import { listCategoryOptions } from "@/server/categories/categories-queries";
+import { parseStockFilter, STOCK_FILTER_PARAM } from "@/lib/utils/stock";
 import { listItemsForAdmin } from "@/server/items/items-queries";
 
 export const metadata = {
@@ -8,16 +9,25 @@ export const metadata = {
   description: "Manage the menu.",
 };
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: PageProps<"/administration/items">) {
   // The layout gate is NOT enough: Next renders layout and page in parallel,
   // so without this the page would fetch and stream item data before the
   // layout's guard threw. See spec §7.2.
   await requireSuperadmin();
 
-  const [items, categories] = await Promise.all([
+  const [items, categories, params] = await Promise.all([
     listItemsForAdmin(),
     listCategoryOptions(),
+    searchParams,
   ]);
 
-  return <ItemsTab items={items} categories={categories} />;
+  return (
+    <ItemsTab
+      items={items}
+      categories={categories}
+      initialStockFilter={parseStockFilter(params[STOCK_FILTER_PARAM])}
+    />
+  );
 }

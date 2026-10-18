@@ -1,8 +1,9 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { PackagePlus, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 
+import { StockBadge } from "@/components/custom/StockBadge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -17,6 +18,7 @@ export const ITEM_HEADERS = [
   "Name",
   "Category",
   "Price",
+  "Stock",
   "Available",
   "Order",
   "",
@@ -28,6 +30,7 @@ export function ItemTableRow({
   onEdit,
   onDelete,
   onToggleAvailability,
+  onUpdateStock,
   disabled,
 }: {
   row: AdminItemRow;
@@ -35,6 +38,7 @@ export function ItemTableRow({
   onEdit: (row: AdminItemRow) => void;
   onDelete: (row: AdminItemRow) => void;
   onToggleAvailability: (row: AdminItemRow) => void;
+  onUpdateStock: (row: AdminItemRow) => void;
   disabled: boolean;
 }) {
   return (
@@ -82,6 +86,9 @@ export function ItemTableRow({
         {formatINR(row.price)}
       </TableCell>
       <TableCell>
+        <StockBadge level={row} />
+      </TableCell>
+      <TableCell>
         <Switch
           checked={row.isAvailable}
           disabled={disabled}
@@ -92,7 +99,26 @@ export function ItemTableRow({
       <TableCell className="text-muted-foreground tabular-nums">
         {row.sortOrder}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-right whitespace-nowrap">
+        {/* The title sits on a wrapper: a disabled button gets no hover. */}
+        <span
+          className="inline-flex"
+          title={
+            row.trackStock
+              ? `Update stock for ${row.name}`
+              : "Turn on stock tracking in Edit"
+          }
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={disabled || !row.trackStock}
+            aria-label={`Update stock for ${row.name}`}
+            onClick={() => onUpdateStock(row)}
+          >
+            <PackagePlus className="size-4" />
+          </Button>
+        </span>
         <Button
           variant="ghost"
           size="icon"

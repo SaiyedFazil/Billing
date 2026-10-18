@@ -10,6 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { StockFilter } from "@/lib/utils/stock";
+
+const STOCK_OPTIONS: Array<{ value: StockFilter; label: string }> = [
+  { value: "ALL", label: "All stock" },
+  { value: "IN_STOCK", label: "In stock" },
+  { value: "LOW", label: "Low stock" },
+  { value: "OUT", label: "Out of stock" },
+  { value: "UNTRACKED", label: "Not tracked" },
+];
 
 export function ItemsTableToolbar({
   search,
@@ -17,12 +26,16 @@ export function ItemsTableToolbar({
   categoryFilter,
   onCategoryFilterChange,
   categories,
+  stockFilter,
+  onStockFilterChange,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
   categoryFilter: string;
   onCategoryFilterChange: (value: string) => void;
   categories: Array<{ id: string; name: string }>;
+  stockFilter: StockFilter;
+  onStockFilterChange: (value: StockFilter) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -46,6 +59,25 @@ export function ItemsTableToolbar({
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={stockFilter}
+        onValueChange={(value) => onStockFilterChange(value as StockFilter)}
+      >
+        <SelectTrigger
+          className="w-44 shadow-card data-[size=default]:h-11"
+          aria-label="Filter by stock"
+        >
+          <SelectValue placeholder="All stock" />
+        </SelectTrigger>
+        <SelectContent>
+          {STOCK_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>
