@@ -15,6 +15,39 @@ async function expectRejection(label: string, statement: SQL) {
   }
 }
 
+/** The full driver message, including the cause Drizzle wraps it in. */
+function describe(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const cause = (error as { cause?: unknown }).cause;
+  return cause instanceof Error ? `${message} ${cause.message}` : message;
+}
+
+/**
+ * Stricter than expectRejection: the statement must fail on the named
+ * constraint, so a missing column or a typo cannot pass for a rejection.
+ */
+async function expectViolation(
+  label: string,
+  statement: SQL,
+  constraint: string,
+) {
+  try {
+    await db.execute(statement);
+    failures += 1;
+    console.error(`FAIL — ${label}: the database ACCEPTED invalid data`);
+  } catch (error) {
+    if (describe(error).includes(constraint)) {
+      console.log(`PASS — ${label}: rejected by ${constraint}`);
+    } else {
+      failures += 1;
+      console.error(
+        `FAIL — ${label}: rejected, but not by ${constraint}:`,
+        describe(error).split("\n")[0],
+      );
+    }
+  }
+}
+
 async function main() {
   // --- fixtures -------------------------------------------------------
   // A user is needed for bills.created_by, a category for items.category_id.
@@ -72,6 +105,73 @@ async function main() {
         VALUES (${categoryId}::uuid, 'Negative Price Probe', -1.00)`,
   );
 
+  // --- stock ----------------------------------------------------------
+  const probeItemId = (
+    (
+      await db.execute(sql`
+        INSERT INTO items (category_id, name, price)
+        VALUES (${categoryId}::uuid, 'Stock Constraint Probe', 10.00)
+        RETURNING id
+      `)
+    ).rows[0] as { id: string }
+  ).id;
+
+  await expectViolation(
+    "stock cannot go negative",
+    sql`UPDATE items SET stock_quantity = -1 WHERE id = ${probeItemId}::uuid`,
+    "items_stock_non_negative",
+  );
+  await expectViolation(
+    "the low-stock level cannot be negative",
+    sql`UPDATE items SET low_stock_threshold = -1 WHERE id = ${probeItemId}::uuid`,
+    "items_low_stock_threshold_non_negative",
+  );
+  await expectViolation(
+    "a SALE movement must name its bill",
+    sql`INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, created_by)
+        VALUES (${probeItemId}::uuid, 'SALE', -1, 0, ${userId}::uuid)`,
+    "stock_movements_bill_iff_sale",
+  );
+  await expectViolation(
+    "only a SALE movement may name a bill",
+    sql`INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, bill_id, created_by)
+        VALUES (${probeItemId}::uuid, 'RESTOCK', 5, 5, gen_random_uuid(), ${userId}::uuid)`,
+    "stock_movements_bill_iff_sale",
+  );
+  await expectViolation(
+    "a RESTOCK cannot change nothing",
+    sql`INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, created_by)
+        VALUES (${probeItemId}::uuid, 'RESTOCK', 0, 0, ${userId}::uuid)`,
+    "stock_movements_delta_non_zero",
+  );
+  await expectViolation(
+    "a movement cannot leave negative stock",
+    sql`INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, created_by)
+        VALUES (${probeItemId}::uuid, 'WASTAGE', -1, -1, ${userId}::uuid)`,
+    "stock_movements_after_non_negative",
+  );
+  await expectViolation(
+    "a note is at most 200 characters",
+    sql`INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, note, created_by)
+        VALUES (${probeItemId}::uuid, 'RESTOCK', 1, 1, ${"x".repeat(201)}, ${userId}::uuid)`,
+    "stock_movements_note_length",
+  );
+
+  // An opening count of 0 is a real, valid save — the one zero-delta row.
+  try {
+    await db.execute(sql`
+      INSERT INTO stock_movements (item_id, type, quantity_delta, quantity_after, created_by)
+      VALUES (${probeItemId}::uuid, 'OPENING', 0, 0, ${userId}::uuid)
+    `);
+    console.log("PASS — a zero-delta OPENING movement is accepted");
+  } catch (error) {
+    failures += 1;
+    console.error(
+      "FAIL — a zero-delta OPENING movement was rejected:",
+      describe(error).split("\n")[0],
+    );
+  }
+
   // --- bill_items -----------------------------------------------------
   await expectRejection(
     "line total must equal unit price times quantity",
@@ -94,6 +194,21 @@ async function main() {
   );
 
   // --- cleanup --------------------------------------------------------
+  // Movement rows are immutable by trigger; lift it for the probe's rows only.
+  // The table is absent on a database that predates stock tracking.
+  await db.execute(sql`
+    DO $$ BEGIN
+      IF to_regclass('stock_movements') IS NOT NULL THEN
+        ALTER TABLE stock_movements DISABLE TRIGGER stock_movements_immutable;
+        DELETE FROM stock_movements WHERE item_id IN
+          (SELECT id FROM items WHERE name = 'Stock Constraint Probe');
+        ALTER TABLE stock_movements ENABLE TRIGGER stock_movements_immutable;
+      END IF;
+    END $$
+  `);
+  await db.execute(
+    sql`DELETE FROM items WHERE name = 'Stock Constraint Probe'`,
+  );
   await db.execute(
     sql`DELETE FROM categories WHERE name = 'Constraint Probe Category'`,
   );

@@ -30,6 +30,7 @@ async function main() {
   // Order matters only without CASCADE; with it, one statement each is enough.
   await db.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS __migrations CASCADE`);
+  await db.execute(sql`DROP TABLE IF EXISTS stock_movements CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_items CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bills CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_counters CASCADE`);
@@ -44,11 +45,15 @@ async function main() {
   );
   await db.execute(sql`DROP FUNCTION IF EXISTS prevent_bill_delete CASCADE`);
   await db.execute(sql`DROP FUNCTION IF EXISTS restrict_bill_update CASCADE`);
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS prevent_stock_movement_mutation CASCADE`,
+  );
 
   await db.execute(sql`DROP TYPE IF EXISTS user_role CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS payment_method CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS bill_status CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS printer_width CASCADE`);
+  await db.execute(sql`DROP TYPE IF EXISTS stock_movement_type CASCADE`);
 
   const after = await db.execute(
     sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY 1`,

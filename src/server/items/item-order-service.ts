@@ -1,10 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 
-import type { db } from "@/db";
 import { items } from "@/db/schema";
-
-/** The transaction handle db.transaction() hands its callback. */
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { Transaction } from "@/db/transaction";
 
 /**
  * Renumbers one category's items to 0, 1, 2, … in their current order,
