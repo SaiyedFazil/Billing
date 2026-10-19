@@ -8,5 +8,7 @@ export * from "./bill-counters";
 export * from "./bills";
 export * from "./bill-items";
 export * from "./stock-movements";
+export * from "./expense-categories";
+export * from "./expenses";
 export * from "./audit-log";
 export * from "./shop-settings";

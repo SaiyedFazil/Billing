@@ -113,6 +113,23 @@ async function main() {
     console.error("FAIL — voiding a bill was rejected:", error);
   }
 
+  // --- expenses are cancelled, never deleted ---------------------------
+  // On a database that predates the cash book this is one clean FAIL, not a
+  // crash that would strand the probe bill above.
+  const hasExpenses = (
+    (
+      await db.execute(
+        sql`SELECT to_regclass('expenses') IS NOT NULL AS present`,
+      )
+    ).rows[0] as { present: boolean }
+  ).present;
+  if (hasExpenses) {
+    await verifyExpenseImmutability();
+  } else {
+    failures += 1;
+    console.error("FAIL — the expenses table is missing; run db:migrate");
+  }
+
   // --- teardown --------------------------------------------------------
   // The triggers block our own cleanup, so disable them for the teardown only.
   await db.execute(
@@ -151,6 +168,71 @@ async function main() {
       : `\n${failures} FAILURE(S)`,
   );
   process.exit(failures === 0 ? 0 : 1);
+}
+
+/** Builds its own probe expense, attacks it, and removes it again. */
+async function verifyExpenseImmutability() {
+  const expense = await db.execute(sql`
+    WITH c AS (
+      INSERT INTO expense_categories (name)
+      VALUES ('Immutability Probe Expense Category') RETURNING id
+    )
+    INSERT INTO expenses (expense_date, amount, mode, category_id,
+                          idempotency_key, created_by)
+    SELECT '2026-01-02', 120.00, 'CASH', c.id, gen_random_uuid(),
+           (SELECT id FROM users WHERE username = 'immutability-probe')
+    FROM c
+    RETURNING id, category_id
+  `);
+  const { id: expenseId, category_id: expenseCategoryId } = expense.rows[0] as {
+    id: string;
+    category_id: string;
+  };
+
+  await expectRejection(
+    "DELETE on expenses",
+    sql`DELETE FROM expenses WHERE id = ${expenseId}::uuid`,
+    "expenses cannot be deleted",
+  );
+  await expectRejection(
+    "DELETE on expense_categories",
+    sql`DELETE FROM expense_categories WHERE id = ${expenseCategoryId}::uuid`,
+    "expense categories cannot be deleted",
+  );
+
+  try {
+    await db.execute(sql`
+      UPDATE expenses SET cancelled_at = now(), cancel_reason = 'probe',
+        cancelled_by = (SELECT id FROM users WHERE username = 'immutability-probe')
+      WHERE id = ${expenseId}::uuid
+    `);
+    console.log("PASS — cancelling an active expense is permitted");
+  } catch (error) {
+    failures += 1;
+    console.error("FAIL — cancelling an active expense was rejected:", error);
+  }
+
+  await expectRejection(
+    "UPDATE on a cancelled expense",
+    sql`UPDATE expenses SET note = 'changed' WHERE id = ${expenseId}::uuid`,
+    "a cancelled expense cannot be changed",
+  );
+
+  // The triggers block our own cleanup, so disable them for the teardown only.
+  await db.execute(
+    sql`ALTER TABLE expenses DISABLE TRIGGER expenses_no_delete`,
+  );
+  await db.execute(
+    sql`ALTER TABLE expense_categories DISABLE TRIGGER expense_categories_no_delete`,
+  );
+  await db.execute(sql`DELETE FROM expenses WHERE id = ${expenseId}::uuid`);
+  await db.execute(
+    sql`DELETE FROM expense_categories WHERE id = ${expenseCategoryId}::uuid`,
+  );
+  await db.execute(sql`ALTER TABLE expenses ENABLE TRIGGER expenses_no_delete`);
+  await db.execute(
+    sql`ALTER TABLE expense_categories ENABLE TRIGGER expense_categories_no_delete`,
+  );
 }
 
 main().catch((error) => {
