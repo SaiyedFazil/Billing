@@ -5,6 +5,7 @@ import {
   isFutureDate,
   summarizeCashBook,
 } from "../src/lib/utils/cash-book";
+import { expensesCsv } from "../src/lib/utils/expense-export";
 import {
   cancelExpenseSchema,
   createExpenseSchema,
@@ -182,6 +183,57 @@ check(
   cancelExpenseSchema.safeParse({ id: validExpense.categoryId, reason: "  " })
     .success,
   false,
+);
+
+// --- CSV ----------------------------------------------------------------
+const csvLines = expensesCsv([
+  {
+    id: "a",
+    expenseDate: "2026-10-20",
+    amount: "1250.00",
+    mode: "UPI",
+    categoryId: "c1",
+    categoryName: "Vegetables & dairy",
+    categoryIsActive: true,
+    paidTo: "Ravi",
+    note: 'Onion, "fresh"',
+    createdByName: "Shop Owner",
+    createdAt: "2026-10-20T05:00:00.000Z",
+    edited: false,
+    cancelledAt: null,
+    cancelReason: null,
+  },
+  {
+    id: "b",
+    expenseDate: "2026-10-19",
+    amount: "450.00",
+    mode: "CASH",
+    categoryId: "c2",
+    categoryName: "Repairs & maintenance",
+    categoryIsActive: false,
+    paidTo: null,
+    note: null,
+    createdByName: "Shop Owner",
+    createdAt: "2026-10-19T05:00:00.000Z",
+    edited: true,
+    cancelledAt: "2026-10-19T06:00:00.000Z",
+    cancelReason: "Entered twice",
+  },
+]).split("\r\n");
+check(
+  "the CSV header",
+  csvLines[0],
+  "﻿Date,Category,Paid to,Note,Mode,Group,Amount,Status,Cancel reason,Entered by,Entered at",
+);
+check(
+  "a note with a comma and quotes is escaped; online mode and group",
+  csvLines[1],
+  '2026-10-20,Vegetables & dairy,Ravi,"Onion, ""fresh""",UPI,Online,1250.00,Active,,Shop Owner,2026-10-20T05:00:00.000Z',
+);
+check(
+  "a cancelled row reads Cancelled with its reason",
+  csvLines[2],
+  "2026-10-19,Repairs & maintenance,,,Cash,Cash,450.00,Cancelled,Entered twice,Shop Owner,2026-10-19T05:00:00.000Z",
 );
 
 console.log(

@@ -2,8 +2,9 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import { auditLog, expenseCategories, expenses, users } from "../src/db/schema";
-import { shiftIsoDate } from "../src/lib/utils/date-range";
+import { presetRange, shiftIsoDate } from "../src/lib/utils/date-range";
 import { businessDate } from "../src/lib/utils/dates";
+import { add, ZERO } from "../src/lib/utils/money";
 import type { ActionResult } from "../src/lib/utils/result";
 import {
   createExpenseSchema,
@@ -17,6 +18,12 @@ import {
   retireExpenseCategory,
   updateExpense,
 } from "../src/server/expenses/expenses-service";
+import {
+  getCashBook,
+  getSpendByCategory,
+  listExpenses,
+} from "../src/server/expenses/expenses-queries";
+import { getPaymentBreakdown } from "../src/server/reports/reports-queries";
 import { getShopTimezone } from "../src/server/settings/settings-queries";
 
 /**
@@ -281,6 +288,86 @@ async function main() {
     "cancelling a missing expense is NOT_FOUND",
     errorOf(missing)?.code === "NOT_FOUND",
     missing,
+  );
+
+  // --- reads -------------------------------------------------------------
+  // A range no real bill or expense falls in, so the figures are exact.
+  const probeRange = { from: "2000-01-01", to: "2000-01-02" };
+  const categoryE = await probe("E");
+  const old = (overrides: Record<string, unknown>) =>
+    createExpense(input({ expenseDate: "2000-01-01", ...overrides }), user.id);
+  await old({ amount: "60.50", mode: "CASH" });
+  await old({ amount: "40.30", mode: "UPI", categoryId: categoryE });
+  const toCancel = await old({ amount: "999.00", mode: "CASH" });
+  if (!toCancel.ok) throw new Error("setup: could not create the 999.00");
+  await cancelExpense(
+    { id: toCancel.data.id, reason: "Wrong amount" },
+    user.id,
+  );
+  await retireExpenseCategory(categoryE, user.id);
+
+  const { summary } = await getCashBook(probeRange.from, probeRange.to);
+  check(
+    "getCashBook counts active expenses only",
+    JSON.stringify(summary.moneyOut) ===
+      JSON.stringify({
+        cash: "60.50",
+        online: "40.30",
+        other: "0.00",
+        total: "100.80",
+      }) &&
+      summary.moneyIn.total === "0.00" &&
+      summary.net.total === "-100.80",
+    summary,
+  );
+
+  const spend = await getSpendByCategory(probeRange.from, probeRange.to);
+  check(
+    "spend by category keeps a retired category's name",
+    spend.length === 2 &&
+      spend[0].name === `${PROBE_PREFIX} C` &&
+      spend[0].total === "60.50" &&
+      spend[1].name === `${PROBE_PREFIX} E` &&
+      spend[1].total === "40.30",
+    spend,
+  );
+
+  const cashPage = await listExpenses({ ...probeRange, group: "CASH" }, 1, 25);
+  check(
+    "listExpenses filters by group and includes cancelled rows",
+    cashPage.total === 2 &&
+      cashPage.rows.length === 2 &&
+      cashPage.rows[0].amount === "999.00" &&
+      cashPage.rows[0].cancelReason === "Wrong amount" &&
+      cashPage.rows[1].amount === "60.50" &&
+      cashPage.rows[1].cancelledAt === null,
+    cashPage,
+  );
+
+  const last30 = presetRange("LAST_30", timeZone);
+  const [cashBook30, payments30] = await Promise.all([
+    getCashBook(last30.from, last30.to),
+    getPaymentBreakdown(last30.from, last30.to),
+  ]);
+  const paid = (method: string) =>
+    payments30.find((row) => row.paymentMethod === method)?.net ?? ZERO;
+  check(
+    "money in matches the Sales payment breakdown",
+    cashBook30.summary.moneyIn.cash === paid("CASH") &&
+      cashBook30.summary.moneyIn.online === add(paid("UPI"), paid("CARD")) &&
+      cashBook30.summary.moneyIn.other === paid("OTHER"),
+    { moneyIn: cashBook30.summary.moneyIn, payments30 },
+  );
+
+  const onAPage = await listExpenses(
+    { from: today, to: today, categoryId: categoryA },
+    1,
+    25,
+  );
+  check(
+    "an edited expense is marked edited and a fresh one is not",
+    onAPage.rows[0]?.edited === true && cashPage.rows[1]?.edited === false,
+    { edited: onAPage.rows[0], fresh: cashPage.rows[1] },
   );
 
   // --- category names -----------------------------------------------------

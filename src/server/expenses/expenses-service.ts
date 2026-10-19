@@ -157,7 +157,9 @@ export async function updateExpense(
   // trigger is the backstop if this check is ever removed.
   const [updated] = await db
     .update(expenses)
-    .set({ ...values, updatedBy: userId, updatedAt: new Date() })
+    // now(), not new Date(): created_at is the database clock, and the list
+    // marks a row "Edited" by comparing the two.
+    .set({ ...values, updatedBy: userId, updatedAt: sql`now()` })
     .where(and(eq(expenses.id, id), isNull(expenses.cancelledAt)))
     .returning({ id: expenses.id });
   if (!updated) return fail("CONFLICT", CANCELLED_EXPENSE);
