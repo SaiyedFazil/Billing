@@ -221,6 +221,7 @@ npm run build            # the production build
 | `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)          |
 | `verify:stock`                                        | sale deduction, last-unit race, adjustments, history           |
 | `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation (no DB) |
+| `verify:audit-details`                                | every audit action reads as plain words (no DB)                |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |
 | `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                 |
 | `verify:report-queries`                               | report SQL against real data                                   |
