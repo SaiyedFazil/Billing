@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  Plus,
   Scale,
   Wallet,
 } from "lucide-react";
@@ -35,17 +36,22 @@ import type {
   ExpensePage,
 } from "@/types/expense.types";
 
+import { CancelExpenseDialog } from "./components/CancelExpenseDialog";
 import { CashBookDaysTable } from "./components/CashBookDaysTable";
 import { CashSplitLine } from "./components/CashSplitLine";
 import { ExpensesTableToolbar } from "./components/ExpensesTableToolbar";
 import { SpendByCategoryCard } from "./components/SpendByCategoryCard";
+import { ExpenseDialog } from "./expense-dialog/ExpenseDialog";
+import { useExpenseForm } from "./expense-dialog/hooks/useExpenseForm";
 import { EXPENSE_COLUMNS, ExpenseTableRow } from "./ExpensesColumns";
 import { type CashBookView, useCashBookTab } from "./hooks/useCashBookTab";
+import { useCancelExpense } from "./hooks/useCancelExpense";
 
 export function CashBookTab({
   from,
   to,
   presets,
+  today,
   view: initialView,
   filters,
   summary,
@@ -68,6 +74,8 @@ export function CashBookTab({
   categories: ExpenseCategoryRow[];
 }) {
   const tab = useCashBookTab(initialView);
+  const expenseForm = useExpenseForm({ today, categories });
+  const cancel = useCancelExpense();
 
   const lastPage = Math.max(
     1,
@@ -89,10 +97,16 @@ export function CashBookTab({
         title="Cash book"
         description="Money in from bills and money out from expenses, cash and online."
         actions={
-          <ExportCsvButton
-            filename={`cash-book-${from}-to-${to}.csv`}
-            onExport={() => exportExpensesCsvAction({ from, to })}
-          />
+          <>
+            <ExportCsvButton
+              filename={`cash-book-${from}-to-${to}.csv`}
+              onExport={() => exportExpensesCsvAction({ from, to })}
+            />
+            <Button onClick={expenseForm.openCreate}>
+              <Plus />
+              Add expense
+            </Button>
+          </>
         }
       />
 
@@ -204,6 +218,14 @@ export function CashBookTab({
                         ? "Try another mode or category."
                         : "Expenses you add will appear here."
                     }
+                    action={
+                      isFiltered ? undefined : (
+                        <Button onClick={expenseForm.openCreate}>
+                          <Plus />
+                          Add expense
+                        </Button>
+                      )
+                    }
                   />
                 </div>
               ) : (
@@ -212,14 +234,23 @@ export function CashBookTab({
                     <TableRow>
                       {EXPENSE_COLUMNS.map((column) => (
                         <TableHead key={column.label} className={column.width}>
-                          {column.label}
+                          {"srOnly" in column ? (
+                            <span className="sr-only">{column.label}</span>
+                          ) : (
+                            column.label
+                          )}
                         </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {expensePage.rows.map((row) => (
-                      <ExpenseTableRow key={row.id} row={row} />
+                      <ExpenseTableRow
+                        key={row.id}
+                        row={row}
+                        onEdit={expenseForm.openEdit}
+                        onCancel={cancel.ask}
+                      />
                     ))}
                   </TableBody>
                 </Table>
@@ -234,6 +265,28 @@ export function CashBookTab({
 
         {spend.length > 0 ? <SpendByCategoryCard spend={spend} /> : null}
       </div>
+
+      <ExpenseDialog
+        open={expenseForm.open}
+        onOpenChange={(open) => (open ? null : expenseForm.close())}
+        form={expenseForm.form}
+        setField={expenseForm.setField}
+        fieldErrors={expenseForm.fieldErrors}
+        categories={expenseForm.categoryOptions}
+        today={today}
+        isPending={expenseForm.isPending}
+        onSubmit={expenseForm.submit}
+      />
+
+      <CancelExpenseDialog
+        expense={cancel.target}
+        reason={cancel.reason}
+        onReasonChange={cancel.setReason}
+        error={cancel.error}
+        isPending={cancel.isPending}
+        onClose={cancel.close}
+        onConfirm={cancel.confirm}
+      />
     </div>
   );
 }

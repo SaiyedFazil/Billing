@@ -1,4 +1,13 @@
+import { Ban, Ellipsis, Pencil } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { formatBillDate } from "@/lib/utils/dates";
@@ -17,9 +26,19 @@ export const EXPENSE_COLUMNS = [
   // On a phone the mode moves under the category, so Amount stays on screen.
   { label: "Mode", width: "hidden w-36 sm:table-cell" },
   { label: "Amount", width: "w-32 text-right" },
+  // The row menu. Labelled for screen readers, blank on screen.
+  { label: "Actions", width: "w-14", srOnly: true },
 ] as const;
 
-export function ExpenseTableRow({ row }: { row: ExpenseRow }) {
+export function ExpenseTableRow({
+  row,
+  onEdit,
+  onCancel,
+}: {
+  row: ExpenseRow;
+  onEdit: (row: ExpenseRow) => void;
+  onCancel: (row: ExpenseRow) => void;
+}) {
   const cancelled = row.cancelledAt !== null;
   const details = [row.paidTo, row.note].filter(Boolean).join(" · ");
 
@@ -58,6 +77,37 @@ export function ExpenseTableRow({ row }: { row: ExpenseRow }) {
         )}
       >
         {formatINR(row.amount)}
+      </TableCell>
+      <TableCell className="text-right align-top">
+        {/* A cancelled expense is final: nothing left to do with it. */}
+        {cancelled ? null : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="-my-1.5 size-10"
+                aria-label={`Actions for ${row.categoryName} ${formatINR(row.amount)}`}
+              >
+                <Ellipsis className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEdit(row)}>
+                <Pencil />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => onCancel(row)}
+              >
+                <Ban />
+                Cancel expense
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </TableCell>
     </TableRow>
   );
