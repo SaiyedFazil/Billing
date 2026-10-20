@@ -128,7 +128,7 @@ export function AppSidebar({
       <Link
         href={REPORT_ROUTES.dashboard}
         onClick={onNavigate}
-        className="flex flex-col items-start gap-1 px-1.5"
+        className="flex flex-col items-center gap-1 px-1.5"
       >
         <BrandLogo
           variant="wordmark"
