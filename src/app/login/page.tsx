@@ -1,7 +1,7 @@
 import { LoginPage } from "@/components/pages/login/LoginPage";
 
 export const metadata = {
-  title: "Sign in | Billing",
+  title: "Sign in",
   description: "Sign in to the billing system.",
 };
 

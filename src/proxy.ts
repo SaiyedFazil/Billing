@@ -28,6 +28,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  // Everything except the auth endpoints and static assets.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|images).*)"],
+  // Everything except the auth endpoints and static assets. The brand logo,
+  // app icons and manifest must load signed out too: the sign-in page shows
+  // the logo, and the browser fetches the icons before anyone signs in.
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|brand/|images).*)",
+  ],
 };

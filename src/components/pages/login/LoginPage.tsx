@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { BrandMark } from "@/components/layout/BrandMark";
+import { BrandLogo } from "@/components/layout/BrandLogo";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { LoginBrandPanel } from "./components/LoginBrandPanel";
@@ -13,9 +13,8 @@ export function LoginPage() {
 
       <section className="flex flex-1 items-center justify-center px-5 py-12 sm:px-8">
         <div className="w-full max-w-95 space-y-8">
-          <div className="flex items-center gap-3 lg:hidden">
-            <BrandMark />
-            <span className="font-heading text-xl font-bold">Billing</span>
+          <div className="lg:hidden">
+            <BrandLogo eager className="h-28" />
           </div>
 
           <div className="space-y-2">

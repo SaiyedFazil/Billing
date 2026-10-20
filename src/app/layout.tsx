@@ -25,10 +25,11 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "Billing",
-    template: "%s | Billing",
+    default: "Mobito",
+    template: "%s · Mobito",
   },
-  description: "Counter billing for a fast food shop.",
+  description: "Counter billing for Mobito.",
+  applicationName: "Mobito",
 };
 
 /**

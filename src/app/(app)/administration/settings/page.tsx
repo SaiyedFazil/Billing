@@ -20,6 +20,7 @@ export default async function Page() {
         addressLine: settings.addressLine ?? "",
         phone: settings.phone ?? "",
         receiptFooter: settings.receiptFooter ?? "",
+        receiptShowLogo: settings.receiptShowLogo,
         printerWidth: settings.printerWidth,
         timezone: settings.timezone,
       }}

@@ -1,0 +1,1 @@
+ALTER TABLE "shop_settings" ADD COLUMN "receipt_show_logo" boolean DEFAULT true NOT NULL;

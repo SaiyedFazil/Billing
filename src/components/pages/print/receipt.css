@@ -40,6 +40,19 @@
   text-align: center;
 }
 
+/* About 60% of the paper's printable width: big enough for the tagline to
+   print legibly at 203 dpi, small enough to keep the bill short. */
+.receipt-logo {
+  display: block;
+  width: 44mm;
+  height: auto;
+  margin: 0 auto 2mm;
+}
+
+.receipt--58 .receipt-logo {
+  width: 34mm;
+}
+
 .receipt-shop-name {
   font-weight: 700;
   font-size: 15px;

@@ -14,6 +14,7 @@ Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 | `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work    |
 | `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups      |
 | `docs/printer-setup.md`                                        | One-time thermal printer setup on the till     |
+| `docs/brand/README.md`                                         | The Mobito logo files and where each one goes  |
 
 ## Commands
 
@@ -155,6 +156,10 @@ utilities through `@theme inline`.
 - **The receipt is not part of the design system.**
   `src/components/pages/print/` and `receipt.css` stay monospace
   black-on-white for thermal printers.
+- **The logo** comes from `BrandLogo` (pick `on="dark"` for the sidebar and
+  other espresso surfaces) or `BrandMark` (the crimson tile, where the
+  wordmark will not fit), never from a raw `<img>`. The receipt draws its own
+  black `ReceiptLogo`. See `docs/brand/README.md`.
 - **New shadcn components** (`npx shadcn add …`) arrive grayscale and without
   semicolons: run `npm run format`, then restyle them to the tokens.
 

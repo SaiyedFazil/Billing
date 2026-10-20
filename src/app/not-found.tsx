@@ -1,12 +1,12 @@
 import Link from "next/link";
 
-import { BrandMark } from "@/components/layout/BrandMark";
+import { BrandLogo } from "@/components/layout/BrandLogo";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-5 p-6 text-center">
-      <BrandMark className="size-12 rounded-2xl" />
+      <BrandLogo variant="wordmark" eager className="h-16" />
       <p className="font-heading text-7xl font-extrabold tracking-tight text-brand">
         404
       </p>
