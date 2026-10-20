@@ -1,18 +1,21 @@
-import { Flame } from "lucide-react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
-/** The tomato flame tile — the app's mark in the sidebar and on sign-in. */
+/**
+ * The crimson "m + smile" tile — the Mobito logo where the wordmark will not
+ * fit, such as the slim sidebar. Its corners are part of the artwork, so do
+ * not round it again. Decorative: put the accessible name on the link around it.
+ */
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <span
+    <Image
+      src="/brand/mobito-mark.svg"
+      alt=""
       aria-hidden
-      className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-[0_8px_18px_-8px_rgb(242_84_45/0.8)]",
-        className,
-      )}
-    >
-      <Flame className="size-[55%]" strokeWidth={2.25} />
-    </span>
+      width={512}
+      height={512}
+      className={cn("size-10 shrink-0", className)}
+    />
   );
 }

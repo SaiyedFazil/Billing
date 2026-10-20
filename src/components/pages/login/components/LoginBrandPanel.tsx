@@ -1,6 +1,6 @@
-import { Flame } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 
-import { BrandMark } from "@/components/layout/BrandMark";
+import { BrandLogo } from "@/components/layout/BrandLogo";
 
 const SAMPLE_LINES = [
   { qty: 2, name: "Cheese Burger", amount: "160.00" },
@@ -70,18 +70,15 @@ function ReceiptIllustration() {
 export function LoginBrandPanel() {
   return (
     <section className="relative hidden w-[52%] max-w-[760px] shrink-0 flex-col justify-between overflow-hidden bg-sidebar bg-dots px-14 py-14 text-sidebar-foreground lg:flex xl:px-16">
-      <div className="relative z-10 flex items-center gap-3">
-        <BrandMark className="size-11" />
-        <span className="font-heading text-[22px] font-bold text-white">
-          Billing
-        </span>
+      <div className="relative z-10">
+        <BrandLogo on="dark" eager className="h-36 xl:h-40" />
       </div>
 
       <ReceiptIllustration />
 
       <div className="relative z-10 max-w-[520px] space-y-5">
         <span className="inline-flex items-center gap-2 rounded-full bg-brand/15 px-3 py-1.5 text-[13px] font-semibold text-[#ff9b7a]">
-          <Flame className="size-3.5" />
+          <ReceiptText className="size-3.5" />
           Counter billing
         </span>
         <p className="font-heading text-[60px] leading-[0.98] font-extrabold tracking-[-0.035em] text-white xl:text-[72px]">

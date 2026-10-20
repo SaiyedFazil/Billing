@@ -8,7 +8,7 @@ import { useState } from "react";
 import type { SessionUser } from "@/lib/auth/guard";
 
 import { AppSidebar } from "./AppSidebar";
-import { BrandMark } from "./BrandMark";
+import { BrandLogo } from "./BrandLogo";
 import { NEW_BILL_HREF } from "./navigation";
 
 /** Below `lg`: a slim espresso top bar whose menu button opens the sidebar as a drawer. */
@@ -61,11 +61,14 @@ export function MobileNav({
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
 
-      <span className="flex min-w-0 flex-1 items-center gap-2.5">
-        <BrandMark className="size-8 rounded-[10px]" />
-        <span className="truncate font-heading text-[15px] font-bold">
-          {shopName}
-        </span>
+      <span className="flex min-w-0 flex-1 items-center">
+        <BrandLogo
+          variant="wordmark"
+          on="dark"
+          alt={shopName}
+          eager
+          className="h-8"
+        />
       </span>
 
       <Link

@@ -12,6 +12,7 @@ import { REPORT_ROUTES } from "@/lib/routes/report-routes";
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/utils/initials";
 
+import { BrandLogo } from "./BrandLogo";
 import { BrandMark } from "./BrandMark";
 import { isActive, NEW_BILL_HREF, navSectionsFor } from "./navigation";
 
@@ -127,17 +128,16 @@ export function AppSidebar({
       <Link
         href={REPORT_ROUTES.dashboard}
         onClick={onNavigate}
-        className="flex items-center gap-3 px-1.5"
+        className="flex flex-col items-start gap-1 px-1.5"
       >
-        <BrandMark />
-        <span className="min-w-0">
-          <span className="block truncate font-heading text-base leading-tight font-bold text-white">
-            {shopName}
-          </span>
-          <span className="block text-xs text-sidebar-muted">
-            Counter billing
-          </span>
-        </span>
+        <BrandLogo
+          variant="wordmark"
+          on="dark"
+          alt={shopName}
+          eager
+          className="h-14"
+        />
+        <span className="text-xs text-sidebar-muted">Counter billing</span>
       </Link>
 
       <Link
