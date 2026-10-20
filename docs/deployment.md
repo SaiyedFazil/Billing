@@ -68,6 +68,41 @@ not generate triggers. It has a matching `meta/0001_snapshot.json` so the
 migration chain stays intact. **Do not delete either file**, and if you ever
 regenerate migrations from scratch, re-create both.
 
+## Loading the menu card
+
+The shop's printed menu card is transcribed in
+`scripts/menu-import/menu-card-2026-08-11.ts`. Load it into whatever
+`DATABASE_URL` points at:
+
+```bash
+# Replace the whole menu with the card
+npm run db:import-menu -- --replace --dry-run   # preview; changes nothing
+npm run db:import-menu -- --replace
+
+# Or only add what is missing, leaving everything else alone
+npm run db:import-menu -- --dry-run
+npm run db:import-menu
+```
+
+**`--replace`** makes the card the whole menu: every current item and category
+is retired and the card created fresh. Retired, not deleted — they disappear
+from the till and the admin lists, while past bills and reports keep them. Only
+what is already exactly the card's (same name, price and category) is kept, so
+running it again changes nothing. Use it to swap the sample menu from
+`db:seed` for the shop's, or to load a new printed card. It also retires items
+added by hand in Administration, so take a backup first (`npm run db:dump --
+<file>`, see below).
+
+**Without `--replace`** it only adds. A dish already on the menu — matched by
+name in any category, ignoring case, spacing and punctuation — is skipped and
+left as it is. A line marked `!` is on the menu with a different price or
+category from the card; correct it in Administration > Items if the card is
+right.
+
+Every change is written in one transaction, so the till never sees half a menu,
+and each is in the audit log as "System". For a new menu card, add a file
+beside the current one and point `scripts/import-menu.ts` at it.
+
 ## Backups — read this
 
 Neon's free plan keeps only a short restore window. This database holds the
