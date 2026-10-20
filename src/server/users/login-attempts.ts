@@ -1,11 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 
+import { LOCKOUT_MINUTES, MAX_FAILED_ATTEMPTS } from "@/constants/sign-in";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { writeAuditLog } from "@/server/audit/write-audit-log";
 
-export const MAX_FAILED_ATTEMPTS = 5;
-export const LOCKOUT_MINUTES = 5;
+// Defined in constants so the audit log screen can explain a lockout too.
+export { LOCKOUT_MINUTES, MAX_FAILED_ATTEMPTS };
 
 /**
  * Records a failed sign-in and locks the account after MAX_FAILED_ATTEMPTS

@@ -147,6 +147,7 @@ export function AuditLogTab({
 
       <AuditDiffDialog
         entry={inspecting}
+        refs={log.refs}
         onOpenChange={(open) => {
           if (!open) setInspecting(null);
         }}
