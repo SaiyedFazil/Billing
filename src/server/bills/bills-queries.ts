@@ -66,6 +66,7 @@ export async function getReceipt(billId: string): Promise<ReceiptData | null> {
       addressLine: settings.addressLine,
       phone: settings.phone,
       receiptFooter: settings.receiptFooter,
+      showLogo: settings.receiptShowLogo,
       printerWidth: settings.printerWidth,
       timezone: settings.timezone,
     },

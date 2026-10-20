@@ -63,6 +63,8 @@ export type ReceiptData = {
     addressLine: string | null;
     phone: string | null;
     receiptFooter: string | null;
+    /** Head the receipt with the logo instead of the name as text. */
+    showLogo: boolean;
     printerWidth: "MM_80" | "MM_58";
     timezone: string;
   };

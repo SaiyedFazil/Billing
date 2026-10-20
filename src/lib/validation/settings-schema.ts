@@ -19,6 +19,7 @@ export const settingsSchema = z.object({
   addressLine: z.string().trim().max(80).nullable(),
   phone: z.string().trim().max(30).nullable(),
   receiptFooter: z.string().trim().max(120).nullable(),
+  receiptShowLogo: z.boolean(),
   printerWidth: z.enum(PRINTER_WIDTHS),
   timezone: z.string().trim().min(1, "Timezone is required"),
 });

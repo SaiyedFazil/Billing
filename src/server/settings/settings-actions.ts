@@ -56,6 +56,7 @@ export async function updateSettingsAction(
         addressLine: before.addressLine,
         phone: before.phone,
         receiptFooter: before.receiptFooter,
+        receiptShowLogo: before.receiptShowLogo,
         printerWidth: before.printerWidth,
         timezone: before.timezone,
       },

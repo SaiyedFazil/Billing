@@ -17,6 +17,7 @@ export type SettingsFormState = {
   addressLine: string;
   phone: string;
   receiptFooter: string;
+  receiptShowLogo: boolean;
   printerWidth: PrinterWidth;
   timezone: string;
 };
@@ -33,7 +34,7 @@ function readDeviceTimezone(): string | null {
   }
 }
 
-/** Every field is a string, so comparing the keys is the whole comparison. */
+/** Every field is a string or a boolean, so comparing the keys is the whole comparison. */
 function hasChanged(a: SettingsFormState, b: SettingsFormState): boolean {
   return (Object.keys(a) as Array<keyof SettingsFormState>).some(
     (field) => a[field] !== b[field],
@@ -79,6 +80,7 @@ export function useShopSettingsTab(initial: SettingsFormState) {
         addressLine: submitted.addressLine || null,
         phone: submitted.phone || null,
         receiptFooter: submitted.receiptFooter || null,
+        receiptShowLogo: submitted.receiptShowLogo,
         printerWidth: submitted.printerWidth,
         timezone: submitted.timezone,
       });

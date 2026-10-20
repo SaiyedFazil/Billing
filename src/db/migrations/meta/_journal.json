@@ -50,6 +50,13 @@
       "when": 1792447635802,
       "tag": "0006_expenses_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792532034078,
+      "tag": "0007_amusing_luminals",
+      "breakpoints": true
     }
   ]
 }

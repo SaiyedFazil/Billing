@@ -51,6 +51,7 @@ export function ReceiptPreviewDialog({
   addressLine,
   phone,
   receiptFooter,
+  showLogo,
   printerWidth,
   timezone,
 }: {
@@ -60,6 +61,7 @@ export function ReceiptPreviewDialog({
   addressLine: string;
   phone: string;
   receiptFooter: string;
+  showLogo: boolean;
   printerWidth: PrinterWidth;
   timezone: string;
 }) {
@@ -68,6 +70,7 @@ export function ReceiptPreviewDialog({
     addressLine: addressLine || null,
     phone: phone || null,
     receiptFooter: receiptFooter || null,
+    showLogo,
     printerWidth,
     timezone,
   });

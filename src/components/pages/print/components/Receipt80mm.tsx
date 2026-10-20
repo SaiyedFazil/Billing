@@ -17,8 +17,12 @@ export function Receipt80mm({
   return (
     <div className={narrow ? "receipt receipt--58" : "receipt"}>
       <div className="receipt-center">
-        <ReceiptLogo className="receipt-logo" />
-        <div className="receipt-shop-name">{shop.name}</div>
+        {/* The logo already says the name, so it is one or the other. */}
+        {shop.showLogo ? (
+          <ReceiptLogo className="receipt-logo" />
+        ) : (
+          <div className="receipt-shop-name">{shop.name}</div>
+        )}
         {shop.addressLine ? <div>{shop.addressLine}</div> : null}
         {shop.phone ? <div>Ph: {shop.phone}</div> : null}
       </div>

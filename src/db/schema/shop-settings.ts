@@ -25,6 +25,9 @@ export const shopSettings = pgTable(
     logoUrl: text("logo_url"),
     logoFileId: text("logo_file_id"),
     receiptFooter: text("receipt_footer"),
+    // The receipt heads with the black Mobito logo, or with the shop name as
+    // text — one or the other, never both: the logo already says the name.
+    receiptShowLogo: boolean("receipt_show_logo").notNull().default(true),
     printerWidth: printerWidthEnum("printer_width").notNull().default("MM_80"),
     currencyCode: text("currency_code").notNull().default("INR"),
     // Which payment buttons the till offers. History is never filtered by it:

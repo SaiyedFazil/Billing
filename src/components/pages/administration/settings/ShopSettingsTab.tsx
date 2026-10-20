@@ -1,6 +1,6 @@
 "use client";
 
-import { LocateFixed, ReceiptText } from "lucide-react";
+import { ImageIcon, LocateFixed, ReceiptText } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -22,8 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { PaymentMethod } from "@/constants/payment-methods";
+import { cn } from "@/lib/utils";
 import {
   PRINTER_WIDTH_LABELS,
   PRINTER_WIDTHS,
@@ -74,8 +76,7 @@ export function ShopSettingsTab({
           <CardHeader>
             <CardTitle>Shop details</CardTitle>
             <CardDescription>
-              Printed at the top of every receipt. The name also appears in the
-              sidebar.
+              The details at the top of every receipt.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -166,6 +167,44 @@ export function ShopSettingsTab({
                     The thank-you line at the bottom of every receipt.
                   </p>
                 </div>
+
+                <div className="flex items-center gap-3 rounded-2xl border px-3.5 py-3 sm:col-span-2">
+                  <span
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+                      form.receiptShowLogo
+                        ? "bg-brand-soft text-brand-ink"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <ImageIcon className="size-4.5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <label
+                      htmlFor="shop-receipt-logo"
+                      className="cursor-pointer text-sm font-semibold"
+                    >
+                      Logo on receipt
+                    </label>
+                    <p
+                      id="shop-receipt-logo-hint"
+                      className="text-xs text-pretty text-muted-foreground"
+                    >
+                      {form.receiptShowLogo
+                        ? "Receipts start with the Mobito logo instead of the shop name."
+                        : "Receipts start with the shop name, printed as text."}
+                    </p>
+                  </div>
+                  <Switch
+                    id="shop-receipt-logo"
+                    checked={form.receiptShowLogo}
+                    disabled={isPending}
+                    aria-describedby="shop-receipt-logo-hint"
+                    onCheckedChange={(checked) =>
+                      setForm({ ...form, receiptShowLogo: checked })
+                    }
+                  />
+                </div>
               </div>
 
               <Separator />
@@ -246,6 +285,7 @@ export function ShopSettingsTab({
         addressLine={form.addressLine}
         phone={form.phone}
         receiptFooter={form.receiptFooter}
+        showLogo={form.receiptShowLogo}
         printerWidth={form.printerWidth}
         timezone={form.timezone}
       />

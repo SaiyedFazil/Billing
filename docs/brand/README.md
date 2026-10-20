@@ -46,6 +46,8 @@ highlights keep the Ember palette in `src/app/globals.css`.
 - **The receipt is always black.** Thermal printers print one colour, and a
   gradient prints as a grey smudge. `ReceiptLogo` is inline SVG, so it is on
   the page the moment the print dialog opens; an `<img>` might not be.
+- **The receipt shows the logo or the name, never both.** Settings → "Logo on
+  receipt" (`shop_settings.receipt_show_logo`, on by default) decides which.
 - **Never stretch, recolour, outline or add effects** to the logo, and keep
   clear space around it of at least the height of the "i" dot.
 - **Signed-out pages need these files.** `src/proxy.ts` exempts `brand/`, the
