@@ -193,7 +193,28 @@ async function main() {
     sql`UPDATE shop_settings SET payment_methods = '{}'::payment_method[]`,
   );
 
+  // --- expenses -------------------------------------------------------
+  // On a database that predates the cash book this is one clean FAIL, not a
+  // crash that would strand the probe rows above.
+  if (await tableExists("expenses")) {
+    await verifyExpenseConstraints(userId);
+  } else {
+    failures += 1;
+    console.error("FAIL — the expenses table is missing; run db:migrate");
+  }
+
   // --- cleanup --------------------------------------------------------
+  // Expense categories cannot be deleted by trigger; lift it for the probe.
+  await db.execute(sql`
+    DO $$ BEGIN
+      IF to_regclass('expense_categories') IS NOT NULL THEN
+        ALTER TABLE expense_categories DISABLE TRIGGER expense_categories_no_delete;
+        DELETE FROM expense_categories WHERE name ILIKE 'constraint probe cat';
+        ALTER TABLE expense_categories ENABLE TRIGGER expense_categories_no_delete;
+      END IF;
+    END $$
+  `);
+
   // Movement rows are immutable by trigger; lift it for the probe's rows only.
   // The table is absent on a database that predates stock tracking.
   await db.execute(sql`
@@ -220,6 +241,75 @@ async function main() {
       : `\n${failures} FAILURE(S)`,
   );
   process.exit(failures === 0 ? 0 : 1);
+}
+
+async function tableExists(name: string): Promise<boolean> {
+  const result = await db.execute(
+    sql`SELECT to_regclass(${name}) IS NOT NULL AS present`,
+  );
+  return (result.rows[0] as { present: boolean }).present;
+}
+
+async function verifyExpenseConstraints(userId: string) {
+  const expenseCategoryId = (
+    (
+      await db.execute(sql`
+        INSERT INTO expense_categories (name) VALUES ('Constraint Probe Cat')
+        RETURNING id
+      `)
+    ).rows[0] as { id: string }
+  ).id;
+
+  const insertExpense = (columns: SQL, values: SQL) =>
+    sql`INSERT INTO expenses (expense_date, mode, category_id, idempotency_key,
+        created_by, ${columns})
+        VALUES ('2026-01-01', 'CASH', ${expenseCategoryId}::uuid,
+        gen_random_uuid(), ${userId}::uuid, ${values})`;
+
+  await expectViolation(
+    "an expense of zero is refused",
+    insertExpense(sql`amount`, sql`0.00`),
+    "expenses_amount_positive",
+  );
+  await expectViolation(
+    "a negative expense is refused",
+    insertExpense(sql`amount`, sql`-1.00`),
+    "expenses_amount_positive",
+  );
+  await expectViolation(
+    "a cancellation must carry who and why",
+    insertExpense(sql`amount, cancelled_at`, sql`10.00, now()`),
+    "expenses_cancellation_complete",
+  );
+  await expectViolation(
+    "paid to is at most 80 characters",
+    insertExpense(sql`amount, paid_to`, sql`10.00, ${"x".repeat(81)}`),
+    "expenses_paid_to_length",
+  );
+  await expectViolation(
+    "two active expense categories cannot share a name",
+    sql`INSERT INTO expense_categories (name) VALUES ('CONSTRAINT PROBE CAT')`,
+    "expense_categories_name_lower_idx",
+  );
+
+  // Rows are never deleted, so the seeded nine survive renames and retirements.
+  const categoryCount = (
+    (
+      await db.execute(
+        sql`SELECT count(*)::int AS count FROM expense_categories`,
+      )
+    ).rows[0] as { count: number }
+  ).count;
+  if (categoryCount >= 9) {
+    console.log(
+      `PASS — the seeded expense categories exist (${categoryCount})`,
+    );
+  } else {
+    failures += 1;
+    console.error(
+      `FAIL — expected at least 9 expense categories, found ${categoryCount}`,
+    );
+  }
 }
 
 main().catch((error) => {

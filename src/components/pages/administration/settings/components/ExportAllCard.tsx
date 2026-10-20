@@ -28,7 +28,8 @@ export function ExportAllCard() {
         `stock-movements-${stamp}.csv`,
         result.data.stockMovements,
       );
-      toast.success("Four files downloaded");
+      downloadTextFile(`expenses-${stamp}.csv`, result.data.expenses);
+      toast.success("Five files downloaded");
     });
   }
 
@@ -45,7 +46,7 @@ export function ExportAllCard() {
             </h2>
             <p className="text-sm text-pretty text-muted-foreground">
               Downloads every bill, every sold line, the current menu with its
-              stock, and the stock history as four CSV files.{" "}
+              stock, the stock history and every expense as five CSV files.{" "}
               <strong className="text-foreground">Do this once a month</strong>{" "}
               and keep the files somewhere other than this computer — the free
               database plan keeps only a short restore window.

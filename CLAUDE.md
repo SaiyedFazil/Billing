@@ -5,14 +5,15 @@ prints thermal receipts; the owner manages the menu, accounts and settings and
 reads the sales reports. Next.js 16 App Router, Drizzle + Neon Postgres,
 Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 
-| Doc                                                            | What it holds                               |
-| -------------------------------------------------------------- | ------------------------------------------- |
-| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)  |
-| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                     |
-| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                     |
-| `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work |
-| `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups   |
-| `docs/printer-setup.md`                                        | One-time thermal printer setup on the till  |
+| Doc                                                            | What it holds                                  |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)     |
+| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                        |
+| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                        |
+| `docs/superpowers/specs/2026-10-20-cash-book-design.md`        | Cash book: money in vs owner-entered money out |
+| `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work    |
+| `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups      |
+| `docs/printer-setup.md`                                        | One-time thermal printer setup on the till     |
 
 ## Commands
 
@@ -62,7 +63,8 @@ Database: `db:generate` (after a schema change) · `db:migrate` · `db:seed` ·
    The server re-reads every price from the database.
 4. **Reports read `bill_items` snapshot columns.** Never join to `items` for a
    name or price — that would let a rename rewrite history.
-5. **Never `DELETE` an item, category or user.** Set `is_active = false`.
+5. **Never `DELETE` an item, category, user, expense or expense category.**
+   Set `is_active = false`, or cancel the expense.
 6. **Inside `db.transaction`, only throw.** Returning from the callback commits.
    Any validation that can fail belongs _before_ the transaction opens — see
    the structure of `create-bill-service.ts`.
@@ -207,20 +209,22 @@ npm run verify:all       # the above plus all database checks
 npm run build            # the production build
 ```
 
-| Command                                               | Proves                                                      |
-| ----------------------------------------------------- | ----------------------------------------------------------- |
-| `verify:money`                                        | exact rupee arithmetic and the shop-local midnight rollover |
-| `verify:retry`                                        | cold-start retry fires once, and never on a real error      |
-| `verify:reports`                                      | date-range and CSV helpers                                  |
-| `format:check`                                        | every file is Prettier-formatted                            |
-| `db:verify`                                           | CHECK constraints reject impossible bills                   |
-| `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding         |
-| `verify:bill`                                         | idempotency, price-change detection, gapless numbering      |
-| `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)       |
-| `verify:stock`                                        | sale deduction, last-unit race, adjustments, history        |
-| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                              |
-| `verify:report-queries`                               | report SQL against real data                                |
-| `verify:imagekit`                                     | image upload credentials                                    |
+| Command                                               | Proves                                                         |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| `verify:money`                                        | exact rupee arithmetic and the shop-local midnight rollover    |
+| `verify:retry`                                        | cold-start retry fires once, and never on a real error         |
+| `verify:reports`                                      | date-range and CSV helpers                                     |
+| `format:check`                                        | every file is Prettier-formatted                               |
+| `db:verify`                                           | CHECK constraints reject impossible bills                      |
+| `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding            |
+| `verify:bill`                                         | idempotency, price-change detection, gapless numbering         |
+| `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)          |
+| `verify:stock`                                        | sale deduction, last-unit race, adjustments, history           |
+| `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation (no DB) |
+| `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |
+| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                 |
+| `verify:report-queries`                               | report SQL against real data                                   |
+| `verify:imagekit`                                     | image upload credentials                                       |
 
 The `db:*` and database `verify:*` checks run against whatever `DATABASE_URL`
 points at. Run `npm run verify:all` before every deploy.

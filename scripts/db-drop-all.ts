@@ -31,6 +31,8 @@ async function main() {
   await db.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS __migrations CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS stock_movements CASCADE`);
+  await db.execute(sql`DROP TABLE IF EXISTS expenses CASCADE`);
+  await db.execute(sql`DROP TABLE IF EXISTS expense_categories CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_items CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bills CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_counters CASCADE`);
@@ -48,12 +50,20 @@ async function main() {
   await db.execute(
     sql`DROP FUNCTION IF EXISTS prevent_stock_movement_mutation CASCADE`,
   );
+  await db.execute(sql`DROP FUNCTION IF EXISTS prevent_expense_delete CASCADE`);
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS restrict_cancelled_expense_update CASCADE`,
+  );
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS prevent_expense_category_delete CASCADE`,
+  );
 
   await db.execute(sql`DROP TYPE IF EXISTS user_role CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS payment_method CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS bill_status CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS printer_width CASCADE`);
   await db.execute(sql`DROP TYPE IF EXISTS stock_movement_type CASCADE`);
+  await db.execute(sql`DROP TYPE IF EXISTS expense_mode CASCADE`);
 
   const after = await db.execute(
     sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY 1`,

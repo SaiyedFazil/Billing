@@ -1,4 +1,5 @@
 import {
+  BookOpenText,
   Flame,
   LayoutDashboard,
   LayoutGrid,
@@ -45,9 +46,18 @@ const MANAGE: NavSection = {
   ],
 };
 
+/** The owner's Insights add the Cash book, which a cashier must never see. */
+const OWNER_INSIGHTS: NavSection = {
+  ...INSIGHTS,
+  links: [
+    ...INSIGHTS.links,
+    { href: ADMIN_ROUTES.cashBook, label: "Cash book", icon: BookOpenText },
+  ],
+};
+
 /** Hiding links is a courtesy only — every admin page guards itself. */
 export function navSectionsFor(role: Role): NavSection[] {
-  return role === "SUPERADMIN" ? [INSIGHTS, MANAGE] : [INSIGHTS];
+  return role === "SUPERADMIN" ? [OWNER_INSIGHTS, MANAGE] : [INSIGHTS];
 }
 
 /** A link is active on its own page and on anything nested under it. */

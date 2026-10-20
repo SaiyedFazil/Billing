@@ -13,14 +13,17 @@ import {
 } from "@/db/schema";
 import { guarded, requireSuperadmin } from "@/lib/auth/guard";
 import { csvAmount, toCsv } from "@/lib/utils/csv";
+import { expensesCsv } from "@/lib/utils/expense-export";
 import { stockMovementsCsv } from "@/lib/utils/stock-export";
 import { type ActionResult, ok } from "@/lib/utils/result";
+import { listExpensesForExport } from "@/server/expenses/expenses-queries";
 
 export type ExportBundle = {
   bills: string;
   billItems: string;
   items: string;
   stockMovements: string;
+  expenses: string;
 };
 
 /**
@@ -131,6 +134,8 @@ export async function exportAllDataAction(): Promise<
         { header: "Low-stock alert at", value: (r) => r.lowStockThreshold },
       ]),
       stockMovements: stockMovementsCsv(movementRows),
+      // Every expense, cancelled ones included, oldest first.
+      expenses: expensesCsv(await listExpensesForExport()),
     });
   });
 }

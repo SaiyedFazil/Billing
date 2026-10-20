@@ -21,3 +21,12 @@ export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
 ]);
 
 export const printerWidthEnum = pgEnum("printer_width", ["MM_80", "MM_58"]);
+
+// Its own list rather than payment_method: bank transfer is not a till option,
+// and "Other" is not wanted for expenses. CASH is offline; the rest are online.
+export const expenseModeEnum = pgEnum("expense_mode", [
+  "CASH",
+  "UPI",
+  "CARD",
+  "BANK_TRANSFER",
+]);

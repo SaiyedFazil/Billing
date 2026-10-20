@@ -39,7 +39,8 @@ export function StatCard({
 }: {
   label: string;
   value: string;
-  hint?: string;
+  /** A line of text, or a small breakdown such as the Cash book's cash/online split. */
+  hint?: React.ReactNode;
   icon: LucideIcon;
   /** "hero" is the dark card that leads a row — use it once per row. */
   tone: keyof typeof TONES;
@@ -84,7 +85,9 @@ export function StatCard({
         >
           {value}
         </p>
-        {hint ? <p className={cn("text-[13px]", style.hint)}>{hint}</p> : null}
+        {hint ? (
+          <div className={cn("text-[13px]", style.hint)}>{hint}</div>
+        ) : null}
       </div>
     </div>
   );
