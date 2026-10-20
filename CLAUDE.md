@@ -27,6 +27,7 @@ npm run verify:all       # the above plus every database check
 ```
 
 Database: `db:generate` (after a schema change) · `db:migrate` · `db:seed` ·
+`db:import-menu` (adds the printed menu card; `-- --dry-run` to preview) ·
 `db:studio`. The full list, with what each proves, is under
 [Verification](#verification).
 
@@ -221,6 +222,7 @@ npm run build            # the production build
 | `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)          |
 | `verify:stock`                                        | sale deduction, last-unit race, adjustments, history           |
 | `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation (no DB) |
+| `verify:menu-import`                                  | menu card is valid; import never adds a duplicate (no DB)      |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |
 | `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                 |
 | `verify:report-queries`                               | report SQL against real data                                   |

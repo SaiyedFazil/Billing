@@ -68,6 +68,31 @@ not generate triggers. It has a matching `meta/0001_snapshot.json` so the
 migration chain stays intact. **Do not delete either file**, and if you ever
 regenerate migrations from scratch, re-create both.
 
+## Loading the menu card
+
+The shop's printed menu card is transcribed in
+`scripts/menu-import/menu-card-2026-08-11.ts`. Load it into whatever
+`DATABASE_URL` points at:
+
+```bash
+npm run db:import-menu -- --dry-run   # show what it would add; writes nothing
+npm run db:import-menu                # add it
+```
+
+It only ever adds. A category or item already on the menu — matched by name in
+any category, ignoring case, spacing and punctuation — is skipped and left as
+it is, so running it again adds nothing. A line marked `!` is on the menu with
+a different price or category from the card; correct it in Administration >
+Items if the card is right.
+
+The sample menu from `db:seed` (Veg Burger, Peri Peri Fries, Coke Small, …) is
+not the shop's. Retire it in Administration > Items first, otherwise the card's
+Peri Peri Fries is skipped as a duplicate of the sample one. Retiring it later
+and running the import again also works.
+
+For a new menu card, add a file beside the current one and point
+`scripts/import-menu.ts` at it.
+
 ## Backups — read this
 
 Neon's free plan keeps only a short restore window. This database holds the
