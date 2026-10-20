@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Plus,
   Scale,
+  Tags,
   Wallet,
 } from "lucide-react";
 
@@ -36,6 +37,8 @@ import type {
   ExpensePage,
 } from "@/types/expense.types";
 
+import { ExpenseCategoriesDialog } from "./categories-dialog/ExpenseCategoriesDialog";
+import { useExpenseCategories } from "./categories-dialog/hooks/useExpenseCategories";
 import { CancelExpenseDialog } from "./components/CancelExpenseDialog";
 import { CashBookDaysTable } from "./components/CashBookDaysTable";
 import { CashSplitLine } from "./components/CashSplitLine";
@@ -76,6 +79,7 @@ export function CashBookTab({
   const tab = useCashBookTab(initialView);
   const expenseForm = useExpenseForm({ today, categories });
   const cancel = useCancelExpense();
+  const categoryManager = useExpenseCategories();
 
   const lastPage = Math.max(
     1,
@@ -102,6 +106,13 @@ export function CashBookTab({
               filename={`cash-book-${from}-to-${to}.csv`}
               onExport={() => exportExpensesCsvAction({ from, to })}
             />
+            <Button
+              variant="outline"
+              onClick={() => categoryManager.setOpen(true)}
+            >
+              <Tags />
+              Categories
+            </Button>
             <Button onClick={expenseForm.openCreate}>
               <Plus />
               Add expense
@@ -276,6 +287,11 @@ export function CashBookTab({
         today={today}
         isPending={expenseForm.isPending}
         onSubmit={expenseForm.submit}
+      />
+
+      <ExpenseCategoriesDialog
+        categories={categories}
+        state={categoryManager}
       />
 
       <CancelExpenseDialog
