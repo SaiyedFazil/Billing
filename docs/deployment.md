@@ -75,23 +75,33 @@ The shop's printed menu card is transcribed in
 `DATABASE_URL` points at:
 
 ```bash
-npm run db:import-menu -- --dry-run   # show what it would add; writes nothing
-npm run db:import-menu                # add it
+# Replace the whole menu with the card
+npm run db:import-menu -- --replace --dry-run   # preview; changes nothing
+npm run db:import-menu -- --replace
+
+# Or only add what is missing, leaving everything else alone
+npm run db:import-menu -- --dry-run
+npm run db:import-menu
 ```
 
-It only ever adds. A category or item already on the menu — matched by name in
-any category, ignoring case, spacing and punctuation — is skipped and left as
-it is, so running it again adds nothing. A line marked `!` is on the menu with
-a different price or category from the card; correct it in Administration >
-Items if the card is right.
+**`--replace`** makes the card the whole menu: every current item and category
+is retired and the card created fresh. Retired, not deleted — they disappear
+from the till and the admin lists, while past bills and reports keep them. Only
+what is already exactly the card's (same name, price and category) is kept, so
+running it again changes nothing. Use it to swap the sample menu from
+`db:seed` for the shop's, or to load a new printed card. It also retires items
+added by hand in Administration, so take a backup first (`npm run db:dump --
+<file>`, see below).
 
-The sample menu from `db:seed` (Veg Burger, Peri Peri Fries, Coke Small, …) is
-not the shop's. Retire it in Administration > Items first, otherwise the card's
-Peri Peri Fries is skipped as a duplicate of the sample one. Retiring it later
-and running the import again also works.
+**Without `--replace`** it only adds. A dish already on the menu — matched by
+name in any category, ignoring case, spacing and punctuation — is skipped and
+left as it is. A line marked `!` is on the menu with a different price or
+category from the card; correct it in Administration > Items if the card is
+right.
 
-For a new menu card, add a file beside the current one and point
-`scripts/import-menu.ts` at it.
+Every change is written in one transaction, so the till never sees half a menu,
+and each is in the audit log as "System". For a new menu card, add a file
+beside the current one and point `scripts/import-menu.ts` at it.
 
 ## Backups — read this
 

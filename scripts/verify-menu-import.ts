@@ -1,8 +1,9 @@
 import { MENU_CARD } from "./menu-import/menu-card-2026-08-11";
 import {
-  type CategoryPlan,
   type CurrentMenu,
+  type ExistingItem,
   type MenuCardCategory,
+  type MenuPlan,
   planImport,
   validateCard,
 } from "./menu-import/plan";
@@ -30,27 +31,50 @@ function rejectionOf(card: MenuCardCategory[]): string | null {
   }
 }
 
-function adds(plan: CategoryPlan[]): string[] {
-  return plan.flatMap((group) =>
-    group.items.filter((item) => item.action === "add").map((i) => i.name),
+const ADD = { replace: false };
+const REPLACE = { replace: true };
+
+function names(plan: MenuPlan, action: "add" | "skip" | "keep"): string[] {
+  return plan.categories.flatMap((group) =>
+    group.items.filter((item) => item.action === action).map((i) => i.name),
   );
 }
 
-function statusOf(plan: CategoryPlan[], name: string) {
-  return plan.find((group) => group.name === name)?.category;
+function statusOf(plan: MenuPlan, name: string) {
+  return plan.categories.find((group) => group.name === name)?.category;
 }
 
-function itemIn(plan: CategoryPlan[], name: string) {
-  return plan
+/** "add", "keep", "skip", or "skip, differs" for a flagged skip. */
+function outcomeOf(plan: MenuPlan, name: string): string | undefined {
+  const item = plan.categories
     .flatMap((group) => group.items)
-    .find((item) => item.name === name);
+    .find((candidate) => candidate.name === name);
+  if (!item || item.action !== "skip") return item?.action;
+  return item.differs ? "skip, differs" : "skip";
 }
 
-/** "add", "skip", or "skip, differs" for a skipped dish that was flagged. */
-function outcomeOf(plan: CategoryPlan[], name: string): string | undefined {
-  const item = itemIn(plan, name);
-  if (!item || item.action === "add") return item?.action;
-  return item.differs ? "skip, differs" : "skip";
+function retired(plan: MenuPlan) {
+  return {
+    categories: plan.retire.categories.map((category) => category.name),
+    items: plan.retire.items.map((item) => item.name),
+  };
+}
+
+function item(
+  id: string,
+  name: string,
+  price: string,
+  category: { id: string; name: string },
+  sortOrder: number,
+): ExistingItem {
+  return {
+    id,
+    name,
+    price,
+    categoryId: category.id,
+    categoryName: category.name,
+    sortOrder,
+  };
 }
 
 const EMPTY: CurrentMenu = { categories: [], items: [] };
@@ -67,7 +91,7 @@ check(
 check(
   "every price is a two-decimal string",
   card.every((group) =>
-    group.items.every((item) => /^\d+\.\d{2}$/.test(item.price)),
+    group.items.every((line) => /^\d+\.\d{2}$/.test(line.price)),
   ),
   true,
 );
@@ -114,176 +138,332 @@ check(
   true,
 );
 
-// --- an empty database --------------------------------------------------
-const fresh = planImport(card, EMPTY);
-check("on an empty menu every item is added", adds(fresh).length, 38);
+// --- fixtures -----------------------------------------------------------
+// The db:seed sample menu.
+const burgers = { id: "burgers", name: "Burgers", sortOrder: 1 };
+const sides = { id: "sides", name: "Sides", sortOrder: 2 };
+const drinks = { id: "drinks", name: "Drinks", sortOrder: 3 };
+const sample: CurrentMenu = {
+  categories: [burgers, sides, drinks],
+  items: [
+    item("veg", "Veg Burger", "60.00", burgers, 0),
+    item("cheese", "Cheese Burger", "80.00", burgers, 1),
+    item("chicken", "Chicken Burger", "110.00", burgers, 2),
+    item("fries", "French Fries", "40.00", sides, 0),
+    item("peri", "Peri Peri Fries", "50.00", sides, 1),
+    item("coke", "Coke Small", "30.00", drinks, 0),
+  ],
+};
+
+/** The menu exactly as a replace leaves it. */
+const asImported: CurrentMenu = {
+  categories: card.map((group, position) => ({
+    id: `category-${position}`,
+    name: group.name,
+    sortOrder: position,
+  })),
+  items: card.flatMap((group, position) =>
+    group.items.map((line, sortOrder) =>
+      item(
+        `${position}-${sortOrder}`,
+        line.name,
+        line.price,
+        { id: `category-${position}`, name: group.name },
+        sortOrder,
+      ),
+    ),
+  ),
+};
+
+// --- add mode: an empty database ----------------------------------------
+const fresh = planImport(card, EMPTY, ADD);
 check(
-  "new categories are numbered in card order",
-  fresh.map((group) =>
-    group.category.status === "new" ? group.category.sortOrder : null,
+  "add: on an empty menu every item is added",
+  names(fresh, "add").length,
+  38,
+);
+check(
+  "add: new categories are numbered in card order",
+  fresh.categories.map(({ category }) =>
+    category.status === "new" ? category.sortOrder : null,
   ),
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
 );
 check(
-  "new items are numbered from zero in card order",
-  fresh[0].items.map((item) => (item.action === "add" ? item.sortOrder : null)),
+  "add: new items are numbered from zero in card order",
+  fresh.categories[0].items.map((line) =>
+    line.action === "add" ? line.sortOrder : null,
+  ),
   [0, 1, 2, 3, 4],
 );
+check("add: never retires anything", retired(fresh), {
+  categories: [],
+  items: [],
+});
 
-// --- running it twice ---------------------------------------------------
-// The menu as the first run leaves it.
-const afterFirstRun: CurrentMenu = {
-  categories: fresh.map((group, index) => ({
-    id: `category-${index}`,
-    name: group.name,
-    sortOrder: index,
-  })),
-  items: fresh.flatMap((group, index) =>
-    group.items.map((item, position) => ({
-      name: item.name,
-      price: item.price,
-      categoryId: `category-${index}`,
-      categoryName: group.name,
-      sortOrder: position,
-    })),
-  ),
-};
-const rerun = planImport(card, afterFirstRun);
-check("a second run adds nothing", adds(rerun), []);
+// --- add mode: running it twice -----------------------------------------
+const addAgain = planImport(card, asImported, ADD);
+check("add: a second run adds nothing", names(addAgain, "add"), []);
 check(
-  "a second run creates no category",
-  rerun.every((group) => group.category.status === "existing"),
+  "add: a second run creates no category",
+  addAgain.categories.every(({ category }) => category.status === "existing"),
   true,
 );
-check(
-  "a second run reports nothing as different",
-  rerun.some((group) =>
-    group.items.some((item) => item.action === "skip" && item.differs),
-  ),
-  false,
-);
 
-// --- a database holding the db:seed sample menu -------------------------
-const sample: CurrentMenu = {
-  categories: [
-    { id: "burgers", name: "Burgers", sortOrder: 1 },
-    { id: "sides", name: "Sides", sortOrder: 2 },
-    { id: "drinks", name: "Drinks", sortOrder: 3 },
-  ],
-  items: [
-    ["Veg Burger", "60.00", "burgers", "Burgers", 0],
-    ["Cheese Burger", "80.00", "burgers", "Burgers", 1],
-    ["Chicken Burger", "110.00", "burgers", "Burgers", 2],
-    ["French Fries", "40.00", "sides", "Sides", 0],
-    ["Peri Peri Fries", "50.00", "sides", "Sides", 1],
-    ["Coke Small", "30.00", "drinks", "Drinks", 0],
-  ].map(([name, price, categoryId, categoryName, sortOrder]) => ({
-    name: name as string,
-    price: price as string,
-    categoryId: categoryId as string,
-    categoryName: categoryName as string,
-    sortOrder: sortOrder as number,
-  })),
-};
-const onSample = planImport(card, sample);
+// --- add mode: on the sample menu ---------------------------------------
+const addOnSample = planImport(card, sample, ADD);
 check(
-  "an existing category is reused, not duplicated",
-  statusOf(onSample, "Burgers"),
+  "add: an existing category is reused, not duplicated",
+  statusOf(addOnSample, "Burgers"),
   { status: "existing", id: "burgers" },
 );
 check(
-  "new items go after the existing items in their category",
-  onSample[0].items.map((item) =>
-    item.action === "add" ? item.sortOrder : null,
+  "add: new items go after the existing items in their category",
+  addOnSample.categories[0].items.map((line) =>
+    line.action === "add" ? line.sortOrder : null,
   ),
   [3, 4, 5, 6, 7],
 );
 check(
-  "new categories go after the existing ones",
-  statusOf(onSample, "Rice Bowl"),
+  "add: new categories go after the existing ones",
+  statusOf(addOnSample, "Rice Bowl"),
   { status: "new", sortOrder: 4 },
 );
 check(
-  "a dish already in another category is skipped and flagged",
-  itemIn(onSample, "Peri Peri Fries"),
-  {
-    name: "Peri Peri Fries",
-    price: "80.00",
-    action: "skip",
-    existing: sample.items[4],
-    differs: true,
-  },
+  "add: a dish already in another category is skipped and flagged",
+  outcomeOf(addOnSample, "Peri Peri Fries"),
+  "skip, differs",
 );
-check("the rest of the card is added", adds(onSample).length, 37);
-
-// --- spelling variants of what is already there -------------------------
-const variants = planImport(card, {
-  categories: [{ id: "b", name: "burgers", sortOrder: 0 }],
-  items: [
-    {
-      name: "chicken  ginger BURGER",
-      price: "130.00",
-      categoryId: "b",
-      categoryName: "burgers",
-      sortOrder: 0,
-    },
-    {
-      name: "Double Decker / Open Burger",
-      price: "210.00",
-      categoryId: "b",
-      categoryName: "burgers",
-      sortOrder: 5,
-    },
-  ],
-});
 check(
-  "an existing category keeps the owner's spelling",
-  variants[0].name,
+  "add: the rest of the card is added",
+  names(addOnSample, "add").length,
+  37,
+);
+check("add: leaves the sample menu alone", retired(addOnSample), {
+  categories: [],
+  items: [],
+});
+
+// --- add mode: spelling variants ----------------------------------------
+const lowerBurgers = { id: "b", name: "burgers", sortOrder: 0 };
+const variants = planImport(
+  card,
+  {
+    categories: [lowerBurgers],
+    items: [
+      item("g", "chicken  ginger BURGER", "130.00", lowerBurgers, 0),
+      item("d", "Double Decker / Open Burger", "210.00", lowerBurgers, 5),
+    ],
+  },
+  ADD,
+);
+check(
+  "add: an existing category keeps the owner's spelling",
+  variants.categories[0].name,
   "burgers",
 );
 check(
-  "case and spacing do not hide a duplicate; same price is not flagged",
+  "add: case and spacing do not hide a duplicate; same price is not flagged",
   outcomeOf(variants, "Chicken Ginger Burger"),
   "skip",
 );
 check(
-  "punctuation does not hide a duplicate; a new price is flagged",
+  "add: punctuation does not hide a duplicate; a new price is flagged",
   outcomeOf(variants, "Double Decker/Open Burger"),
   "skip, differs",
 );
 check(
-  "numbering continues after the highest existing number, past any gap",
-  variants[0].items.flatMap((item) =>
-    item.action === "add" ? [item.sortOrder] : [],
+  "add: numbering continues after the highest existing number, past any gap",
+  variants.categories[0].items.flatMap((line) =>
+    line.action === "add" ? [line.sortOrder] : [],
   ),
   [6, 7, 8],
 );
 
-// --- a category that would be empty -------------------------------------
-const unneeded = planImport(card, {
-  categories: [{ id: "s", name: "Snacks", sortOrder: 0 }],
-  items: [
-    {
-      name: "Chicken Pizza (6 inch)",
-      price: "120.00",
-      categoryId: "s",
-      categoryName: "Snacks",
-      sortOrder: 0,
-    },
-  ],
-});
+// --- add mode: a category that would be empty ---------------------------
+const snacks = { id: "s", name: "Snacks", sortOrder: 0 };
+const unneeded = planImport(
+  card,
+  {
+    categories: [snacks],
+    items: [item("p", "Chicken Pizza (6 inch)", "120.00", snacks, 0)],
+  },
+  ADD,
+);
 check(
-  "a new category whose items all exist elsewhere is not created",
+  "add: a new category whose items all exist elsewhere is not created",
   statusOf(unneeded, "Pizza"),
   { status: "unneeded" },
 );
 check(
-  "and it does not use up a sort number",
+  "add: and it does not use up a sort number",
   [statusOf(unneeded, "Sandwich"), statusOf(unneeded, "Fries")],
   [
     { status: "new", sortOrder: 3 },
     { status: "new", sortOrder: 4 },
   ],
+);
+
+// --- replace mode: on the sample menu -----------------------------------
+const replaceSample = planImport(card, sample, REPLACE);
+check(
+  "replace: retires every current category and item",
+  retired(replaceSample),
+  {
+    categories: ["Burgers", "Sides", "Drinks"],
+    items: [
+      "Veg Burger",
+      "Cheese Burger",
+      "Chicken Burger",
+      "French Fries",
+      "Peri Peri Fries",
+      "Coke Small",
+    ],
+  },
+);
+check(
+  "replace: carries nothing over, not even a same-named category",
+  statusOf(replaceSample, "Burgers"),
+  { status: "new", sortOrder: 0 },
+);
+check(
+  "replace: a dish on both menus is created fresh at the card's price",
+  outcomeOf(replaceSample, "Peri Peri Fries"),
+  "add",
+);
+check(
+  "replace: every card item is added",
+  names(replaceSample, "add").length,
+  38,
+);
+check(
+  "replace: categories are numbered in card order",
+  replaceSample.categories.map(({ category }) =>
+    category.status === "new" ? category.sortOrder : null,
+  ),
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+);
+
+// --- replace mode: running it twice -------------------------------------
+const replaceAgain = planImport(card, asImported, REPLACE);
+check("replace: a second run retires nothing", retired(replaceAgain), {
+  categories: [],
+  items: [],
+});
+check("replace: a second run adds nothing", names(replaceAgain, "add"), []);
+check(
+  "replace: a second run keeps every category in place",
+  replaceAgain.categories.every(
+    ({ category }) =>
+      category.status === "keep" &&
+      category.existing.sortOrder === category.sortOrder,
+  ),
+  true,
+);
+check(
+  "replace: a second run keeps every item in place",
+  replaceAgain.categories.every((group) =>
+    group.items.every(
+      (line) =>
+        line.action === "keep" && line.existing.sortOrder === line.sortOrder,
+    ),
+  ),
+  true,
+);
+
+// --- replace mode: a menu that has drifted from the card ----------------
+const [importedBurgers] = asImported.categories;
+const drifted: CurrentMenu = {
+  categories: [
+    { ...importedBurgers, sortOrder: 7 },
+    ...asImported.categories.slice(1),
+    { id: "drinks", name: "Drinks", sortOrder: 10 },
+  ],
+  items: [
+    // The burgers, in reverse order.
+    ...asImported.items
+      .filter((line) => line.categoryId === importedBurgers.id)
+      .map((line, index) => ({ ...line, sortOrder: 4 - index })),
+    // Re-priced in the admin since the import.
+    ...asImported.items
+      .filter((line) => line.categoryId !== importedBurgers.id)
+      .map((line) =>
+        line.name === "Fish Bowl" ? { ...line, price: "190.00" } : line,
+      ),
+    item("veg", "Veg Burger", "60.00", importedBurgers, 5),
+    item("coke", "Coke Small", "30.00", { id: "drinks", name: "Drinks" }, 0),
+    // Left active in a category that was retired some time ago.
+    item("ghost", "Old Special", "99.00", { id: "gone", name: "Gone" }, 0),
+  ],
+};
+const replaceDrifted = planImport(card, drifted, REPLACE);
+check(
+  "replace: retires what is not on the card, including orphaned items",
+  retired(replaceDrifted),
+  {
+    categories: ["Drinks"],
+    items: ["Fish Bowl", "Veg Burger", "Coke Small", "Old Special"],
+  },
+);
+check(
+  "replace: a re-priced item is replaced at the card's price",
+  outcomeOf(replaceDrifted, "Fish Bowl"),
+  "add",
+);
+check(
+  "replace: a kept category moves back to its place on the card",
+  statusOf(replaceDrifted, "Burgers"),
+  { status: "keep", existing: drifted.categories[0], sortOrder: 0 },
+);
+check(
+  "replace: kept items move back into card order",
+  replaceDrifted.categories[0].items.map((line) =>
+    line.action === "keep" ? [line.existing.sortOrder, line.sortOrder] : null,
+  ),
+  [
+    [4, 0],
+    [3, 1],
+    [2, 2],
+    [1, 3],
+    [0, 4],
+  ],
+);
+
+// --- replace mode: exact matches only -----------------------------------
+const lowerOnly = planImport(
+  card,
+  {
+    categories: [lowerBurgers],
+    items: [item("g", "Chicken Ginger Burger", "130.00", lowerBurgers, 0)],
+  },
+  REPLACE,
+);
+check(
+  "replace: a differently spelled category is retired and created fresh",
+  [retired(lowerOnly), statusOf(lowerOnly, "Burgers")],
+  [
+    { categories: ["burgers"], items: ["Chicken Ginger Burger"] },
+    { status: "new", sortOrder: 0 },
+  ],
+);
+
+// --- add mode ignores orphaned items ------------------------------------
+check(
+  "add: an item left in a retired category does not count as on the menu",
+  outcomeOf(
+    planImport(
+      card,
+      {
+        categories: [],
+        items: [
+          item("ghost", "Fish Burger", "180.00", { id: "x", name: "X" }, 0),
+        ],
+      },
+      ADD,
+    ),
+    "Fish Burger",
+  ),
+  "add",
 );
 
 console.log(
