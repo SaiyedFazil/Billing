@@ -3,7 +3,6 @@
 import {
   ArrowRight,
   BookOpenText,
-  ChevronRight,
   Clock,
   History,
   IndianRupee,
@@ -96,19 +95,6 @@ function Sentence({ text }: { text: AuditText }) {
   );
 }
 
-function Snapshot({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <p className={SECTION_LABEL}>{label}</p>
-      <pre className="max-h-56 overflow-auto rounded-xl border bg-table-head p-3 font-mono text-xs leading-relaxed">
-        {value === null || value === undefined
-          ? "—"
-          : JSON.stringify(value, null, 2)}
-      </pre>
-    </div>
-  );
-}
-
 /** Who did it: a person, the menu import, or the system itself. */
 function Actor({
   entry,
@@ -141,8 +127,7 @@ function Actor({
 
 /**
  * One audit row, in plain words: what happened, only what changed, and every
- * value as the owner would say it. The raw snapshots stay under "Technical
- * details" for troubleshooting.
+ * value as the owner would say it — never the raw snapshots.
  */
 export function AuditDiffDialog({
   entry,
@@ -267,17 +252,6 @@ export function AuditDiffDialog({
                 {note}
               </p>
             ))}
-
-            <details className="group rounded-2xl border">
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-                <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
-                Technical details
-              </summary>
-              <div className="grid gap-3 border-t p-4 sm:grid-cols-2">
-                <Snapshot label="Before" value={entry.before} />
-                <Snapshot label="After" value={entry.after} />
-              </div>
-            </details>
           </>
         ) : null}
       </DialogContent>
