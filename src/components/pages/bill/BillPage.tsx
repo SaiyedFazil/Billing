@@ -74,6 +74,7 @@ export function BillPage({
 
       <PriceChangedDialog
         message={bill.priceChange}
+        step={bill.priceChangeStep}
         onConfirm={bill.confirmPriceChange}
         onDismiss={bill.dismissPriceChange}
         isSaving={bill.isSaving}

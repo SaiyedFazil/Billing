@@ -167,6 +167,9 @@ export async function createBill(
     return fail(
       "PRICE_CHANGED",
       `Prices changed while this bill was open. The new total is ${formatINR(total)}.`,
+      // The till compares its refreshed bill against this before it lets the
+      // cashier charge it.
+      { total },
     );
   }
 

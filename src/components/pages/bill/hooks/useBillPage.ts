@@ -27,6 +27,10 @@ import { createBillAction } from "@/server/bills/bills-actions";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
 
 import { atStockCap, filterItems, topSearchMatch } from "../utils/cart";
+import {
+  type PendingPriceChange,
+  priceChangeStep,
+} from "../utils/price-change";
 import { useCartReducer } from "./useCartReducer";
 
 export function useBillPage({
@@ -48,13 +52,16 @@ export function useBillPage({
     syncMenu,
   } = useCartReducer();
 
-  // A fresh menu (after a refresh, or a failed save) may hold less stock than
-  // the cart: cut the cart down to it and say so, rather than let the cashier
-  // re-submit a bill the server will refuse.
+  // A fresh menu (after a refresh, or a failed save) may hold less stock or
+  // different prices than the cart: bring the cart to it and say so, rather
+  // than let the cashier re-submit a bill the server will refuse.
   useEffect(() => {
-    const changed = syncMenu(menu);
+    const { changed, repriced } = syncMenu(menu);
     if (changed.length > 0) {
       toast.warning(`Updated to current stock: ${changed.join(", ")}`);
+    }
+    if (repriced.length > 0) {
+      toast(`Prices updated: ${repriced.join(", ")}`);
     }
   }, [menu, syncMenu]);
 
@@ -74,7 +81,9 @@ export function useBillPage({
     ? selectedMethod
     : defaultMethod;
   const [error, setError] = useState<string | null>(null);
-  const [priceChange, setPriceChange] = useState<string | null>(null);
+  const [priceChange, setPriceChange] = useState<PendingPriceChange | null>(
+    null,
+  );
 
   // One key per cart. A retry after a failure REUSES it, so retrying cannot
   // create a second bill. Reset only after a successful save. See spec §8.4.
@@ -195,7 +204,14 @@ export function useBillPage({
         }
 
         if (result.error.code === "PRICE_CHANGED") {
-          setPriceChange(result.error.message);
+          // Remember the menu we hold now; the refresh brings a different one,
+          // and the dialog stays on "Updating prices…" until it does.
+          setPriceChange({
+            message: result.error.message,
+            newTotal: result.error.fields?.total ?? null,
+            menu,
+          });
+          router.refresh();
           return;
         }
 
@@ -213,6 +229,7 @@ export function useBillPage({
       discount,
       idempotencyKey,
       lines,
+      menu,
       paymentMethod,
       resetForNextCustomer,
       router,
@@ -223,16 +240,27 @@ export function useBillPage({
 
   const save = useCallback(() => submit(total), [submit, total]);
 
+  // What the dialog may offer: the bill must have caught up with the refreshed
+  // menu and reach exactly the server's new total.
+  const priceChangeState = useMemo(
+    () =>
+      priceChange
+        ? priceChangeStep(priceChange, menu, lines, rawDiscount)
+        : null,
+    [priceChange, menu, lines, rawDiscount],
+  );
+
   /**
-   * The cashier accepted the recalculated total. Re-submitting with the same
-   * idempotency key is safe — the rejected attempt never wrote anything.
+   * The cashier accepted the recalculated total. Only once the till has
+   * re-priced the bill to it (READY) — before that, `total` is the old one and
+   * would be refused again. Re-submitting with the same idempotency key is
+   * safe: the rejected attempt never wrote anything.
    */
   const confirmPriceChange = useCallback(() => {
+    if (priceChangeState !== "READY") return;
     setPriceChange(null);
-    // Pull fresh prices into the menu for the next customer.
-    router.refresh();
     submit(total);
-  }, [router, submit, total]);
+  }, [priceChangeState, submit, total]);
 
   const dismissPriceChange = useCallback(() => setPriceChange(null), []);
 
@@ -270,7 +298,8 @@ export function useBillPage({
     canSave,
     isSaving,
     error,
-    priceChange,
+    priceChange: priceChange?.message ?? null,
+    priceChangeStep: priceChangeState,
     confirmPriceChange,
     dismissPriceChange,
     save,

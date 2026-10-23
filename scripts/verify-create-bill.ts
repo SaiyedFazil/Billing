@@ -132,6 +132,11 @@ async function main() {
     !stale.ok && stale.error.code === "PRICE_CHANGED",
     stale,
   );
+  check(
+    "PRICE_CHANGED carries the new total in fields.total",
+    !stale.ok && compare(stale.error.fields?.total ?? "", first.price) === 0,
+    stale,
+  );
 
   // --- a discount larger than the subtotal is rejected -------------------
   const overDiscount = await createBill(

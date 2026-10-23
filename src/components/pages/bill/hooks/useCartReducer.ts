@@ -94,13 +94,19 @@ export function useCartReducer() {
 
   /**
    * Re-applies a freshly loaded menu to the cart. Returns the names of the
-   * lines it cut down or removed, so the till can tell the cashier.
+   * lines it cut down or removed (`changed`) and of those it re-priced
+   * (`repriced`), so the till can tell the cashier.
    */
-  const syncMenu = useCallback((menu: MenuCategory[]): string[] => {
-    const { changed } = clampLinesToMenu(linesRef.current, menu);
-    if (changed.length > 0) dispatch({ type: "SYNC_MENU", menu });
-    return changed;
-  }, []);
+  const syncMenu = useCallback(
+    (menu: MenuCategory[]): { changed: string[]; repriced: string[] } => {
+      const { changed, repriced } = clampLinesToMenu(linesRef.current, menu);
+      if (changed.length > 0 || repriced.length > 0) {
+        dispatch({ type: "SYNC_MENU", menu });
+      }
+      return { changed, repriced };
+    },
+    [],
+  );
 
   return { lines, addItem, setQuantity, removeItem, clear, syncMenu };
 }
