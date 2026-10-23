@@ -246,13 +246,20 @@ The cash and online dot colours are new tokens in `globals.css` (or reuse
 These dots mean the **group**, not the bill payment method, so they do not use
 `PAYMENT_METHOD_DOT`.
 
-### 8.3 Left card: tabs "Expenses" | "Day by day"
+### 8.3 Page tabs: "Expenses" | "Day by day"
 
-**Expenses tab.** A table in `TableCard`:
+_Revised 2026-10-23: the owner found the in-card toggle confusing._ The two
+views are a full-width tab bar directly under the header. The date range and
+the KPI row sit below it and are shared; each tab then shows its own
+full-width table.
 
-- **Columns:** Date, Category with "paid to · note" underneath, Mode (pill:
-  Cash, or UPI / Card / Bank transfer in the online tone), Amount, and a row
-  menu (Edit, Cancel).
+**Expenses tab.** A table in `TableCard`, with the filters in its top bar:
+
+- **Columns:** Date, Category, Paid to, Note, Paid by (pill: Cash, or UPI /
+  Card / Bank transfer in the online tone, named as in the dialog), Amount,
+  and a row menu (Edit, Cancel). A blank Paid to or Note shows "—". Below
+  `xl`, Paid to, Note and Paid by fold under the category, labelled; on a
+  phone the date does too, so Amount stays on screen.
 - **Sorting:** `expense_date` desc, then `created_at` desc.
 - **Cancelled rows:** shown in place, muted, amount struck through, with a
   "Cancelled" badge and the reason. Their menu has no actions.
@@ -266,15 +273,17 @@ These dots mean the **group**, not the bill payment method, so they do not use
   around 100–300 expenses.
 
 **Day by day tab.** One row per date in the range that has any bill or
-expense. Columns: Date, In cash, In online, Out cash, Out online, Net, and a
-totals row. "Other" bill money is included in Net but gets no column of its
-own. The builder may add a column if it reads better on screen.
+expense. Columns: Date, then **Money in** (Cash, Online) and **Money out**
+(Cash, Online) under grouped headers, then Net, and a totals row. Zero
+amounts are muted. "Other" bill money is included in Net but gets no column
+of its own. Below `lg` the table scrolls sideways with the date pinned.
 
-### 8.4 Right card: Spend by category
+### 8.4 Spend by category
 
 Active expenses in the range, grouped by category, sorted by amount desc,
 hiding zero rows. Each row has the name, the amount, and a share bar in
-`bg-brand`. On a phone it stacks below the left card.
+`bg-brand`. It sits below the expense table on the Expenses tab, in two
+columns from `md` up.
 
 ### 8.5 Add / Edit expense dialog
 

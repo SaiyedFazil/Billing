@@ -25,8 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { CashBookDay, CashBookSummary } from "@/lib/utils/cash-book";
 import { formatINR, isNegative } from "@/lib/utils/money";
 import type { PresetMap } from "@/lib/utils/report-params";
@@ -41,6 +40,7 @@ import { ExpenseCategoriesDialog } from "./categories-dialog/ExpenseCategoriesDi
 import { useExpenseCategories } from "./categories-dialog/hooks/useExpenseCategories";
 import { CancelExpenseDialog } from "./components/CancelExpenseDialog";
 import { CashBookDaysTable } from "./components/CashBookDaysTable";
+import { CashBookViewTabs } from "./components/CashBookViewTabs";
 import { CashSplitLine } from "./components/CashSplitLine";
 import { ExpensesTableToolbar } from "./components/ExpensesTableToolbar";
 import { SpendByCategoryCard } from "./components/SpendByCategoryCard";
@@ -121,161 +121,153 @@ export function CashBookTab({
         }
       />
 
-      <ReportDateRangeBar from={from} to={to} presets={presets} />
+      {/* The tabs switch the table below; the range and totals are shared. */}
+      <Tabs value={tab.view} onValueChange={tab.setView} className="gap-6">
+        <CashBookViewTabs />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <StatCard
-          tone="basil"
-          icon={ArrowDownLeft}
-          label="Money in · bills"
-          value={formatINR(summary.moneyIn.total)}
-          hint={<CashSplitLine split={summary.moneyIn} />}
-        />
-        <StatCard
-          tone="mustard"
-          icon={ArrowUpRight}
-          label="Money out · expenses"
-          value={formatINR(summary.moneyOut.total)}
-          hint={<CashSplitLine split={summary.moneyOut} />}
-        />
-        <StatCard
-          tone="hero"
-          icon={Scale}
-          label="Net · in − out"
-          value={formatINR(summary.net.total)}
-          hint={
-            <>
-              <CashSplitLine split={summary.net} />
-              {/* The minus sign carries it: destructive red fails contrast
-                  on the dark hero card. */}
-              {isNegative(summary.net.total) ? (
-                <span className="mt-1 block">More went out than came in</span>
-              ) : null}
-            </>
-          }
-        />
-      </div>
+        <ReportDateRangeBar from={from} to={to} presets={presets} />
 
-      <div
-        className={cn(
-          "grid items-start gap-4",
-          spend.length > 0 && "lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
-        )}
-      >
-        <TableCard
-          footer={
-            tab.view === "expenses" && expensePage.total > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <StatCard
+            tone="basil"
+            icon={ArrowDownLeft}
+            label="Money in (bills)"
+            value={formatINR(summary.moneyIn.total)}
+            hint={<CashSplitLine split={summary.moneyIn} />}
+          />
+          <StatCard
+            tone="mustard"
+            icon={ArrowUpRight}
+            label="Money out (expenses)"
+            value={formatINR(summary.moneyOut.total)}
+            hint={<CashSplitLine split={summary.moneyOut} />}
+          />
+          <StatCard
+            tone="hero"
+            icon={Scale}
+            label="Net (in − out)"
+            value={formatINR(summary.net.total)}
+            hint={
               <>
-                <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {firstRow}–{lastRow}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {expensePage.total}
-                  </span>
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={expensePage.page <= 1 || tab.isPending}
-                    onClick={() => tab.goToPage(expensePage.page - 1)}
-                  >
-                    <ChevronLeft />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={expensePage.page >= lastPage || tab.isPending}
-                    onClick={() => tab.goToPage(expensePage.page + 1)}
-                  >
-                    Next
-                    <ChevronRight />
-                  </Button>
-                </div>
+                <CashSplitLine split={summary.net} />
+                {/* The minus sign carries it: destructive red fails contrast
+                    on the dark hero card. */}
+                {isNegative(summary.net.total) ? (
+                  <span className="mt-1 block">More went out than came in</span>
+                ) : null}
               </>
-            ) : undefined
-          }
-        >
-          <Tabs value={tab.view} onValueChange={tab.setView} className="gap-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-              <TabsList>
-                <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                <TabsTrigger value="days">Day by day</TabsTrigger>
-              </TabsList>
-              {tab.view === "expenses" ? (
-                <ExpensesTableToolbar
-                  group={filters.group}
-                  categoryId={filters.categoryId}
-                  categories={categories}
-                  disabled={tab.isPending}
-                  onGroupChange={tab.setGroup}
-                  onCategoryChange={tab.setCategory}
-                />
-              ) : null}
+            }
+          />
+        </div>
+
+        <TabsContent value="expenses" className="space-y-4">
+          <TableCard
+            footer={
+              expensePage.total > 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-semibold text-foreground tabular-nums">
+                      {firstRow}–{lastRow}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-foreground tabular-nums">
+                      {expensePage.total}
+                    </span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={expensePage.page <= 1 || tab.isPending}
+                      onClick={() => tab.goToPage(expensePage.page - 1)}
+                    >
+                      <ChevronLeft />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={expensePage.page >= lastPage || tab.isPending}
+                      onClick={() => tab.goToPage(expensePage.page + 1)}
+                    >
+                      Next
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                </>
+              ) : undefined
+            }
+          >
+            <div className="border-b px-4 py-3">
+              <ExpensesTableToolbar
+                group={filters.group}
+                categoryId={filters.categoryId}
+                categories={categories}
+                disabled={tab.isPending}
+                onGroupChange={tab.setGroup}
+                onCategoryChange={tab.setCategory}
+              />
             </div>
 
-            <TabsContent value="expenses">
-              {expensePage.rows.length === 0 ? (
-                <div className="p-4">
-                  <TableEmptyState
-                    icon={Wallet}
-                    title="No expenses in this range"
-                    description={
-                      isFiltered
-                        ? "Try another mode or category."
-                        : "Expenses you add will appear here."
-                    }
-                    action={
-                      isFiltered ? undefined : (
-                        <Button onClick={expenseForm.openCreate}>
-                          <Plus />
-                          Add expense
-                        </Button>
-                      )
-                    }
-                  />
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {EXPENSE_COLUMNS.map((column) => (
-                        <TableHead key={column.label} className={column.width}>
-                          {"srOnly" in column ? (
-                            <span className="sr-only">{column.label}</span>
-                          ) : (
-                            column.label
-                          )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {expensePage.rows.map((row) => (
-                      <ExpenseTableRow
-                        key={row.id}
-                        row={row}
-                        onEdit={expenseForm.openEdit}
-                        onCancel={cancel.ask}
-                      />
+            {expensePage.rows.length === 0 ? (
+              <div className="p-4">
+                <TableEmptyState
+                  icon={Wallet}
+                  title="No expenses in this range"
+                  description={
+                    isFiltered
+                      ? "Try another payment or category."
+                      : "Expenses you add will appear here."
+                  }
+                  action={
+                    isFiltered ? undefined : (
+                      <Button onClick={expenseForm.openCreate}>
+                        <Plus />
+                        Add expense
+                      </Button>
+                    )
+                  }
+                />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {EXPENSE_COLUMNS.map((column) => (
+                      <TableHead key={column.label} className={column.width}>
+                        {"srOnly" in column ? (
+                          <span className="sr-only">{column.label}</span>
+                        ) : (
+                          column.label
+                        )}
+                      </TableHead>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
-            </TabsContent>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expensePage.rows.map((row) => (
+                    <ExpenseTableRow
+                      key={row.id}
+                      row={row}
+                      onEdit={expenseForm.openEdit}
+                      onCancel={cancel.ask}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </TableCard>
 
-            <TabsContent value="days">
-              <CashBookDaysTable days={days} summary={summary} />
-            </TabsContent>
-          </Tabs>
-        </TableCard>
+          {spend.length > 0 ? <SpendByCategoryCard spend={spend} /> : null}
+        </TabsContent>
 
-        {spend.length > 0 ? <SpendByCategoryCard spend={spend} /> : null}
-      </div>
+        <TabsContent value="days">
+          <TableCard>
+            <CashBookDaysTable days={days} summary={summary} />
+          </TableCard>
+        </TabsContent>
+      </Tabs>
 
       <ExpenseDialog
         open={expenseForm.open}

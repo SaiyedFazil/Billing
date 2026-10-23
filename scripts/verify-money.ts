@@ -2,6 +2,7 @@ import {
   businessDate,
   formatBillDate,
   formatBillTime,
+  formatDayDate,
 } from "../src/lib/utils/dates";
 import {
   add,
@@ -195,6 +196,7 @@ check(
   "2026-08-27",
 );
 check("formatBillDate", formatBillDate("2026-08-26"), "26/08/26");
+check("formatDayDate", formatDayDate("2026-10-20"), "Tue, 20 Oct 2026");
 check(
   "formatBillTime is 24-hour, shop-local",
   formatBillTime(new Date("2026-08-26T14:12:00Z"), "Asia/Kolkata"),
