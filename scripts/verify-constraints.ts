@@ -89,25 +89,31 @@ async function main() {
   ).id;
 
   // --- bills ----------------------------------------------------------
-  await expectRejection(
+  // Named, not just "rejected": these bills have no payment line, so the
+  // deferred balance trigger would refuse them at commit even if the CHECK
+  // under test were gone.
+  await expectViolation(
     "total must equal subtotal minus discount",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
         VALUES (9001, '2026-01-01', 100.00, 10.00, 99.99, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+    "bills_total_matches",
   );
 
-  await expectRejection(
+  await expectViolation(
     "discount cannot exceed subtotal",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
         VALUES (9002, '2026-01-01', 100.00, 200.00, -100.00, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+    "bills_discount_within_subtotal",
   );
 
-  await expectRejection(
+  await expectViolation(
     "change must equal tendered minus total",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, tendered, change_due, idempotency_key, created_by)
         VALUES (9003, '2026-01-01', 100.00, 0.00, 100.00, 'CASH', 200.00, 50.00, gen_random_uuid(), ${userId}::uuid)`,
+    "bills_change_matches",
   );
 
   // --- items ----------------------------------------------------------
