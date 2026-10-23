@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 
+import { SPLIT } from "@/constants/payment-methods";
 import { db } from "@/db";
 import { billItems, billPayments, bills } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
@@ -135,6 +136,25 @@ export async function getPaymentBreakdown(
       .orderBy(desc(sql`sum(${billPayments.amount})`));
 
     return rows.map((row) => ({ ...row, net: toAmount(row.net) }));
+  });
+}
+
+/**
+ * True when the range holds a completed split bill. The Sales card uses it to
+ * explain why the per-method bill counts can add up to more than the bills.
+ */
+export async function hasSplitBills(
+  from: string,
+  to: string,
+): Promise<boolean> {
+  return withConnectionRetry(async () => {
+    const rows = await db
+      .select({ id: bills.id })
+      .from(bills)
+      .where(and(inRange(from, to), eq(bills.paymentMethod, SPLIT)))
+      .limit(1);
+
+    return rows.length > 0;
   });
 }
 

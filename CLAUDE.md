@@ -5,16 +5,17 @@ prints thermal receipts; the owner manages the menu, accounts and settings and
 reads the sales reports. Next.js 16 App Router, Drizzle + Neon Postgres,
 Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 
-| Doc                                                            | What it holds                                  |
-| -------------------------------------------------------------- | ---------------------------------------------- |
-| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)     |
-| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                        |
-| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                        |
-| `docs/superpowers/specs/2026-10-20-cash-book-design.md`        | Cash book: money in vs owner-entered money out |
-| `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work    |
-| `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups      |
-| `docs/printer-setup.md`                                        | One-time thermal printer setup on the till     |
-| `docs/brand/README.md`                                         | The Mobito logo files and where each one goes  |
+| Doc                                                            | What it holds                                   |
+| -------------------------------------------------------------- | ----------------------------------------------- |
+| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)      |
+| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                         |
+| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                         |
+| `docs/superpowers/specs/2026-10-20-cash-book-design.md`        | Cash book: money in vs owner-entered money out  |
+| `docs/superpowers/specs/2026-10-24-split-payment-design.md`    | Split payment: one bill paid by several methods |
+| `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work     |
+| `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups       |
+| `docs/printer-setup.md`                                        | One-time thermal printer setup on the till      |
+| `docs/brand/README.md`                                         | The Mobito logo files and where each one goes   |
 
 ## Commands
 
@@ -81,6 +82,9 @@ menu, `-- --dry-run` previews) ·
    with a new `CORRECTION` row. Stock is a whole-unit `integer`, not money.
    An untracked item (`track_stock = false`) must bill exactly as before
    stock existed. See `docs/superpowers/specs/2026-10-18-stock-management-design.md`.
+10. **How a bill was paid lives in `bill_payments`.** Never sum money by
+    `bills.payment_method`: a `SPLIT` bill's money belongs to its lines.
+    Showing the label is fine.
 
 ## Structure
 
@@ -228,6 +232,7 @@ npm run build            # the production build
 | `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)          |
 | `verify:stock`                                        | sale deduction, last-unit race, adjustments, history           |
 | `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation (no DB) |
+| `verify:split-payment`                                | split payment rules and the till's split maths (no DB)         |
 | `verify:menu-import`                                  | card is valid, adds no duplicate, replace is exact (no DB)     |
 | `verify:audit-details`                                | every audit action reads as plain words (no DB)                |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |

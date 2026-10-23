@@ -11,6 +11,7 @@ import {
   getItemSales,
   getPaymentBreakdown,
   getSalesByDay,
+  hasSplitBills,
 } from "../src/server/reports/reports-queries";
 
 let failures = 0;
@@ -259,6 +260,11 @@ async function main() {
       after: cashBookAfter.summary.moneyIn,
       splitBillId,
     },
+  );
+
+  check(
+    "hasSplitBills sees today's split",
+    (await hasSplitBills(today, today)) === true,
   );
 
   // --- the Bills list and the receipt show a split bill's lines -----------

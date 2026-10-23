@@ -7,9 +7,11 @@ import type { PaymentBreakdownRow } from "@/types/report.types";
 export function PaymentBreakdownCard({
   payments,
   totalNet,
+  showSplitNote,
 }: {
   payments: PaymentBreakdownRow[];
   totalNet: string;
+  showSplitNote: boolean;
 }) {
   // Bar widths and percentages are geometry only: these Numbers never feed
   // back into an amount.
@@ -65,6 +67,12 @@ export function PaymentBreakdownCard({
           </li>
         ))}
       </ul>
+
+      {showSplitNote ? (
+        <p className="text-xs text-muted-foreground">
+          A split bill is counted under each method it used.
+        </p>
+      ) : null}
     </section>
   );
 }

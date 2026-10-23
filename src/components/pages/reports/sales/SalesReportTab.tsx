@@ -35,12 +35,14 @@ export function SalesReportTab({
   presets,
   rows,
   payments,
+  showSplitNote,
 }: {
   from: string;
   to: string;
   presets: PresetMap;
   rows: SalesByDayRow[];
   payments: PaymentBreakdownRow[];
+  showSplitNote: boolean;
 }) {
   const totals = rows.reduce(
     (accumulator, row) => ({
@@ -135,7 +137,11 @@ export function SalesReportTab({
           </TableCard>
 
           {payments.length > 0 ? (
-            <PaymentBreakdownCard payments={payments} totalNet={totals.net} />
+            <PaymentBreakdownCard
+              payments={payments}
+              totalNet={totals.net}
+              showSplitNote={showSplitNote}
+            />
           ) : null}
         </div>
       )}

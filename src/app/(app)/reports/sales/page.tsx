@@ -3,6 +3,7 @@ import { resolveReportRange } from "@/lib/utils/report-params";
 import {
   getPaymentBreakdown,
   getSalesByDay,
+  hasSplitBills,
 } from "@/server/reports/reports-queries";
 import { getShopTimezone } from "@/server/settings/settings-queries";
 
@@ -18,9 +19,10 @@ export default async function Page({
   const timeZone = await getShopTimezone();
   const { from, to, presets } = resolveReportRange(params, timeZone, "LAST_7");
 
-  const [rows, payments] = await Promise.all([
+  const [rows, payments, showSplitNote] = await Promise.all([
     getSalesByDay(from, to),
     getPaymentBreakdown(from, to),
+    hasSplitBills(from, to),
   ]);
 
   return (
@@ -30,6 +32,7 @@ export default async function Page({
       presets={presets}
       rows={rows}
       payments={payments}
+      showSplitNote={showSplitNote}
     />
   );
 }

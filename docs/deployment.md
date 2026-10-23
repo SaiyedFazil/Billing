@@ -61,6 +61,44 @@ npm run db:migrate     # applies to whatever DATABASE_URL points at
 
 **Always back up before a migration** — see below.
 
+### Going live with split payment
+
+This is the one migration that changes how every bill is stored, so follow the
+order. Do it after closing, when no till is saving bills. Allow about an hour.
+
+1. **Back up.** Take the dump described under "Backups" below, and run
+   Settings → Export all data.
+2. **Prove it on a copy first.** In the Neon console, make a branch of the live
+   database and point `DATABASE_URL` at that branch. Then run:
+
+   ```bash
+   npm run db:migrate
+   npm run verify:report-queries
+   ```
+
+   The `verify:report-queries` data audit checks that every bill's payment
+   lines add up to its total, and that every one-method bill has exactly one
+   line that matches it.
+
+   Then compare the Sales report "By payment method" card and the Cash book for
+   the last 90 days before and after the migration (run `npm run dev` against
+   the branch for the "after" figures). They must match to the paisa. If
+   anything differs, stop and do not go live.
+
+3. **Migrate the live database and deploy straight away.** Point
+   `DATABASE_URL` back at the live database, then run:
+
+   ```bash
+   npm run db:migrate
+   netlify deploy --build --prod
+   ```
+
+   The old till cannot save a bill once the migration has run, so do not leave
+   a gap between the two commands.
+
+4. **Try it.** Ring up one cash bill and one split bill (for example ₹400 cash
+   and ₹100 UPI). Check both receipts, then void both test bills.
+
 ### The hand-written trigger migration
 
 `0001_immutability_triggers.sql` is written by hand because drizzle-kit does
