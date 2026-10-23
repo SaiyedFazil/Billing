@@ -66,6 +66,9 @@ export function BillPage({
         tenderedInput={bill.tenderedInput}
         onTenderedChange={bill.setTenderedInput}
         changeDue={bill.changeDue}
+        showSplit={bill.showSplit}
+        splitAvailable={bill.splitAvailable}
+        split={bill.split}
         canSave={bill.canSave}
         isSaving={bill.isSaving}
         error={bill.error}

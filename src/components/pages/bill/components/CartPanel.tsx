@@ -10,10 +10,14 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { PaymentMethod } from "@/constants/payment-methods";
+import type {
+  BillPaymentMethod,
+  PaymentMethod,
+} from "@/constants/payment-methods";
 import { formatINR } from "@/lib/utils/money";
 import type { CartLine as CartLineType } from "@/types/bill.types";
 
+import type { SplitPaymentState } from "../hooks/useSplitPayment";
 import { CartLine } from "./CartLine";
 import { DiscountInput } from "./DiscountInput";
 import { PaymentPanel } from "./PaymentPanel";
@@ -34,6 +38,9 @@ export function CartPanel({
   tenderedInput,
   onTenderedChange,
   changeDue,
+  showSplit,
+  splitAvailable,
+  split,
   canSave,
   isSaving,
   error,
@@ -49,11 +56,14 @@ export function CartPanel({
   discountExceedsSubtotal: boolean;
   total: string;
   paymentMethods: PaymentMethod[];
-  paymentMethod: PaymentMethod;
-  onPaymentMethodChange: (method: PaymentMethod) => void;
+  paymentMethod: BillPaymentMethod;
+  onPaymentMethodChange: (method: BillPaymentMethod) => void;
   tenderedInput: string;
   onTenderedChange: (value: string) => void;
   changeDue: string | null;
+  showSplit: boolean;
+  splitAvailable: boolean;
+  split: SplitPaymentState;
   canSave: boolean;
   isSaving: boolean;
   error: string | null;
@@ -146,6 +156,9 @@ export function CartPanel({
           tenderedInput={tenderedInput}
           onTenderedChange={onTenderedChange}
           changeDue={changeDue}
+          showSplit={showSplit}
+          splitAvailable={splitAvailable}
+          split={split}
           disabled={isSaving}
         />
 

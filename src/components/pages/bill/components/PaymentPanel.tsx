@@ -1,14 +1,21 @@
 "use client";
 
 import { MoneyInput } from "@/components/custom/MoneyInput";
+import { Split } from "lucide-react";
+
 import {
+  type BillPaymentMethod,
   collectsTender,
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
+  SPLIT,
 } from "@/constants/payment-methods";
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/utils/money";
 import { PAYMENT_METHOD_ICONS } from "@/lib/utils/payment-method-style";
+
+import type { SplitPaymentState } from "../hooks/useSplitPayment";
+import { SplitPaymentLines } from "./SplitPaymentLines";
 
 /**
  * Written out in full because Tailwind scans for literal class names — a
@@ -19,7 +26,16 @@ const GRID_COLUMNS: Record<number, string> = {
   2: "grid-cols-2",
   3: "grid-cols-3",
   4: "grid-cols-4",
+  5: "grid-cols-5",
 };
+
+/** Written once so the Split button matches the method buttons exactly. */
+const METHOD_BUTTON =
+  "flex h-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const METHOD_SELECTED =
+  "border-brand bg-brand-soft text-brand-ink ring-[0.5px] ring-brand";
+const METHOD_IDLE =
+  "border-input bg-card text-foreground/80 hover:border-foreground/25";
 
 export function PaymentPanel({
   paymentMethods,
@@ -28,25 +44,31 @@ export function PaymentPanel({
   tenderedInput,
   onTenderedChange,
   changeDue,
+  showSplit,
+  splitAvailable,
+  split,
   disabled,
 }: {
   paymentMethods: PaymentMethod[];
-  paymentMethod: PaymentMethod;
-  onPaymentMethodChange: (method: PaymentMethod) => void;
+  paymentMethod: BillPaymentMethod;
+  onPaymentMethodChange: (method: BillPaymentMethod) => void;
   tenderedInput: string;
   onTenderedChange: (value: string) => void;
   changeDue: string | null;
+  showSplit: boolean;
+  splitAvailable: boolean;
+  split: SplitPaymentState;
   disabled: boolean;
 }) {
+  const splitting = paymentMethod === SPLIT;
+  const columns = paymentMethods.length + (showSplit ? 1 : 0);
+
   return (
     <div className="space-y-3">
       <div
         role="group"
         aria-label="Payment method"
-        className={cn(
-          "grid gap-2",
-          GRID_COLUMNS[paymentMethods.length] ?? "grid-cols-4",
-        )}
+        className={cn("grid gap-2", GRID_COLUMNS[columns] ?? "grid-cols-4")}
       >
         {paymentMethods.map((method) => {
           const Icon = PAYMENT_METHOD_ICONS[method];
@@ -59,10 +81,8 @@ export function PaymentPanel({
               disabled={disabled}
               onClick={() => onPaymentMethodChange(method)}
               className={cn(
-                "flex h-15 cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                selected
-                  ? "border-brand bg-brand-soft text-brand-ink ring-[0.5px] ring-brand"
-                  : "border-input bg-card text-foreground/80 hover:border-foreground/25",
+                METHOD_BUTTON,
+                selected ? METHOD_SELECTED : METHOD_IDLE,
               )}
             >
               <Icon className="size-5" />
@@ -70,9 +90,29 @@ export function PaymentPanel({
             </button>
           );
         })}
+
+        {showSplit ? (
+          <button
+            type="button"
+            aria-pressed={splitting}
+            // Nothing to split on a ₹0 bill. Disabled, not hidden, so the row
+            // does not jump when the first item is added.
+            disabled={disabled || !splitAvailable}
+            onClick={() => onPaymentMethodChange(SPLIT)}
+            className={cn(
+              METHOD_BUTTON,
+              splitting ? METHOD_SELECTED : METHOD_IDLE,
+            )}
+          >
+            <Split className="size-5" />
+            Split
+          </button>
+        ) : null}
       </div>
 
-      {collectsTender(paymentMethod) ? (
+      {splitting ? (
+        <SplitPaymentLines split={split} disabled={disabled} />
+      ) : collectsTender(paymentMethod) ? (
         <div className="grid grid-cols-2 gap-2.5">
           <label
             htmlFor="tendered"
