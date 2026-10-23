@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import { add, compare, subtract, ZERO } from "../src/lib/utils/money";
+import { getReceipt, listBills } from "../src/server/bills/bills-queries";
 import { createBill } from "../src/server/bills/create-bill-service";
 import { getCashBook } from "../src/server/expenses/expenses-queries";
 import { getMenu } from "../src/server/items/items-queries";
@@ -258,6 +259,68 @@ async function main() {
       after: cashBookAfter.summary.moneyIn,
       splitBillId,
     },
+  );
+
+  // --- the Bills list and the receipt show a split bill's lines -----------
+  const ledgerWhere = { from: today, to: today };
+  const splitOnly = await listBills(
+    { ...ledgerWhere, paymentMethod: "SPLIT" },
+    1,
+    200,
+  );
+  check(
+    "the Split filter finds only split bills",
+    splitOnly.rows.length > 0 &&
+      splitOnly.rows.every((row) => row.paymentMethod === "SPLIT") &&
+      splitOnly.rows.some((row) => row.id === splitBillId),
+    splitOnly.rows.map((row) => row.paymentMethod),
+  );
+
+  const upiOnly = await listBills(
+    { ...ledgerWhere, paymentMethod: "UPI" },
+    1,
+    200,
+  );
+  check(
+    "filtering by UPI finds split bills with a UPI line",
+    upiOnly.rows.some((row) => row.id === splitBillId),
+    upiOnly.rows.map((row) => row.id),
+  );
+
+  const splitRow = splitOnly.rows.find((row) => row.id === splitBillId);
+  check(
+    "split rows carry their payments as strings",
+    splitOnly.rows.every(
+      (row) =>
+        row.splitPayments !== null &&
+        row.splitPayments.length >= 2 &&
+        row.splitPayments.every((part) => /^\d+\.\d{2}$/.test(part.amount)) &&
+        compare(
+          row.splitPayments.reduce((sum, part) => add(sum, part.amount), ZERO),
+          row.total,
+        ) === 0,
+    ) && splitRow?.splitPayments?.length === 2,
+    splitOnly.rows.map((row) => row.splitPayments),
+  );
+
+  const allToday = await listBills(ledgerWhere, 1, 200);
+  check(
+    "a one-method row has no split payments",
+    allToday.rows
+      .filter((row) => row.paymentMethod !== "SPLIT")
+      .every((row) => row.splitPayments === null),
+  );
+
+  const splitReceipt = await getReceipt(splitBillId);
+  check(
+    "the receipt lists a split bill's payments",
+    splitReceipt !== null &&
+      splitReceipt.payments.length === 2 &&
+      splitReceipt.payments[0].method === "CASH" &&
+      splitReceipt.payments[1].method === "UPI" &&
+      compare(splitReceipt.payments[0].amount, splitCash) === 0 &&
+      compare(splitReceipt.payments[1].amount, "10.00") === 0,
+    splitReceipt?.payments,
   );
 
   console.log(

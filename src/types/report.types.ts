@@ -54,13 +54,15 @@ export type BillLedgerRow = {
   status: "COMPLETED" | "VOID";
   cashierName: string;
   lineCount: number;
+  /** A SPLIT bill's lines in position order; null for a one-method bill. */
+  splitPayments: Array<{ method: PaymentMethod; amount: string }> | null;
 };
 
 export type BillLedgerFilters = {
   from: string;
   to: string;
   cashierId?: string;
-  paymentMethod?: PaymentMethod;
+  paymentMethod?: BillPaymentMethod;
   billNumber?: number;
 };
 

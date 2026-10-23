@@ -1,4 +1,7 @@
-import type { BillPaymentMethod } from "@/constants/payment-methods";
+import type {
+  BillPaymentMethod,
+  PaymentMethod,
+} from "@/constants/payment-methods";
 import type { SplitPaymentInput } from "@/lib/utils/bill-payments";
 
 /**
@@ -49,6 +52,15 @@ export type ReceiptLine = {
   lineTotal: string;
 };
 
+/** One payment line of a bill, as the receipt and bill details show it. */
+export type ReceiptPayment = {
+  method: PaymentMethod;
+  amount: string;
+  /** Cash handed over: the cash line only. */
+  tendered: string | null;
+  changeDue: string | null;
+};
+
 export type ReceiptData = {
   billNumber: number;
   businessDate: string;
@@ -62,6 +74,8 @@ export type ReceiptData = {
   paymentMethod: BillPaymentMethod;
   tendered: string | null;
   changeDue: string | null;
+  /** The bill's payment lines, ordered by position. */
+  payments: ReceiptPayment[];
   shop: {
     name: string;
     addressLine: string | null;

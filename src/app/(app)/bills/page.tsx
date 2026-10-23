@@ -1,8 +1,8 @@
 import { Container } from "@/components/layout/Container";
 import { BillsTab } from "@/components/pages/bills/BillsTab";
 import {
-  PAYMENT_METHODS,
-  type PaymentMethod,
+  BILL_PAYMENT_METHODS,
+  type BillPaymentMethod,
 } from "@/constants/payment-methods";
 import { requireUser } from "@/lib/auth/guard";
 import { resolveReportRange } from "@/lib/utils/report-params";
@@ -28,8 +28,10 @@ export default async function Page({ searchParams }: PageProps<"/bills">) {
 
   const cashierId = read("cashierId");
   const paymentRaw = read("paymentMethod");
-  const paymentMethod = PAYMENT_METHODS.includes(paymentRaw as PaymentMethod)
-    ? (paymentRaw as PaymentMethod)
+  const paymentMethod = BILL_PAYMENT_METHODS.includes(
+    paymentRaw as BillPaymentMethod,
+  )
+    ? (paymentRaw as BillPaymentMethod)
     : undefined;
   const billNumberRaw = read("billNumber");
   const billNumber = /^\d+$/.test(billNumberRaw)
