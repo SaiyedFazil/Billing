@@ -7,7 +7,8 @@ export function SpendByCategoryCard({ spend }: { spend: CategorySpendRow[] }) {
     <section className="space-y-4 rounded-[20px] border bg-card p-6 shadow-card">
       <h2 className="font-heading text-lg font-bold">Spend by category</h2>
 
-      <ul className="space-y-3.5">
+      {/* Two columns on wider screens, so a full-width card keeps short bars. */}
+      <ul className="grid gap-x-10 gap-y-3.5 md:grid-cols-2">
         {spend.map((row) => (
           <li key={row.categoryId} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-3 text-sm">

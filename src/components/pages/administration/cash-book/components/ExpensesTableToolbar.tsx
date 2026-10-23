@@ -30,11 +30,11 @@ export function ExpensesTableToolbar({
         disabled={disabled}
         onValueChange={onGroupChange}
       >
-        <SelectTrigger className="w-36" aria-label="Filter by mode">
+        <SelectTrigger className="w-36" aria-label="Filter by how it was paid">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="ALL">All modes</SelectItem>
+          <SelectItem value="ALL">All payments</SelectItem>
           <SelectItem value="cash">Cash</SelectItem>
           <SelectItem value="online">Online</SelectItem>
         </SelectContent>

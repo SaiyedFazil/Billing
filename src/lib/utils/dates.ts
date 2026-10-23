@@ -39,6 +39,21 @@ export function formatLongDate(businessDateIso: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/**
+ * "2026-10-20" -> "Tue, 20 Oct 2026", for table rows where the weekday helps,
+ * such as the Cash book. UTC throughout, for the same reason as formatLongDate.
+ */
+export function formatDayDate(businessDateIso: string): string {
+  const [year, month, day] = businessDateIso.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 /** 24-hour clock in the shop's timezone, for the receipt header. */
 export function formatBillTime(at: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {

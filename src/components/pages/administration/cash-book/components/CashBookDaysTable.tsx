@@ -12,23 +12,36 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { CashBookDay, CashBookSummary } from "@/lib/utils/cash-book";
-import { formatBillDate } from "@/lib/utils/dates";
+import { formatDayDate } from "@/lib/utils/dates";
 import { formatINR, isNegative, isZero } from "@/lib/utils/money";
 
-const HEADERS = [
-  "Date",
-  "In · cash",
-  "In · online",
-  "Out · cash",
-  "Out · online",
-  "Net",
-] as const;
+/** Draws the line between the Date, Money in, Money out and Net groups. */
+const GROUP_EDGE = "border-l border-border/70";
 
-function Amount({ value, net }: { value: string; net?: boolean }) {
+/**
+ * Below lg the table scrolls sideways, so the date stays pinned on the left.
+ * A pinned cell needs its own background, and an inset shadow for its edge:
+ * a collapsed table border would scroll away under it.
+ */
+const PINNED =
+  "max-lg:sticky max-lg:left-0 max-lg:z-10 max-lg:shadow-[inset_-1px_0_0_var(--color-border)]";
+
+function Amount({
+  value,
+  net,
+  groupStart,
+}: {
+  value: string;
+  net?: boolean;
+  groupStart?: boolean;
+}) {
   return (
     <TableCell
       className={cn(
         "text-right tabular-nums",
+        groupStart && GROUP_EDGE,
+        // A zero steps back so the days' real figures stand out.
+        isZero(value) && "text-muted-foreground",
         net && "font-bold",
         net && isNegative(value) && "text-destructive",
       )}
@@ -63,38 +76,74 @@ export function CashBookDaysTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {HEADERS.map((header) => (
-              <TableHead
-                key={header}
-                className={header === "Date" ? "w-28" : "text-right"}
-              >
-                {header}
-              </TableHead>
-            ))}
+            <TableHead
+              rowSpan={2}
+              className={cn("max-lg:bg-table-head lg:w-48", PINNED)}
+            >
+              Date
+            </TableHead>
+            <TableHead
+              colSpan={2}
+              className={cn(
+                "h-9 bg-success-soft text-center text-success-ink",
+                GROUP_EDGE,
+              )}
+            >
+              Money in
+            </TableHead>
+            <TableHead
+              colSpan={2}
+              className={cn(
+                "h-9 bg-warning-soft text-center text-warning-ink",
+                GROUP_EDGE,
+              )}
+            >
+              Money out
+            </TableHead>
+            <TableHead rowSpan={2} className={cn("text-right", GROUP_EDGE)}>
+              Net
+            </TableHead>
+          </TableRow>
+          <TableRow>
+            <TableHead className={cn("h-9 text-right", GROUP_EDGE)}>
+              Cash
+            </TableHead>
+            <TableHead className="h-9 text-right">Online</TableHead>
+            <TableHead className={cn("h-9 text-right", GROUP_EDGE)}>
+              Cash
+            </TableHead>
+            <TableHead className="h-9 text-right">Online</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {days.map((day) => (
             <TableRow key={day.date}>
-              <TableCell className="text-foreground/80 tabular-nums">
-                {formatBillDate(day.date)}
+              <TableCell
+                className={cn(
+                  "font-medium tabular-nums max-lg:bg-card",
+                  PINNED,
+                )}
+              >
+                {formatDayDate(day.date)}
               </TableCell>
-              <Amount value={day.inCash} />
+              <Amount value={day.inCash} groupStart />
               <Amount value={day.inOnline} />
-              <Amount value={day.outCash} />
+              <Amount value={day.outCash} groupStart />
               <Amount value={day.outOnline} />
-              <Amount value={day.net} net />
+              <Amount value={day.net} net groupStart />
             </TableRow>
           ))}
         </TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell className="font-semibold">Total</TableCell>
-            <Amount value={summary.moneyIn.cash} />
+        <TableFooter className="bg-brand-soft font-bold text-brand-ink">
+          <TableRow className="hover:bg-brand-soft">
+            <TableCell className={cn("max-lg:bg-brand-soft", PINNED)}>
+              Total
+            </TableCell>
+            <Amount value={summary.moneyIn.cash} groupStart />
             <Amount value={summary.moneyIn.online} />
-            <Amount value={summary.moneyOut.cash} />
+            <Amount value={summary.moneyOut.cash} groupStart />
             <Amount value={summary.moneyOut.online} />
-            <Amount value={summary.net.total} net />
+            <Amount value={summary.net.total} net groupStart />
           </TableRow>
         </TableFooter>
       </Table>
