@@ -1,6 +1,21 @@
 import type { PaymentMethod } from "../src/constants/payment-methods";
 import { PAYMENT_METHODS } from "../src/constants/payment-methods";
+import {
+  addSplitLine,
+  canSplit,
+  keepEnabledLines,
+  methodsToAdd,
+  removeSplitLine,
+  resolveSplit,
+  type SplitLine,
+  splitPayload as toSplitPayload,
+  splitStatus,
+  splitStatusText,
+  startSplit,
+  typeSplitAmount,
+} from "../src/components/pages/bill/utils/split-payment";
 import { planPayments } from "../src/lib/utils/bill-payments";
+import { formatINR } from "../src/lib/utils/money";
 import { createBillSchema } from "../src/lib/validation/bill-schema";
 
 let failures = 0;
@@ -434,6 +449,315 @@ check(
     ]),
   ),
   false,
+);
+
+// ---- The till's split maths -------------------------------------------------
+
+check(
+  "formatINR writes the rupee sign with two decimals",
+  formatINR("100.00"),
+  "₹100.00",
+);
+
+const sl = (
+  method: PaymentMethod,
+  amountInput: string,
+  auto: boolean,
+): SplitLine => ({ method, amountInput, auto });
+
+/** Resolve, then read the status the cashier would see. */
+function tillView(lines: SplitLine[], total: string, cashGiven = "") {
+  const resolved = resolveSplit(lines, total);
+  const status = splitStatus(resolved, total, cashGiven);
+  return { resolved, status, text: splitStatusText(status) };
+}
+
+const amounts = (lines: ReturnType<typeof resolveSplit>) =>
+  lines.map((l) => `${l.method} ${l.amount}`);
+
+check("canSplit: one method is not enough", canSplit(["CASH"], TOTAL), false);
+check(
+  "canSplit: a Rs.0 bill cannot split",
+  canSplit(["CASH", "UPI"], "0.00"),
+  false,
+);
+check(
+  "canSplit: two methods and a total",
+  canSplit(["CASH", "UPI"], TOTAL),
+  true,
+);
+
+check("startSplit: Cash first, then the next method", startSplit(ALL), [
+  sl("CASH", "", false),
+  sl("UPI", "", true),
+]);
+check("startSplit: Cash disabled", startSplit(["UPI", "CARD"]), [
+  sl("UPI", "", false),
+  sl("CARD", "", true),
+]);
+check(
+  "startSplit: Cash is first even when listed later",
+  startSplit(["CARD", "CASH"]),
+  [sl("CASH", "", false), sl("CARD", "", true)],
+);
+
+const typedCash = typeSplitAmount(startSplit(ALL), "CASH", "400");
+
+{
+  const view = tillView(typedCash, TOTAL);
+  check("typing CASH 400 leaves UPI as the rest", amounts(view.resolved), [
+    "CASH 400.00",
+    "UPI 100.00",
+  ]);
+  check("the UPI line stays auto", view.resolved[1].auto, true);
+  check("CASH 400 + UPI 100 is PAID with no change", view.status, {
+    kind: "PAID",
+    change: null,
+  });
+  check("PAID text", view.text, {
+    tone: "success",
+    text: "Fully paid",
+    detail: "₹0.00 left",
+  });
+}
+
+check(
+  "the auto line follows a discount",
+  amounts(resolveSplit(typedCash, "450.00")),
+  ["CASH 400.00", "UPI 50.00"],
+);
+
+{
+  const typedBoth = typeSplitAmount(typedCash, "UPI", "100");
+  const view = tillView(typedBoth, "450.00");
+  check("typed UPI does not follow a discount", view.status, {
+    kind: "OVER",
+    amount: "50.00",
+  });
+  check("OVER text", view.text, {
+    tone: "destructive",
+    text: "₹50.00 too much",
+    detail: null,
+  });
+}
+
+{
+  const view = tillView(typeSplitAmount(typedCash, "UPI", "50"), TOTAL);
+  check("CASH 400 + UPI 50 is SHORT", view.status, {
+    kind: "SHORT",
+    amount: "50.00",
+  });
+  check("SHORT text", view.text, {
+    tone: "warning",
+    text: "Collect ₹50.00 more",
+    detail: null,
+  });
+}
+
+{
+  const view = tillView(typeSplitAmount(startSplit(ALL), "CASH", "500"), TOTAL);
+  check("CASH 500 leaves UPI at 0.00", amounts(view.resolved), [
+    "CASH 500.00",
+    "UPI 0.00",
+  ]);
+  check("one method covering the bill is SINGLE_METHOD", view.status, {
+    kind: "SINGLE_METHOD",
+    method: "CASH",
+  });
+  check("SINGLE_METHOD text", view.text, {
+    tone: "warning",
+    text: "Cash covers the whole bill. Tap Cash instead.",
+    detail: null,
+  });
+}
+
+// Three lines: CASH 300, UPI freezes at 200, CARD is the rest.
+const threeLines = addSplitLine(
+  typeSplitAmount(startSplit(ALL), "CASH", "300"),
+  "CARD",
+  TOTAL,
+);
+
+check("addSplitLine freezes the old rest and appends a new one", threeLines, [
+  sl("CASH", "300", false),
+  sl("UPI", "200.00", false),
+  sl("CARD", "", true),
+]);
+
+{
+  const view = tillView(threeLines, TOTAL);
+  check("a rest of 0.00 is a ZERO_LINE", view.status, {
+    kind: "ZERO_LINE",
+    method: "CARD",
+  });
+  check("ZERO_LINE text", view.text, {
+    tone: "warning",
+    text: "Enter an amount for Card",
+    detail: null,
+  });
+}
+
+{
+  const retyped = typeSplitAmount(threeLines, "UPI", "150");
+  const view = tillView(retyped, TOTAL);
+  check("typing UPI 150 hands CARD the remaining 50", amounts(view.resolved), [
+    "CASH 300.00",
+    "UPI 150.00",
+    "CARD 50.00",
+  ]);
+  check("three lines, all non-zero, is PAID", view.status, {
+    kind: "PAID",
+    change: null,
+  });
+}
+
+check(
+  "removeSplitLine does nothing at two lines",
+  removeSplitLine(typedCash, "UPI"),
+  typedCash,
+);
+check(
+  "removing the auto line makes the last remaining line auto",
+  removeSplitLine(threeLines, "CARD"),
+  [sl("CASH", "300", false), sl("UPI", "", true)],
+);
+check(
+  "removing a manual line keeps the auto line",
+  removeSplitLine(threeLines, "UPI"),
+  [sl("CASH", "300", false), sl("CARD", "", true)],
+);
+
+{
+  const view = tillView(typedCash, TOTAL, "500");
+  check("cash given above the cash part gives change", view.status, {
+    kind: "PAID",
+    change: "100.00",
+  });
+  check("PAID with change text", view.text, {
+    tone: "success",
+    text: "Fully paid",
+    detail: "Change ₹100.00",
+  });
+}
+
+{
+  const view = tillView(typedCash, TOTAL, "399");
+  check("cash given below the cash part", view.status, {
+    kind: "CASH_GIVEN_SHORT",
+    cashAmount: "400.00",
+  });
+  check("CASH_GIVEN_SHORT text", view.text, {
+    tone: "warning",
+    text: "Cash given is less than ₹400.00",
+    detail: null,
+  });
+}
+
+check(
+  "cash given equal to the cash part gives zero change",
+  tillView(typedCash, TOTAL, "400.00").status,
+  { kind: "PAID", change: "0.00" },
+);
+
+check(
+  "cash given with no cash line is ignored",
+  tillView(
+    typeSplitAmount(startSplit(["UPI", "CARD"]), "UPI", "400"),
+    TOTAL,
+    "999",
+  ).status,
+  { kind: "PAID", change: null },
+);
+
+for (const junk of ["", ".", "abc", "1.005"]) {
+  const lines = typeSplitAmount(startSplit(ALL), "CASH", junk);
+  const view = tillView(lines, TOTAL);
+  check(
+    `CASH ${JSON.stringify(junk)} reads as Rs.0 and UPI covers it all`,
+    [amounts(view.resolved), view.status],
+    [["CASH 0.00", "UPI 500.00"], { kind: "SINGLE_METHOD", method: "UPI" }],
+  );
+}
+
+{
+  // 60.50 + 40.30 + 10.00 = 110.80, which a float cannot add up.
+  const total = "110.80";
+  const lines = typeSplitAmount(
+    addSplitLine(
+      typeSplitAmount(startSplit(ALL), "CASH", "60.50"),
+      "CARD",
+      total,
+    ),
+    "UPI",
+    "40.30",
+  );
+  const view = tillView(lines, total);
+  check("the float trap leaves CARD exactly 10.00", amounts(view.resolved), [
+    "CASH 60.50",
+    "UPI 40.30",
+    "CARD 10.00",
+  ]);
+  check("the float trap is PAID", view.status, { kind: "PAID", change: null });
+}
+
+{
+  // UPI typed before CARD is added: there is no auto line to freeze.
+  const total = "110.80";
+  const lines = addSplitLine(
+    typeSplitAmount(
+      typeSplitAmount(startSplit(ALL), "CASH", "60.50"),
+      "UPI",
+      "40.30",
+    ),
+    "CARD",
+    total,
+  );
+  check(
+    "adding a line when none is auto",
+    amounts(resolveSplit(lines, total)),
+    ["CASH 60.50", "UPI 40.30", "CARD 10.00"],
+  );
+}
+
+check(
+  "keepEnabledLines: one line left is null",
+  keepEnabledLines(typedCash, ["CASH"]),
+  null,
+);
+check(
+  "keepEnabledLines: all enabled changes nothing",
+  keepEnabledLines(threeLines, ALL),
+  threeLines,
+);
+check(
+  "keepEnabledLines: dropping the auto line makes the last line auto",
+  keepEnabledLines(threeLines, ["CASH", "UPI", "OTHER"]),
+  [sl("CASH", "300", false), sl("UPI", "", true)],
+);
+check(
+  "keepEnabledLines: dropping a manual line keeps the auto line",
+  keepEnabledLines(threeLines, ["CASH", "CARD"]),
+  [sl("CASH", "300", false), sl("CARD", "", true)],
+);
+
+check(
+  "methodsToAdd lists the methods not yet used, in order",
+  methodsToAdd(typedCash, ALL),
+  ["CARD", "OTHER"],
+);
+check(
+  "methodsToAdd skips a disabled method",
+  methodsToAdd(typedCash, ["CASH", "UPI", "OTHER"]),
+  ["OTHER"],
+);
+
+check(
+  "splitPayload carries method and amount only",
+  toSplitPayload(resolveSplit(typedCash, TOTAL)),
+  [
+    { method: "CASH", amount: "400.00" },
+    { method: "UPI", amount: "100.00" },
+  ],
 );
 
 console.log(
