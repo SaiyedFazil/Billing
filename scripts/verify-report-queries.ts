@@ -2,6 +2,9 @@ import { sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import { add, compare, subtract, ZERO } from "../src/lib/utils/money";
+import { createBill } from "../src/server/bills/create-bill-service";
+import { getCashBook } from "../src/server/expenses/expenses-queries";
+import { getMenu } from "../src/server/items/items-queries";
 import {
   getDashboardStats,
   getItemSales,
@@ -152,6 +155,109 @@ async function main() {
     "every one-method bill has exactly one matching line",
     mismatched.n === 0,
     { bills: mismatched.n },
+  );
+
+  // --- a split bill is counted under each method it used -------------------
+  // Read both reports, save a CASH + UPI split bill, read them again. The
+  // bill's id and cash part stay in variables for the checks that follow.
+  const today = stats.businessDate;
+  const methodNet = (rows: Awaited<ReturnType<typeof getPaymentBreakdown>>) =>
+    new Map(rows.map((row) => [row.paymentMethod, row.net]));
+  const sumNet = (rows: Awaited<ReturnType<typeof getPaymentBreakdown>>) =>
+    rows.reduce((sum, row) => add(sum, row.net), ZERO);
+
+  const paymentsBefore = await getPaymentBreakdown(today, today);
+  const cashBookBefore = await getCashBook(today, today);
+
+  const [superadmin] = (
+    await db.execute(
+      sql`SELECT id FROM users WHERE role = 'SUPERADMIN' LIMIT 1`,
+    )
+  ).rows as Array<{ id: string }>;
+  const menu = await getMenu();
+  const splitItem = menu[0]?.items[0];
+
+  if (!superadmin || !splitItem) {
+    throw new Error(
+      "No superadmin or menu found. Run `npm run db:seed` first.",
+    );
+  }
+
+  const splitTotal = splitItem.price;
+  const splitCash = subtract(splitTotal, "10.00");
+  const splitSaved = await createBill(
+    {
+      idempotencyKey: crypto.randomUUID(),
+      lines: [{ itemId: splitItem.id, quantity: 1 }],
+      discount: "0.00",
+      paymentMethod: "SPLIT",
+      tendered: null,
+      splitPayments: [
+        { method: "CASH", amount: splitCash },
+        { method: "UPI", amount: "10.00" },
+      ],
+      expectedTotal: splitTotal,
+    },
+    superadmin.id,
+  );
+  if (!splitSaved.ok) {
+    throw new Error(
+      `The split probe bill did not save: ${splitSaved.error.message}`,
+    );
+  }
+  const splitBillId = splitSaved.data.id;
+
+  const paymentsAfter = await getPaymentBreakdown(today, today);
+  const cashBookAfter = await getCashBook(today, today);
+  const netBefore = methodNet(paymentsBefore);
+  const netAfter = methodNet(paymentsAfter);
+  const delta = (after: string | undefined, before: string | undefined) =>
+    subtract(after ?? ZERO, before ?? ZERO);
+
+  check(
+    "a split adds its cash part to Cash",
+    compare(delta(netAfter.get("CASH"), netBefore.get("CASH")), splitCash) ===
+      0,
+    { before: netBefore.get("CASH"), after: netAfter.get("CASH"), splitCash },
+  );
+  check(
+    "a split adds its UPI part to UPI",
+    compare(delta(netAfter.get("UPI"), netBefore.get("UPI")), "10.00") === 0,
+    { before: netBefore.get("UPI"), after: netAfter.get("UPI") },
+  );
+  check(
+    "a split bill counts once in Net",
+    compare(
+      subtract(sumNet(paymentsAfter), sumNet(paymentsBefore)),
+      splitTotal,
+    ) === 0,
+    {
+      before: sumNet(paymentsBefore),
+      after: sumNet(paymentsAfter),
+      splitTotal,
+    },
+  );
+  check(
+    "the Cash book splits it too",
+    compare(
+      subtract(
+        cashBookAfter.summary.moneyIn.cash,
+        cashBookBefore.summary.moneyIn.cash,
+      ),
+      splitCash,
+    ) === 0 &&
+      compare(
+        subtract(
+          cashBookAfter.summary.moneyIn.online,
+          cashBookBefore.summary.moneyIn.online,
+        ),
+        "10.00",
+      ) === 0,
+    {
+      before: cashBookBefore.summary.moneyIn,
+      after: cashBookAfter.summary.moneyIn,
+      splitBillId,
+    },
   );
 
   console.log(

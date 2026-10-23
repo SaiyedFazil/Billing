@@ -1,7 +1,5 @@
-import type {
-  BillPaymentMethod,
-  PaymentMethod,
-} from "@/constants/payment-methods";
+import type { BillPaymentMethod } from "@/constants/payment-methods";
+import type { SplitPaymentInput } from "@/lib/utils/bill-payments";
 
 /**
  * Every amount below is RUPEES as an exact decimal string, e.g. "60.50".
@@ -29,8 +27,10 @@ export type CreateBillInput = {
   idempotencyKey: string;
   lines: Array<{ itemId: string; quantity: number }>;
   discount: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: BillPaymentMethod;
   tendered: string | null;
+  /** The lines of a SPLIT bill. Absent for a one-method bill. */
+  splitPayments?: SplitPaymentInput[] | null;
   /** What the cashier saw on screen. A mismatch aborts with PRICE_CHANGED. */
   expectedTotal: string;
 };

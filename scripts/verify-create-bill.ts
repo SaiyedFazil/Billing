@@ -219,6 +219,129 @@ async function main() {
         SET payment_methods = '{CASH,UPI,CARD,OTHER}'::payment_method[]`,
   );
 
+  // --- a split bill --------------------------------------------------------
+  // One line of `first`, so the total is its price: Rs.10 on UPI, the rest in
+  // cash, with Rs.5 more handed over than the cash part.
+  const splitTotal = first.price;
+  const splitCash = subtract(splitTotal, "10.00");
+  const splitTendered = add(splitCash, "5.00");
+  const splitInput = {
+    idempotencyKey: crypto.randomUUID(),
+    lines: [{ itemId: first.id, quantity: 1 }],
+    discount: "0.00",
+    paymentMethod: "SPLIT" as const,
+    tendered: splitTendered,
+    splitPayments: [
+      { method: "CASH" as const, amount: splitCash },
+      { method: "UPI" as const, amount: "10.00" },
+    ],
+    expectedTotal: splitTotal,
+  };
+
+  const splitSaved = await createBill(splitInput, userId);
+  const splitBillId = splitSaved.ok ? splitSaved.data.id : null;
+  const splitBillRows = splitBillId
+    ? await db.execute(sql`
+        SELECT payment_method::text AS payment_method,
+               tendered::text AS tendered, change_due::text AS change_due
+        FROM bills WHERE id = ${splitBillId}::uuid`)
+    : null;
+  const splitLineRows = splitBillId
+    ? await db.execute(sql`
+        SELECT method::text AS method, amount::text AS amount,
+               tendered::text AS tendered, change_due::text AS change_due,
+               position
+        FROM bill_payments WHERE bill_id = ${splitBillId}::uuid
+        ORDER BY position`)
+    : null;
+  const expectedSplitBill = [
+    { payment_method: "SPLIT", tendered: null, change_due: null },
+  ];
+  const expectedSplitLines = [
+    {
+      method: "CASH",
+      amount: splitCash,
+      tendered: splitTendered,
+      change_due: "5.00",
+      position: 1,
+    },
+    {
+      method: "UPI",
+      amount: "10.00",
+      tendered: null,
+      change_due: null,
+      position: 2,
+    },
+  ];
+  check(
+    "a split bill saves",
+    JSON.stringify(splitBillRows?.rows) === JSON.stringify(expectedSplitBill) &&
+      JSON.stringify(splitLineRows?.rows) ===
+        JSON.stringify(expectedSplitLines),
+    {
+      saved: splitSaved,
+      bill: splitBillRows?.rows,
+      lines: splitLineRows?.rows,
+      expected: { bill: expectedSplitBill, lines: expectedSplitLines },
+    },
+  );
+
+  const splitRetry = await createBill(splitInput, userId);
+  const splitRetryLines = splitBillId
+    ? await db.execute(sql`
+        SELECT count(*)::int AS n FROM bill_payments
+        WHERE bill_id = ${splitBillId}::uuid`)
+    : null;
+  check(
+    "a split retry returns the same bill",
+    splitRetry.ok &&
+      splitRetry.data.id === splitBillId &&
+      (splitRetryLines?.rows[0] as { n: number } | undefined)?.n === 2,
+    { retry: splitRetry, lines: splitRetryLines?.rows },
+  );
+
+  const splitMismatch = await createBill(
+    {
+      ...splitInput,
+      idempotencyKey: crypto.randomUUID(),
+      splitPayments: [
+        { method: "CASH", amount: splitCash },
+        { method: "UPI", amount: "9.99" },
+      ],
+    },
+    userId,
+  );
+  check(
+    "split lines that don't add up are rejected",
+    !splitMismatch.ok && splitMismatch.error.code === "VALIDATION",
+    splitMismatch,
+  );
+
+  await db.execute(
+    sql`UPDATE shop_settings SET payment_methods = '{CASH,UPI}'::payment_method[]`,
+  );
+  const splitDisabled = await createBill(
+    {
+      ...splitInput,
+      idempotencyKey: crypto.randomUUID(),
+      tendered: null,
+      splitPayments: [
+        { method: "CASH", amount: splitCash },
+        { method: "CARD", amount: "10.00" },
+      ],
+    },
+    userId,
+  );
+  check(
+    "a disabled method in a split is rejected",
+    !splitDisabled.ok && splitDisabled.error.code === "CONFLICT",
+    splitDisabled,
+  );
+  await db.execute(
+    sql`UPDATE shop_settings
+        SET payment_methods = '{CASH,UPI,CARD,OTHER}'::payment_method[]`,
+  );
+
   // --- snapshots ---------------------------------------------------------
   const linesRow = await db.execute(sql`
     SELECT item_name, category_name, unit_price, quantity, line_total

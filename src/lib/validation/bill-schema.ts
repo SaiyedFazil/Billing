@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { PAYMENT_METHODS } from "@/constants/payment-methods";
+import {
+  BILL_PAYMENT_METHODS,
+  PAYMENT_METHODS,
+} from "@/constants/payment-methods";
+import { MAX_SPLIT_LINES } from "@/lib/utils/bill-payments";
 
 export const MAX_LINE_QUANTITY = 99;
 
@@ -37,8 +41,18 @@ export const createBillSchema = z.object({
   idempotencyKey: z.uuid(),
   lines: z.array(lineSchema).min(1, "Add at least one item to the bill"),
   discount: amount("Discount"),
-  paymentMethod: z.enum(PAYMENT_METHODS),
+  paymentMethod: z.enum(BILL_PAYMENT_METHODS),
   tendered: amount("Amount tendered").nullable(),
+  // Only for a SPLIT bill. A line is never SPLIT itself.
+  splitPayments: z
+    .array(
+      z.object({
+        method: z.enum(PAYMENT_METHODS),
+        amount: amount("Payment"),
+      }),
+    )
+    .max(MAX_SPLIT_LINES)
+    .nullish(),
   expectedTotal: amount("Total"),
 });
 

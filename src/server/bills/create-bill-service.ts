@@ -1,9 +1,5 @@
 import { eq, inArray, sql } from "drizzle-orm";
 
-import {
-  collectsTender,
-  PAYMENT_METHOD_LABELS,
-} from "@/constants/payment-methods";
 import { db } from "@/db";
 import {
   billCounters,
@@ -13,13 +9,13 @@ import {
   categories,
   items,
 } from "@/db/schema";
+import { planPayments } from "@/lib/utils/bill-payments";
 import { businessDate } from "@/lib/utils/dates";
 import {
   billTotal,
   compare,
   formatINR,
   lineTotal,
-  subtract,
   toAmount,
 } from "@/lib/utils/money";
 import { isUniqueViolation } from "@/lib/utils/parse-db-error";
@@ -182,27 +178,10 @@ export async function createBill(
 
   // The till only draws buttons for enabled methods, but a server action is a
   // publicly callable endpoint — hiding a button is not enforcement, so the
-  // method is checked here too. See spec §8.2.
-  if (!enabledMethods.includes(input.paymentMethod)) {
-    return fail(
-      "CONFLICT",
-      `${PAYMENT_METHOD_LABELS[input.paymentMethod]} is no longer accepted at this shop. Pick another payment method.`,
-    );
-  }
-
-  let tendered: string | null = null;
-  let changeDue: string | null = null;
-
-  if (collectsTender(input.paymentMethod) && input.tendered !== null) {
-    tendered = toAmount(input.tendered);
-    if (compare(tendered, total) < 0) {
-      return fail(
-        "VALIDATION",
-        "The amount tendered is less than the bill total.",
-        { tendered: `Must be at least ${formatINR(total)}` },
-      );
-    }
-    changeDue = subtract(tendered, total);
+  // methods and the split are checked here too. See spec §8.2.
+  const plan = planPayments(input, total, enabledMethods);
+  if (!plan.ok) {
+    return fail(plan.error.code, plan.error.message, plan.error.fields);
   }
 
   // Stamped as late as possible, so the date reflects when the bill was saved.
@@ -232,9 +211,9 @@ export async function createBill(
           subtotal,
           discount,
           total,
-          paymentMethod: input.paymentMethod,
-          tendered,
-          changeDue,
+          paymentMethod: plan.data.paymentMethod,
+          tendered: plan.data.tendered,
+          changeDue: plan.data.changeDue,
           idempotencyKey: input.idempotencyKey,
           createdBy: userId,
         })
@@ -242,14 +221,11 @@ export async function createBill(
 
       // How the bill was paid. A deferred trigger checks at COMMIT that the
       // lines add up to the bill, so a mismatch throws out of the transaction.
-      await tx.insert(billPayments).values({
-        billId: bill.id,
-        method: input.paymentMethod,
-        amount: total,
-        tendered,
-        changeDue,
-        position: 1,
-      });
+      await tx
+        .insert(billPayments)
+        .values(
+          plan.data.lines.map((payment) => ({ billId: bill.id, ...payment })),
+        );
 
       await tx.insert(billItems).values(
         priced.map((line) => ({
