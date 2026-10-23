@@ -1,4 +1,7 @@
-import type { PaymentMethod } from "@/constants/payment-methods";
+import type {
+  BillPaymentMethod,
+  PaymentMethod,
+} from "@/constants/payment-methods";
 
 /**
  * Every amount below is RUPEES as an exact decimal string, e.g. "60.50".
@@ -55,7 +58,8 @@ export type ReceiptData = {
   subtotal: string;
   discount: string;
   total: string;
-  paymentMethod: PaymentMethod;
+  /** The bill's label: one method, or SPLIT. */
+  paymentMethod: BillPaymentMethod;
   tendered: string | null;
   changeDue: string | null;
   shop: {

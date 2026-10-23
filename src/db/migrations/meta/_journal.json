@@ -57,6 +57,20 @@
       "when": 1792532034078,
       "tag": "0007_amusing_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792791394914,
+      "tag": "0008_left_major_mapleleaf",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792791394915,
+      "tag": "0009_bill_payments_guards",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,7 @@ const TABLES = [
   "items",
   "bills",
   "bill_items",
+  "bill_payments",
   "bill_counters",
   "audit_log",
   "shop_settings",

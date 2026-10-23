@@ -50,6 +50,11 @@ async function main() {
                          total, payment_method, idempotency_key, created_by)
       SELECT 9100, '2026-01-02', 50.00, 0.00, 50.00, 'CASH', gen_random_uuid(), u.id
       FROM u RETURNING id
+    ), p AS (
+      -- In the same statement as its bill, so the deferred balance check
+      -- sees both when it runs at commit.
+      INSERT INTO bill_payments (bill_id, method, amount, position)
+      SELECT b.id, 'CASH', 50.00, 1 FROM b
     )
     INSERT INTO bill_items (bill_id, item_id, item_name, category_name,
                             unit_price, quantity, line_total)
@@ -80,6 +85,16 @@ async function main() {
     "UPDATE of a non-void column on bills",
     sql`UPDATE bills SET total = 1.00 WHERE id = ${billId}::uuid`,
   );
+  await expectRejection(
+    "UPDATE on bill_payments",
+    sql`UPDATE bill_payments SET amount = 1.00 WHERE bill_id = ${billId}::uuid`,
+    "bill_payments are immutable",
+  );
+  await expectRejection(
+    "DELETE on bill_payments",
+    sql`DELETE FROM bill_payments WHERE bill_id = ${billId}::uuid`,
+    "bill_payments are immutable",
+  );
 
   // --- stock history is append-only ------------------------------------
   const movement = await db.execute(sql`
@@ -102,6 +117,7 @@ async function main() {
   );
 
   // --- the one permitted mutation must SUCCEED -------------------------
+  // The bill has a payment line, which stays as the record of what was paid.
   try {
     await db.execute(sql`
       UPDATE bills SET status = 'VOID', voided_at = now(), void_reason = 'probe'
@@ -135,11 +151,20 @@ async function main() {
   await db.execute(
     sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
   );
+  await db.execute(
+    sql`ALTER TABLE bill_payments DISABLE TRIGGER bill_payments_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
   await db.execute(sql`DELETE FROM bill_items WHERE bill_id = ${billId}::uuid`);
+  await db.execute(
+    sql`DELETE FROM bill_payments WHERE bill_id = ${billId}::uuid`,
+  );
   await db.execute(sql`DELETE FROM bills WHERE id = ${billId}::uuid`);
   await db.execute(
     sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
+  await db.execute(
+    sql`ALTER TABLE bill_payments ENABLE TRIGGER bill_payments_immutable`,
   );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
   await db.execute(

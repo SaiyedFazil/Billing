@@ -32,6 +32,7 @@ export const bills = pgTable(
     discount: money("discount").notNull().default("0.00"),
     total: money("total").notNull(),
 
+    // One real method, or SPLIT when bill_payments holds two or more lines.
     paymentMethod: paymentMethodEnum("payment_method").notNull(),
     tendered: money("tendered"),
     changeDue: money("change_due"),
@@ -74,6 +75,11 @@ export const bills = pgTable(
     check(
       "bills_change_matches",
       sql`${table.tendered} IS NULL OR ${table.changeDue} = ${table.tendered} - ${table.total}`,
+    ),
+    // A split bill's cash given and change live on its cash payment line.
+    check(
+      "bills_split_has_no_tender",
+      sql`${table.paymentMethod} <> 'SPLIT' OR (${table.tendered} IS NULL AND ${table.changeDue} IS NULL)`,
     ),
 
     index("bills_business_date_idx").on(table.businessDate),

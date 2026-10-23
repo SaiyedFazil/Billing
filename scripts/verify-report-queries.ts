@@ -120,6 +120,40 @@ async function main() {
     console.log("SKIP — no completed bill available to void-test");
   }
 
+  // --- data audit: every bill's payment lines ----------------------------
+  // Voided bills included. Run after db:migrate on a copy of the live data:
+  // the backfill must leave every bill paid exactly as it was. Spec §6.4.
+  const [unbalanced] = (
+    await db.execute(sql`
+      SELECT count(*)::int AS n FROM bills b
+      WHERE b.total <> coalesce(
+        (SELECT sum(p.amount) FROM bill_payments p WHERE p.bill_id = b.id), 0)`)
+  ).rows as Array<{ n: number }>;
+  check("every bill's payment lines add up to its total", unbalanced.n === 0, {
+    bills: unbalanced.n,
+  });
+
+  const [mismatched] = (
+    await db.execute(sql`
+      SELECT count(*)::int AS n FROM bills b
+      WHERE b.payment_method <> 'SPLIT'
+        AND (
+          (SELECT count(*) FROM bill_payments p WHERE p.bill_id = b.id) <> 1
+          OR EXISTS (
+            SELECT 1 FROM bill_payments p
+            WHERE p.bill_id = b.id
+              AND (p.method, p.amount, p.tendered, p.change_due)
+                  IS DISTINCT FROM
+                  (b.payment_method, b.total, b.tendered, b.change_due)
+          )
+        )`)
+  ).rows as Array<{ n: number }>;
+  check(
+    "every one-method bill has exactly one matching line",
+    mismatched.n === 0,
+    { bills: mismatched.n },
+  );
+
   console.log(
     failures === 0
       ? "\nAll report query checks passed."

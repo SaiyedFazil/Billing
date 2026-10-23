@@ -3,9 +3,10 @@ import { sql } from "drizzle-orm";
 import { db } from "../src/db";
 
 /**
- * Deletes ALL bills, bill lines, counters, stock history and expenses, and
- * switches stock tracking off on every item. Expense categories are kept. For the development-to-handover
- * transition only — the shop's real ledger must never be run through this.
+ * Deletes ALL bills, bill lines, payment lines, counters, stock history and
+ * expenses, and switches stock tracking off on every item. Expense categories
+ * are kept. For the development-to-handover transition only — the shop's real
+ * ledger must never be run through this.
  *
  * The immutability triggers exist precisely to stop this happening by accident,
  * so they are disabled and re-enabled around the delete.
@@ -30,6 +31,11 @@ async function main() {
   await db.execute(
     sql`ALTER TABLE bill_items DISABLE TRIGGER bill_items_immutable`,
   );
+  // The deferred balance triggers fire on INSERT only, so the delete never
+  // trips them; only the immutability trigger needs lifting.
+  await db.execute(
+    sql`ALTER TABLE bill_payments DISABLE TRIGGER bill_payments_immutable`,
+  );
   await db.execute(sql`ALTER TABLE bills DISABLE TRIGGER bills_no_delete`);
   await db.execute(
     sql`ALTER TABLE bills DISABLE TRIGGER bills_restrict_update`,
@@ -50,6 +56,7 @@ async function main() {
     sql`UPDATE items SET track_stock = false, stock_quantity = 0`,
   );
   await db.execute(sql`DELETE FROM bill_items`);
+  await db.execute(sql`DELETE FROM bill_payments`);
   await db.execute(sql`DELETE FROM bills`);
   await db.execute(sql`DELETE FROM bill_counters`);
   // Practice expenses go with the practice bills; the category list stays.
@@ -57,6 +64,9 @@ async function main() {
 
   await db.execute(
     sql`ALTER TABLE bill_items ENABLE TRIGGER bill_items_immutable`,
+  );
+  await db.execute(
+    sql`ALTER TABLE bill_payments ENABLE TRIGGER bill_payments_immutable`,
   );
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_no_delete`);
   await db.execute(sql`ALTER TABLE bills ENABLE TRIGGER bills_restrict_update`);
@@ -69,9 +79,10 @@ async function main() {
   // remove the audit guarantee, and nothing else would ever notice.
   const check = await db.execute(sql`
     SELECT tgname, tgenabled FROM pg_trigger
-    WHERE tgname IN ('bill_items_immutable', 'bills_no_delete',
-                     'bills_restrict_update', 'stock_movements_immutable',
-                     'expenses_no_delete', 'expenses_cancelled_final')
+    WHERE tgname IN ('bill_items_immutable', 'bill_payments_immutable',
+                     'bills_no_delete', 'bills_restrict_update',
+                     'stock_movements_immutable', 'expenses_no_delete',
+                     'expenses_cancelled_final')
     ORDER BY tgname`);
 
   const triggers = check.rows as Array<{ tgname: string; tgenabled: string }>;
@@ -79,11 +90,11 @@ async function main() {
 
   // 'O' means "enabled, origin" — the normal enabled state. 'D' is disabled.
   const allEnabled =
-    triggers.length === 6 && triggers.every((t) => t.tgenabled === "O");
+    triggers.length === 7 && triggers.every((t) => t.tgenabled === "O");
 
   console.log(
     allEnabled
-      ? "Bills and expenses cleared. All six immutability triggers are ENABLED."
+      ? "Bills and expenses cleared. All seven immutability triggers are ENABLED."
       : "WARNING — a trigger is still disabled. Re-run `npm run db:migrate`.",
   );
 

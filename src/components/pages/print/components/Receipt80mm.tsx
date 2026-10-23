@@ -1,4 +1,4 @@
-import { PAYMENT_METHOD_LABELS } from "@/constants/payment-methods";
+import { BILL_PAYMENT_METHOD_LABELS } from "@/constants/payment-methods";
 import { formatBillDate, formatBillTime } from "@/lib/utils/dates";
 import { formatReceiptAmount, isZero } from "@/lib/utils/money";
 import type { ReceiptData } from "@/types/bill.types";
@@ -89,7 +89,7 @@ export function Receipt80mm({
             <td className="amt">{formatReceiptAmount(receipt.total)}</td>
           </tr>
           <tr>
-            <td>Paid: {PAYMENT_METHOD_LABELS[receipt.paymentMethod]}</td>
+            <td>Paid: {BILL_PAYMENT_METHOD_LABELS[receipt.paymentMethod]}</td>
             <td className="amt">
               {formatReceiptAmount(receipt.tendered ?? receipt.total)}
             </td>

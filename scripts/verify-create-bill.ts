@@ -66,6 +66,28 @@ async function main() {
     result.data.total,
   );
 
+  // --- the bill's payment line ---------------------------------------------
+  // Every amount crosses as ::text, so the comparison is exact.
+  const paymentsRow = await db.execute(sql`
+    SELECT method::text AS method, amount::text AS amount,
+           tendered::text AS tendered, change_due::text AS change_due, position
+    FROM bill_payments WHERE bill_id = ${result.data.id}::uuid
+    ORDER BY position`);
+  const expectedPayments = [
+    {
+      method: "CASH",
+      amount: expectedTotal,
+      tendered: "500.00",
+      change_due: subtract("500.00", expectedTotal),
+      position: 1,
+    },
+  ];
+  check(
+    "a one-method bill writes exactly one matching line",
+    JSON.stringify(paymentsRow.rows) === JSON.stringify(expectedPayments),
+    { got: paymentsRow.rows, expected: expectedPayments },
+  );
+
   // --- idempotency: the single most important behaviour -----------------
   const repeat = await createBill(
     {

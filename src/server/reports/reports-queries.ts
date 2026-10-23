@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { billItems, bills } from "@/db/schema";
+import { billItems, billPayments, bills } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
 import { businessDate } from "@/lib/utils/dates";
 import { add, divide, isZero, toAmount, ZERO } from "@/lib/utils/money";
@@ -112,6 +112,11 @@ export async function getSalesTrend(
   return getSalesByDay(from, to);
 }
 
+/**
+ * Summed from the payment lines, never from bills.payment_method: a split
+ * bill's money belongs to its lines, so it counts once under each method it
+ * used. One line per method per bill, so billCount still counts bills.
+ */
 export async function getPaymentBreakdown(
   from: string,
   to: string,
@@ -119,14 +124,15 @@ export async function getPaymentBreakdown(
   return withConnectionRetry(async () => {
     const rows = await db
       .select({
-        paymentMethod: bills.paymentMethod,
+        paymentMethod: billPayments.method,
         billCount: sql<number>`count(*)::int`,
-        net: sql<string>`coalesce(sum(${bills.total}), 0)::text`,
+        net: sql<string>`coalesce(sum(${billPayments.amount}), 0)::text`,
       })
-      .from(bills)
+      .from(billPayments)
+      .innerJoin(bills, eq(bills.id, billPayments.billId))
       .where(inRange(from, to))
-      .groupBy(bills.paymentMethod)
-      .orderBy(desc(sql`sum(${bills.total})`));
+      .groupBy(billPayments.method)
+      .orderBy(desc(sql`sum(${billPayments.amount})`));
 
     return rows.map((row) => ({ ...row, net: toAmount(row.net) }));
   });

@@ -34,6 +34,7 @@ async function main() {
   await db.execute(sql`DROP TABLE IF EXISTS expenses CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS expense_categories CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_items CASCADE`);
+  await db.execute(sql`DROP TABLE IF EXISTS bill_payments CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bills CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_counters CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS audit_log CASCADE`);
@@ -56,6 +57,18 @@ async function main() {
   );
   await db.execute(
     sql`DROP FUNCTION IF EXISTS prevent_expense_category_delete CASCADE`,
+  );
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS prevent_bill_payment_mutation CASCADE`,
+  );
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS check_bill_payments_on_bill CASCADE`,
+  );
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS check_bill_payments_on_line CASCADE`,
+  );
+  await db.execute(
+    sql`DROP FUNCTION IF EXISTS assert_bill_payments_balance CASCADE`,
   );
 
   await db.execute(sql`DROP TYPE IF EXISTS user_role CASCADE`);

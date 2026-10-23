@@ -2,11 +2,15 @@ import { pgEnum } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["ADMIN", "SUPERADMIN"]);
 
+// SPLIT is a bill-level label only (bills.payment_method): never a payment
+// line's method, never an enabled till method. CHECKs on bill_payments and
+// shop_settings enforce that. See the split payment spec §6.1.
 export const paymentMethodEnum = pgEnum("payment_method", [
   "CASH",
   "UPI",
   "CARD",
   "OTHER",
+  "SPLIT",
 ]);
 
 export const billStatusEnum = pgEnum("bill_status", ["COMPLETED", "VOID"]);

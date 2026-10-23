@@ -5,7 +5,14 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "@/constants/payment-methods";
 import { db } from "@/db";
-import { billCounters, billItems, bills, categories, items } from "@/db/schema";
+import {
+  billCounters,
+  billItems,
+  billPayments,
+  bills,
+  categories,
+  items,
+} from "@/db/schema";
 import { businessDate } from "@/lib/utils/dates";
 import {
   billTotal,
@@ -232,6 +239,17 @@ export async function createBill(
           createdBy: userId,
         })
         .returning(CREATED_BILL_COLUMNS);
+
+      // How the bill was paid. A deferred trigger checks at COMMIT that the
+      // lines add up to the bill, so a mismatch throws out of the transaction.
+      await tx.insert(billPayments).values({
+        billId: bill.id,
+        method: input.paymentMethod,
+        amount: total,
+        tendered,
+        changeDue,
+        position: 1,
+      });
 
       await tx.insert(billItems).values(
         priced.map((line) => ({
