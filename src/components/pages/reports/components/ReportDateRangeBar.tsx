@@ -17,11 +17,17 @@ export function ReportDateRangeBar({
   from,
   to,
   presets,
+  keepParams,
 }: {
   from: string;
   to: string;
   /** Precomputed on the server so presets use the SHOP's today, not the browser's. */
   presets: Record<RangePreset, { from: string; to: string }>;
+  /**
+   * Other URL params to carry across a range change. Without it a range
+   * change keeps only from and to, which resets the page and every filter.
+   */
+  keepParams?: Record<string, string>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,8 +43,12 @@ export function ReportDateRangeBar({
     // Swap rather than reject — the user clearly meant the range between them.
     const [start, end] =
       nextFrom <= nextTo ? [nextFrom, nextTo] : [nextTo, nextFrom];
+    const query = new URLSearchParams({ from: start, to: end });
+    for (const [key, value] of Object.entries(keepParams ?? {})) {
+      if (value) query.set(key, value);
+    }
     startTransition(() => {
-      router.push(`${pathname}?from=${start}&to=${end}`);
+      router.push(`${pathname}?${query.toString()}`);
     });
   }
 

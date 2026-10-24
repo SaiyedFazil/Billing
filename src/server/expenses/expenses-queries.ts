@@ -33,6 +33,7 @@ import type {
   CategorySpendRow,
   ExpenseCategoryRow,
   ExpenseListFilters,
+  ExpenseMonth,
   ExpensePage,
   ExpenseRow,
 } from "@/types/expense.types";
@@ -176,6 +177,25 @@ function toExpenseRow({ updatedAt, ...row }: SelectedExpense): ExpenseRow {
 }
 
 /**
+ * The list filters as SQL. Shared by the list and the spreadsheet's total,
+ * so the total always covers exactly the rows the filters select.
+ */
+function expenseListConditions(filters: ExpenseListFilters): SQL[] {
+  const conditions: SQL[] = [
+    gte(expenses.expenseDate, filters.from),
+    lte(expenses.expenseDate, filters.to),
+  ];
+  if (filters.group === "CASH") conditions.push(eq(expenses.mode, "CASH"));
+  if (filters.group === "ONLINE") {
+    conditions.push(inArray(expenses.mode, [...ONLINE_EXPENSE_MODES]));
+  }
+  if (filters.categoryId) {
+    conditions.push(eq(expenses.categoryId, filters.categoryId));
+  }
+  return conditions;
+}
+
+/**
  * Filtered and paginated in SQL, like the Bills ledger. Cancelled rows are
  * included: the list shows them struck through.
  */
@@ -185,19 +205,7 @@ export async function listExpenses(
   pageSize: number,
 ): Promise<ExpensePage> {
   return withConnectionRetry(async () => {
-    const conditions: SQL[] = [
-      gte(expenses.expenseDate, filters.from),
-      lte(expenses.expenseDate, filters.to),
-    ];
-    if (filters.group === "CASH") conditions.push(eq(expenses.mode, "CASH"));
-    if (filters.group === "ONLINE") {
-      conditions.push(inArray(expenses.mode, [...ONLINE_EXPENSE_MODES]));
-    }
-    if (filters.categoryId) {
-      conditions.push(eq(expenses.categoryId, filters.categoryId));
-    }
-
-    const where = and(...conditions);
+    const where = and(...expenseListConditions(filters));
 
     const [rows, [totalRow]] = await Promise.all([
       selectExpenseRows()
@@ -214,6 +222,39 @@ export async function listExpenses(
       page,
       pageSize,
     };
+  });
+}
+
+/**
+ * What the filters add up to across every page, for the spreadsheet's footer.
+ * A cancelled expense is listed but never counted.
+ */
+export async function getExpenseTotal(
+  filters: ExpenseListFilters,
+): Promise<string> {
+  return withConnectionRetry(async () => {
+    const [row] = await db
+      .select({
+        total: sql<string>`coalesce(sum(${expenses.amount}), 0)::text`,
+      })
+      .from(expenses)
+      .where(and(ACTIVE, ...expenseListConditions(filters)));
+    return toAmount(row?.total ?? ZERO);
+  });
+}
+
+/**
+ * Every month that has an expense, newest first, with how many it has.
+ * Cancelled expenses count, because the spreadsheet lists them too.
+ */
+export async function listExpenseMonths(): Promise<ExpenseMonth[]> {
+  return withConnectionRetry(async () => {
+    const month = sql<string>`to_char(${expenses.expenseDate}, 'YYYY-MM')`;
+    return db
+      .select({ month, count: sql<number>`count(*)::int` })
+      .from(expenses)
+      .groupBy(month)
+      .orderBy(desc(month));
   });
 }
 

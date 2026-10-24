@@ -6,6 +6,17 @@ import {
   summarizeCashBook,
 } from "../src/lib/utils/cash-book";
 import { expensesCsv } from "../src/lib/utils/expense-export";
+import { parseExpenseListParams } from "../src/lib/utils/expense-list-params";
+import {
+  defaultMonth,
+  expenseListHref,
+  formatSheetDate,
+  groupMonthsByYear,
+  monthBounds,
+  monthLabel,
+  monthOfRange,
+  parsePageSize,
+} from "../src/lib/utils/expense-spreadsheet";
 import {
   cancelExpenseSchema,
   createExpenseSchema,
@@ -234,6 +245,133 @@ check(
   "a cancelled row reads Cancelled with its reason",
   csvLines[2],
   "2026-10-19,Repairs & maintenance,,,Cash,Cash,450.00,Cancelled,Entered twice,Shop Owner,2026-10-19T05:00:00.000Z",
+);
+
+// --- spreadsheet view ---------------------------------------------------
+check(
+  "rows per page accepts only 25, 50 and 100",
+  ["25", "50", "100", "", "10", "1000", "abc", "50.0"].map(parsePageSize),
+  [25, 50, 100, 25, 25, 25, 25, 25],
+);
+check("a month's bounds", monthBounds("2026-10"), {
+  from: "2026-10-01",
+  to: "2026-10-31",
+});
+check(
+  "February in a leap year ends on the 29th",
+  monthBounds("2028-02")?.to,
+  "2028-02-29",
+);
+check(
+  "February in a common year ends on the 28th",
+  monthBounds("2026-02")?.to,
+  "2026-02-28",
+);
+check(
+  "a malformed month has no bounds",
+  ["2026-13", "2026-00", "2026-1", "", "abcd-ef"].map(monthBounds),
+  [null, null, null, null, null],
+);
+check(
+  "a range that is exactly one month names it",
+  monthOfRange("2026-10-01", "2026-10-31"),
+  "2026-10",
+);
+check(
+  "a range that is not exactly one month names none",
+  [
+    monthOfRange("2026-10-01", "2026-10-24"),
+    monthOfRange("2026-10-02", "2026-10-31"),
+    monthOfRange("2026-09-01", "2026-10-31"),
+  ],
+  [null, null, null],
+);
+check("a month reads in words", monthLabel("2026-10"), "October 2026");
+check(
+  "months group under their year, newest first",
+  groupMonthsByYear([
+    { month: "2026-10", count: 2 },
+    { month: "2026-07", count: 9 },
+    { month: "2025-12", count: 21 },
+  ]),
+  [
+    {
+      year: "2026",
+      months: [
+        { month: "2026-10", count: 2 },
+        { month: "2026-07", count: 9 },
+      ],
+    },
+    { year: "2025", months: [{ month: "2025-12", count: 21 }] },
+  ],
+);
+check("no months, no groups", groupMonthsByYear([]), []);
+const sheetMonths = [
+  { month: "2026-10", count: 2 },
+  { month: "2026-07", count: 9 },
+];
+check(
+  "month view opens on the range's month when it has expenses",
+  defaultMonth("2026-07-05", sheetMonths),
+  "2026-07",
+);
+check(
+  "otherwise on the newest month with expenses",
+  defaultMonth("2026-08-01", sheetMonths),
+  "2026-10",
+);
+check(
+  "with no expenses at all there is no month",
+  defaultMonth("2026-08-01", []),
+  null,
+);
+check(
+  "the grid's date is day-month-year",
+  formatSheetDate("2026-10-20"),
+  "20-10-2026",
+);
+check(
+  "a link keeps the range and only the filters that are set",
+  [
+    expenseListHref("/x", {
+      from: "2026-10-01",
+      to: "2026-10-24",
+      group: "cash",
+      categoryId: "",
+    }),
+    expenseListHref("/x", {
+      from: "2026-10-01",
+      to: "2026-10-31",
+      group: "",
+      categoryId: "",
+    }),
+  ],
+  [
+    "/x?from=2026-10-01&to=2026-10-24&group=cash",
+    "/x?from=2026-10-01&to=2026-10-31",
+  ],
+);
+
+const listParams = (values: Record<string, string>) =>
+  parseExpenseListParams((key) => values[key] ?? "");
+check(
+  "list params: cash, a category and page 3",
+  listParams({
+    group: "cash",
+    categoryId: "6f1c2b9e-3a4d-4e5f-8a7b-1c2d3e4f5a6b",
+    page: "3",
+  }),
+  {
+    group: "CASH",
+    groupParam: "cash",
+    categoryId: "6f1c2b9e-3a4d-4e5f-8a7b-1c2d3e4f5a6b",
+    page: 3,
+  },
+);
+check(
+  "list params: junk falls back to the defaults",
+  listParams({ group: "bogus", categoryId: "not-a-uuid", page: "-2" }),
+  { groupParam: "bogus", page: 1 },
 );
 
 console.log(
