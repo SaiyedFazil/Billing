@@ -1,4 +1,5 @@
 import { ItemReportTab } from "@/components/pages/reports/items/ItemReportTab";
+import { requireUser } from "@/lib/auth/guard";
 import { resolveReportRange } from "@/lib/utils/report-params";
 import { getItemSales } from "@/server/reports/reports-queries";
 import { getShopTimezone } from "@/server/settings/settings-queries";
@@ -11,6 +12,8 @@ export const metadata = {
 export default async function Page({
   searchParams,
 }: PageProps<"/reports/items">) {
+  await requireUser();
+
   const params = await searchParams;
   const timeZone = await getShopTimezone();
   const { from, to, presets } = resolveReportRange(params, timeZone, "LAST_30");

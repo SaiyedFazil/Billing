@@ -1,4 +1,5 @@
 import { SalesReportTab } from "@/components/pages/reports/sales/SalesReportTab";
+import { requireUser } from "@/lib/auth/guard";
 import { resolveReportRange } from "@/lib/utils/report-params";
 import {
   getPaymentBreakdown,
@@ -15,6 +16,8 @@ export const metadata = {
 export default async function Page({
   searchParams,
 }: PageProps<"/reports/sales">) {
+  await requireUser();
+
   const params = await searchParams;
   const timeZone = await getShopTimezone();
   const { from, to, presets } = resolveReportRange(params, timeZone, "LAST_7");
