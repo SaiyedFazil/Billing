@@ -1,4 +1,4 @@
-ALTER TYPE "public"."payment_method" ADD VALUE 'SPLIT';--> statement-breakpoint
+ALTER TYPE "public"."payment_method" ADD VALUE IF NOT EXISTS 'SPLIT';--> statement-breakpoint
 CREATE TABLE "bill_payments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"bill_id" uuid NOT NULL,

@@ -66,6 +66,36 @@ npm run db:migrate     # applies to whatever DATABASE_URL points at
 This is the one migration that changes how every bill is stored, so follow the
 order. Do it after closing, when no till is saving bills. Allow about an hour.
 
+**Before go-live night,** the owner runs through these screens on a test copy,
+never the live site (for example `npm run dev` against a Neon branch), with all
+four payment methods switched on:
+
+- **The ₹500 bill:**
+  1. Tap Split and type 400 in Cash. UPI shows 100.00 "the rest" and the status
+     reads Fully paid.
+  2. Enter cash given 500. Change shows ₹100.00.
+  3. Save & Print. The receipt lists both payments, plus cash given and change.
+- **Status states:** type into UPI, change the discount, and watch Collect /
+  too much appear. Add Card, then remove it. Tap Cash and the split goes away.
+- **Price change:** change an item's price in another tab while a bill is open,
+  then press Save. A one-method bill saves at the new total; a split returns to
+  the panel re-balanced.
+- **Layout:**
+  - Save & Print stays on screen at 1366×768 and at phone width.
+  - There's no horizontal scroll at 375px.
+  - Five method buttons fit at 360px.
+- **Receipts:** print a split bill at 80mm and 58mm. A cash bill's receipt is
+  unchanged.
+- **Bills list:** the Split row and its hover amounts, the Split / Cash / UPI
+  filters, and the split bill's details page.
+- **Reports:**
+  - the Sales report's "By payment method" note appears only in a range with a
+    split bill
+  - the Cash book shows the split's cash and online parts
+- **Backup:** Settings → Export all data downloads six files.
+
+**On the night:**
+
 1. **Back up.** Take the dump described under "Backups" below, and run
    Settings → Export all data.
 2. **Prove it on a copy first.** In the Neon console, make a branch of the live
@@ -91,8 +121,17 @@ order. Do it after closing, when no till is saving bills. Allow about an hour.
    the branch for the "after" figures). They must match to the paisa. If
    anything differs, stop and do not go live.
 
-3. **Migrate the live database and deploy straight away.** Point
-   `DATABASE_URL` back at the live database, then run:
+3. **Build first,** while the old till still works:
+
+   ```bash
+   npm run build
+   ```
+
+   If it fails, stop. Nothing has changed yet, and the old till carries on.
+   Only once it succeeds, go on to migrate and deploy.
+
+4. **Migrate the live database and deploy straight away.** Point
+   `DATABASE_URL` back at the live database and note the time, then run:
 
    ```bash
    npm run db:migrate
@@ -102,8 +141,16 @@ order. Do it after closing, when no till is saving bills. Allow about an hour.
    The old till cannot save a bill once the migration has run, so do not leave
    a gap between the two commands.
 
-4. **Try it.** Ring up one cash bill and one split bill (for example ₹400 cash
+5. **Try it.** Ring up one cash bill and one split bill (for example ₹400 cash
    and ₹100 UPI). Check both receipts, then void both test bills.
+
+**If `db:migrate` or the deploy fails part-way,** do not run it again blindly.
+Restore the live database to just before the migration with Neon's
+point-in-time restore (restore the live branch to the time you noted in step
+4), then redeploy the previous build (in Netlify, Deploys → the last good
+production deploy → Publish deploy). Do not use a plain `pg_restore` of the
+step 1 dump for this: over a migrated database it does not remove
+`bill_payments` and its triggers cleanly.
 
 ### The hand-written trigger migration
 
