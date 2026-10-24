@@ -220,26 +220,26 @@ npm run verify:all       # the above plus all database checks
 npm run build            # the production build
 ```
 
-| Command                                               | Proves                                                         |
-| ----------------------------------------------------- | -------------------------------------------------------------- |
-| `verify:money`                                        | exact rupee arithmetic and the shop-local midnight rollover    |
-| `verify:retry`                                        | cold-start retry fires once, and never on a real error         |
-| `verify:reports`                                      | date-range and CSV helpers                                     |
-| `format:check`                                        | every file is Prettier-formatted                               |
-| `db:verify`                                           | CHECK constraints reject impossible bills                      |
-| `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding            |
-| `verify:bill`                                         | idempotency, price-change detection, gapless numbering         |
-| `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)          |
-| `verify:stock`                                        | sale deduction, last-unit race, adjustments, history           |
-| `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation (no DB) |
-| `verify:split-payment`                                | split payment rules and the till's split maths (no DB)         |
-| `verify:menu-import`                                  | card is valid, adds no duplicate, replace is exact (no DB)     |
-| `verify:audit-details`                                | every audit action reads as plain words (no DB)                |
-| `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |
-| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                 |
-| `verify:report-queries`                               | report SQL against real data; saves a test bill                |
-| `db:audit-payments`                                   | every bill's payments add up; read-only, safe on live data     |
-| `verify:imagekit`                                     | image upload credentials                                       |
+| Command                                               | Proves                                                                              |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `verify:money`                                        | exact rupee arithmetic and the shop-local midnight rollover                         |
+| `verify:retry`                                        | cold-start retry fires once, and never on a real error                              |
+| `verify:reports`                                      | date-range and CSV helpers                                                          |
+| `format:check`                                        | every file is Prettier-formatted                                                    |
+| `db:verify`                                           | CHECK constraints reject impossible bills                                           |
+| `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding                                 |
+| `verify:bill`                                         | idempotency, price-change detection, gapless numbering                              |
+| `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)                               |
+| `verify:stock`                                        | sale deduction, last-unit race, adjustments, history                                |
+| `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation, spreadsheet helpers (no DB) |
+| `verify:split-payment`                                | split payment rules and the till's split maths (no DB)                              |
+| `verify:menu-import`                                  | card is valid, adds no duplicate, replace is exact (no DB)                          |
+| `verify:audit-details`                                | every audit action reads as plain words (no DB)                                     |
+| `verify:expenses`                                     | expense writes, cancellation, categories, cash book and spreadsheet totals          |
+| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                                      |
+| `verify:report-queries`                               | report SQL against real data; saves a test bill                                     |
+| `db:audit-payments`                                   | every bill's payments add up; read-only, safe on live data                          |
+| `verify:imagekit`                                     | image upload credentials                                                            |
 
 The `db:*` and database `verify:*` checks run against whatever `DATABASE_URL`
 points at. Run `npm run verify:all` before every deploy.

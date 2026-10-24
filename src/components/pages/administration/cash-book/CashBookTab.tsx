@@ -7,9 +7,11 @@ import {
   ChevronRight,
   Plus,
   Scale,
+  Sheet,
   Tags,
   Wallet,
 } from "lucide-react";
+import Link from "next/link";
 
 import { StatCard } from "@/components/custom/StatCard";
 import { TableCard } from "@/components/custom/TableCard";
@@ -26,7 +28,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ADMIN_ROUTES } from "@/lib/routes/administration-routes";
 import type { CashBookDay, CashBookSummary } from "@/lib/utils/cash-book";
+import { expenseListHref } from "@/lib/utils/expense-spreadsheet";
 import { formatINR, isNegative } from "@/lib/utils/money";
 import type { PresetMap } from "@/lib/utils/report-params";
 import { exportExpensesCsvAction } from "@/server/expenses/expenses-actions";
@@ -199,7 +203,7 @@ export function CashBookTab({
               ) : undefined
             }
           >
-            <div className="border-b px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <ExpensesTableToolbar
                 group={filters.group}
                 categoryId={filters.categoryId}
@@ -208,6 +212,19 @@ export function CashBookTab({
                 onGroupChange={tab.setGroup}
                 onCategoryChange={tab.setCategory}
               />
+              {/* Opens the same list, read-only, with the range and filters. */}
+              <Button variant="outline" asChild>
+                <Link
+                  href={expenseListHref(ADMIN_ROUTES.cashBookSpreadsheet, {
+                    from,
+                    to,
+                    ...filters,
+                  })}
+                >
+                  <Sheet />
+                  Spreadsheet view
+                </Link>
+              </Button>
             </div>
 
             {expensePage.rows.length === 0 ? (

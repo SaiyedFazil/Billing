@@ -332,6 +332,37 @@ date, category, paid to, note, mode, group (Cash/Online), amount, status,
 cancel reason, entered by, entered at. Use the existing `toCsv` and
 `csvAmount`.
 
+### 8.9 Spreadsheet view
+
+_Added 2026-10-24 at the owner's request._ A **Spreadsheet view** button in
+the Expenses table's toolbar opens `/administration/cash-book/spreadsheet`
+(`ADMIN_ROUTES.cashBookSpreadsheet`). It carries the range and the filters
+across. It is for audit, and it is **read-only**: no edit, cancel or add.
+
+- **Guard:** the page calls `requireSuperadmin()` itself, like every page under
+  `/administration`.
+- **Data:** the same `listExpenses` query and filters (Paid by, Category) as
+  the Expenses table. Two read-only queries are added:
+  - `getExpenseTotal(filters)`: active expenses across every page
+  - `listExpenseMonths()`: the months that have expenses, newest first, with
+    a count each
+- **Period:** a **Month / Date range** switch.
+  - Month offers only the months that have expenses, grouped by year.
+  - Date range is the Cash book's range bar. Changing it keeps the filters and
+    the rows per page.
+- **Grid:**
+  - A numbered row gutter, gridlines, and a header and gutter that stay put
+    while scrolling.
+  - Columns: Date, Category, Paid to, Note, Paid by, Cash / Online, Amount,
+    Entered by, Entered at. An edited expense gets a small "Edited" tag.
+- **Cancelled expenses:** they stay listed, struck through, with a ⊘ in the
+  gutter and the reason on hover. They are left out of the total.
+- **Footer:** "Showing x–y of n" on the left. On the right, "Rows per page" (25,
+  50 or 100), then Previous and Next.
+- **URL:** everything lives there (`period`, `from`, `to`, `group`,
+  `categoryId`, `rows`, `page`).
+- **The Cash book itself is unchanged:** 25 rows per page, and the same table.
+
 ## 9. Server side
 
 `src/server/expenses/`:

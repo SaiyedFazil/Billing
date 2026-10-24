@@ -20,7 +20,9 @@ import {
 } from "../src/server/expenses/expenses-service";
 import {
   getCashBook,
+  getExpenseTotal,
   getSpendByCategory,
+  listExpenseMonths,
   listExpenses,
 } from "../src/server/expenses/expenses-queries";
 import { getPaymentBreakdown } from "../src/server/reports/reports-queries";
@@ -342,6 +344,41 @@ async function main() {
       cashPage.rows[1].amount === "60.50" &&
       cashPage.rows[1].cancelledAt === null,
     cashPage,
+  );
+
+  // The spreadsheet's footer and month list.
+  const [allTotal, cashTotal, onlineTotal, months] = await Promise.all([
+    getExpenseTotal(probeRange),
+    getExpenseTotal({ ...probeRange, group: "CASH" }),
+    getExpenseTotal({ ...probeRange, group: "ONLINE", categoryId: categoryE }),
+    listExpenseMonths(),
+  ]);
+  check(
+    "the spreadsheet total skips the cancelled 999.00 and follows the filters",
+    allTotal === "100.80" && cashTotal === "60.50" && onlineTotal === "40.30",
+    { allTotal, cashTotal, onlineTotal },
+  );
+  check(
+    "the month list counts every expense in a month, cancelled ones too",
+    months.find((entry) => entry.month === "2000-01")?.count === 3,
+    months.find((entry) => entry.month === "2000-01"),
+  );
+  check(
+    "the month list runs newest first",
+    months.every(
+      (entry, index) => index === 0 || months[index - 1].month > entry.month,
+    ),
+    months.map((entry) => entry.month),
+  );
+  const pageOfTwo = await listExpenses(probeRange, 1, 2);
+  const secondPage = await listExpenses(probeRange, 2, 2);
+  check(
+    "a smaller page size pages the same rows",
+    pageOfTwo.rows.length === 2 &&
+      secondPage.rows.length === 1 &&
+      pageOfTwo.total === 3 &&
+      !pageOfTwo.rows.some((row) => row.id === secondPage.rows[0]?.id),
+    { pageOfTwo, secondPage },
   );
 
   const last30 = presetRange("LAST_30", timeZone);

@@ -1,8 +1,7 @@
-import { z } from "zod";
-
 import { CashBookTab } from "@/components/pages/administration/cash-book/CashBookTab";
 import { requireSuperadmin } from "@/lib/auth/guard";
 import { businessDate } from "@/lib/utils/dates";
+import { parseExpenseListParams } from "@/lib/utils/expense-list-params";
 import { resolveReportRange } from "@/lib/utils/report-params";
 import {
   getCashBook,
@@ -40,14 +39,12 @@ export default async function Page({
 
   // A hand-edited URL falls back to the defaults rather than failing.
   const view = read("view") === "days" ? "days" : "expenses";
-  const groupRaw = read("group");
-  const group =
-    groupRaw === "cash" ? "CASH" : groupRaw === "online" ? "ONLINE" : undefined;
-  const categoryRaw = read("categoryId");
-  const categoryId = z.uuid().safeParse(categoryRaw).success
-    ? categoryRaw
-    : undefined;
-  const page = Math.max(1, Number(read("page")) || 1);
+  const {
+    group,
+    groupParam: groupRaw,
+    categoryId,
+    page,
+  } = parseExpenseListParams(read);
 
   const [cashBook, spend, expensePage, categories] = await Promise.all([
     getCashBook(from, to),

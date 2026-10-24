@@ -39,6 +39,13 @@ export type ExpenseListFilters = {
   categoryId?: string;
 };
 
+/** A month that has at least one expense, cancelled ones included. */
+export type ExpenseMonth = {
+  /** "2026-10" */
+  month: string;
+  count: number;
+};
+
 export type ExpensePage = {
   rows: ExpenseRow[];
   total: number;
