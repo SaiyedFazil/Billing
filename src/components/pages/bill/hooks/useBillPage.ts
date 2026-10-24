@@ -33,7 +33,11 @@ import {
   type PendingPriceChange,
   priceChangeStep,
 } from "../utils/price-change";
-import { canSplit, splitPayload, startsNewOrder } from "../utils/split-payment";
+import {
+  canSplit,
+  dropsLeftoverSplit,
+  splitPayload,
+} from "../utils/split-payment";
 import { useCartReducer } from "./useCartReducer";
 import { useSplitPayment } from "./useSplitPayment";
 
@@ -182,13 +186,16 @@ export function useBillPage({
         toast(`Only ${item.stockQuantity} ${item.name} in stock`);
         return;
       }
-      // An emptied cart keeps the last order's payment on screen; it must not
-      // come back with this customer's first item. Done here, in the event,
-      // so search adds (through this function) are covered too.
-      if (startsNewOrder(lines)) resetPayment();
+      // An emptied cart keeps the last order's split on screen; it must not
+      // come back with this customer's first item. A method tapped before
+      // that item is kept. Done here, in the event, so search adds (through
+      // this function) are covered too.
+      if (dropsLeftoverSplit(lines, selectedMethod, split.lines.length)) {
+        resetPayment();
+      }
       addToCart(item);
     },
-    [addToCart, lines, resetPayment],
+    [addToCart, lines, resetPayment, selectedMethod, split.lines.length],
   );
 
   const setQuantity = useCallback(

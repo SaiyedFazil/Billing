@@ -3,6 +3,7 @@ import { PAYMENT_METHODS } from "../src/constants/payment-methods";
 import {
   addSplitLine,
   canSplit,
+  dropsLeftoverSplit,
   keepEnabledLines,
   methodsToAdd,
   removeSplitLine,
@@ -12,7 +13,6 @@ import {
   splitStatus,
   splitStatusText,
   startSplit,
-  startsNewOrder,
   typeSplitAmount,
 } from "../src/components/pages/bill/utils/split-payment";
 import { planPayments } from "../src/lib/utils/bill-payments";
@@ -488,8 +488,9 @@ check(
   true,
 );
 
-// The first item on an empty cart is a new customer: the till drops the
-// payment an abandoned order left behind before adding it.
+// The first item on an empty cart is a new customer: the till drops a split
+// an abandoned order left behind before adding it. A real method tapped
+// before that first item is this customer's choice, and stays.
 const cartLine = (unitPrice: string) => ({
   itemId: crypto.randomUUID(),
   name: "Probe Burger",
@@ -499,18 +500,38 @@ const cartLine = (unitPrice: string) => ({
 });
 
 check(
-  "startsNewOrder: an empty cart starts a new order",
-  startsNewOrder([]),
+  "dropsLeftoverSplit: a split left on an empty cart is dropped",
+  dropsLeftoverSplit([], "SPLIT", 2),
   true,
 );
 check(
-  "startsNewOrder: a second item is the same order",
-  startsNewOrder([cartLine("60.00")]),
+  "dropsLeftoverSplit: Split selected with its lines gone is dropped too",
+  dropsLeftoverSplit([], "SPLIT", 0),
+  true,
+);
+check(
+  "dropsLeftoverSplit: split lines on an empty cart are dropped",
+  dropsLeftoverSplit([], "CASH", 2),
+  true,
+);
+check(
+  "dropsLeftoverSplit: a pre-tapped UPI on an empty cart survives the first add",
+  dropsLeftoverSplit([], "UPI", 0),
   false,
 );
 check(
-  "startsNewOrder: a Rs.0 total with items on the bill is the same order",
-  startsNewOrder([cartLine("0.00")]),
+  "dropsLeftoverSplit: the default method on an empty cart is left alone",
+  dropsLeftoverSplit([], "CASH", 0),
+  false,
+);
+check(
+  "dropsLeftoverSplit: a split on a cart with items is this order's",
+  dropsLeftoverSplit([cartLine("60.00")], "SPLIT", 2),
+  false,
+);
+check(
+  "dropsLeftoverSplit: a Rs.0 total with items on the bill is the same order",
+  dropsLeftoverSplit([cartLine("0.00")], "SPLIT", 2),
   false,
 );
 

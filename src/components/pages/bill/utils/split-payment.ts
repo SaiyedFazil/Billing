@@ -1,6 +1,8 @@
 import {
+  type BillPaymentMethod,
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
+  SPLIT,
 } from "@/constants/payment-methods";
 import {
   add,
@@ -56,14 +58,21 @@ export function canSplit(
 }
 
 /**
- * True when an item added now is the first of a new order, so the till drops
- * the payment left on screen first. An abandoned order (every item removed)
- * keeps its split, method and cash given until then, and they must not come
- * back for the next customer. Only an empty cart counts: a ₹0 total does not,
- * as a discount being typed can briefly equal the subtotal.
+ * True when an item added now is the first of a new order and the last order
+ * left a split behind (Split selected, or split lines kept), so the till drops
+ * it first. An abandoned order (every item removed) keeps its split until
+ * then, and it must not come back for the next customer.
+ *
+ * A real method tapped before the first item is this customer's choice and
+ * stays, exactly as before splits existed. Only an empty cart counts: a ₹0
+ * total does not, as a discount being typed can briefly equal the subtotal.
  */
-export function startsNewOrder(cart: readonly CartLine[]): boolean {
-  return cart.length === 0;
+export function dropsLeftoverSplit(
+  cart: readonly CartLine[],
+  selectedMethod: BillPaymentMethod,
+  splitLineCount: number,
+): boolean {
+  return cart.length === 0 && (selectedMethod === SPLIT || splitLineCount > 0);
 }
 
 /**
