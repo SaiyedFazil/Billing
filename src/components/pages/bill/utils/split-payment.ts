@@ -12,6 +12,7 @@ import {
   ZERO,
 } from "@/lib/utils/money";
 import type { SplitPaymentInput } from "@/lib/utils/bill-payments";
+import type { CartLine } from "@/types/bill.types";
 
 /**
  * The till's split-payment maths, kept pure so it can be checked without a
@@ -52,6 +53,17 @@ export function canSplit(
   total: string,
 ): boolean {
   return enabled.length >= 2 && compare(total, ZERO) > 0;
+}
+
+/**
+ * True when an item added now is the first of a new order, so the till drops
+ * the payment left on screen first. An abandoned order (every item removed)
+ * keeps its split, method and cash given until then, and they must not come
+ * back for the next customer. Only an empty cart counts: a ₹0 total does not,
+ * as a discount being typed can briefly equal the subtotal.
+ */
+export function startsNewOrder(cart: readonly CartLine[]): boolean {
+  return cart.length === 0;
 }
 
 /**

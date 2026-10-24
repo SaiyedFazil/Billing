@@ -12,6 +12,7 @@ import {
   splitStatus,
   splitStatusText,
   startSplit,
+  startsNewOrder,
   typeSplitAmount,
 } from "../src/components/pages/bill/utils/split-payment";
 import { planPayments } from "../src/lib/utils/bill-payments";
@@ -485,6 +486,32 @@ check(
   "canSplit: two methods and a total",
   canSplit(["CASH", "UPI"], TOTAL),
   true,
+);
+
+// The first item on an empty cart is a new customer: the till drops the
+// payment an abandoned order left behind before adding it.
+const cartLine = (unitPrice: string) => ({
+  itemId: crypto.randomUUID(),
+  name: "Probe Burger",
+  unitPrice,
+  quantity: 1,
+  maxQuantity: 10,
+});
+
+check(
+  "startsNewOrder: an empty cart starts a new order",
+  startsNewOrder([]),
+  true,
+);
+check(
+  "startsNewOrder: a second item is the same order",
+  startsNewOrder([cartLine("60.00")]),
+  false,
+);
+check(
+  "startsNewOrder: a Rs.0 total with items on the bill is the same order",
+  startsNewOrder([cartLine("0.00")]),
+  false,
 );
 
 check("startSplit: Cash first, then the next method", startSplit(ALL), [
