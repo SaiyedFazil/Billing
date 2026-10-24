@@ -214,9 +214,10 @@ one, as with `0003` and `0004`, and keep `_journal.json` in sync:
 
 1. After closing, take the backup, as for every migration.
 2. Prove the migration first on a Neon branch of the live database:
-   - Run `db:migrate`, then `verify:report-queries`. Its data audit checks
+   - Run `db:migrate`, then `db:audit-payments`, which only reads. It checks
      that every bill's lines add up to its total, and that every one-method
-     bill's line matches the bill.
+     bill's line matches the bill. Never run `verify:report-queries` here: it
+     saves a test bill, and a bill cannot be deleted.
    - Compare the Sales report payment breakdown and the Cash book for the last
      90 days, before and after. They must match to the paisa.
 3. Run `db:migrate` on the live database, then deploy straight away. The old
@@ -514,14 +515,20 @@ No test framework (client decision). Extend and add:
     match hand-computed figures to the paisa. A split bill adds its total to
     Net once.
   - A **data audit**: every bill's lines add up to its total, and every
-    one-method bill has exactly one line that matches it. This is the
-    migration proof (§6.4), and it keeps proving it afterwards.
+    one-method bill has exactly one line that matches it. It shares its
+    queries with `db:audit-payments` and keeps proving them on the dev
+    database. It saves a test bill, so it is a dev check, never the
+    migration proof.
+- **`db:audit-payments`** (read-only, safe on live data): the same data
+  audit, plus the last 90 days' one-method totals per method from the bills
+  and from their lines. This is the migration proof (§6.4).
 - **`verify:stock-utils`:** a fresh menu re-prices the bill's lines and names
   them, separately from the stock changes (§9.4).
 - **Existing scripts that insert bills directly** (`verify-constraints.ts`,
   `verify-immutability.ts`) must also insert a payment line, or the deferred
   check fails them at commit.
-- **Migration proof** (§6.4) on a Neon branch of live data before deploying.
+- **Migration proof** (§6.4): `db:audit-payments` on a Neon branch of live
+  data before deploying.
 - `npm run verify:all` and `npm run build` pass.
 - **Look at the screen:** run the dev server and ring up the ₹400 + ₹100 bill
   at desktop (1920 and 1366 wide) and phone widths. Print it on both receipt
