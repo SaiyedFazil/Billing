@@ -370,6 +370,11 @@ async function main() {
     ),
     months.map((entry) => entry.month),
   );
+  check(
+    "a period with no expenses totals 0.00",
+    (await getExpenseTotal({ from: "1999-06-01", to: "1999-06-30" })) ===
+      "0.00",
+  );
   const pageOfTwo = await listExpenses(probeRange, 1, 2);
   const secondPage = await listExpenses(probeRange, 2, 2);
   check(

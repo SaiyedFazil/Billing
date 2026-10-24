@@ -58,11 +58,13 @@ export function ExpenseSpreadsheetGrid({
   timeZone: string;
 }) {
   return (
-    <div className="max-h-[calc(100dvh-22rem)] overflow-auto">
+    // A vertical scroller of its own only from sm up: on a phone the toolbars
+    // wrap tall, and a nested scroller would be small and swallow swipes.
+    <div className="overflow-x-auto sm:max-h-[calc(100dvh-22rem)] sm:overflow-y-auto">
       <table className="w-full border-separate border-spacing-0 text-[13px] tabular-nums">
         <thead className="sticky top-0 z-2">
           <tr>
-            <th scope="col" className={cn(NUMBER_CELL, "z-3 bg-muted")}>
+            <th scope="col" className={cn(NUMBER_CELL, "z-3")}>
               <span className="sr-only">Row</span>#
             </th>
             {COLUMNS.map((column) => (
@@ -84,14 +86,11 @@ export function ExpenseSpreadsheetGrid({
         <tbody>
           {rows.map((row, index) => {
             const cancelled = row.cancelledAt !== null;
+            const cancelledText = `Cancelled: ${row.cancelReason ?? "no reason given"}`;
             return (
               <tr
                 key={row.id}
-                title={
-                  cancelled
-                    ? `Cancelled: ${row.cancelReason ?? "no reason given"}`
-                    : undefined
-                }
+                title={cancelled ? cancelledText : undefined}
                 className={cn(
                   "bg-card",
                   // Struck per cell: a line on the row would strike the
@@ -101,13 +100,14 @@ export function ExpenseSpreadsheetGrid({
                 )}
               >
                 <td
+                  title={cancelled ? cancelledText : undefined}
                   className={cn(NUMBER_CELL, cancelled && "text-destructive")}
                 >
                   <span className="inline-flex items-center gap-1">
                     {cancelled ? (
                       <>
                         <Ban aria-hidden className="size-3" />
-                        <span className="sr-only">Cancelled</span>
+                        <span className="sr-only">{cancelledText}</span>
                       </>
                     ) : null}
                     {firstRowNumber + index}
@@ -118,8 +118,12 @@ export function ExpenseSpreadsheetGrid({
                 <td className={CELL}>
                   <Optional value={row.paidTo} />
                 </td>
-                <td className={cn(CELL, "max-w-72 truncate")}>
-                  <Optional value={row.note} />
+                {/* Wraps rather than truncates: an audit must read the whole note. */}
+                <td className={cn(CELL, "whitespace-normal")}>
+                  {/* Table cells ignore max-width, so the limit sits inside. */}
+                  <div className="max-w-80 min-w-48 break-words">
+                    <Optional value={row.note} />
+                  </div>
                 </td>
                 <td className={CELL}>{EXPENSE_MODE_LABELS[row.mode]}</td>
                 <td className={CELL}>

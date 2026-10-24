@@ -42,12 +42,20 @@ export default async function Page({
 
   // Read-only: the same list query as the Cash book, plus a total and the
   // months that have data. Nothing on this page writes.
-  const [expensePage, total, months, categories] = await Promise.all([
+  const [firstTry, total, months, categories] = await Promise.all([
     listExpenses(filters, page, pageSize),
     getExpenseTotal(filters),
     listExpenseMonths(),
     listActiveExpenseCategories(),
   ]);
+
+  // A page past the end (a stale link, or a hand-edited URL) shows the last
+  // page rather than an empty sheet that says there are no expenses.
+  const lastPage = Math.max(1, Math.ceil(firstTry.total / pageSize));
+  const expensePage =
+    page > lastPage
+      ? await listExpenses(filters, lastPage, pageSize)
+      : firstTry;
 
   return (
     <ExpenseSpreadsheetTab
