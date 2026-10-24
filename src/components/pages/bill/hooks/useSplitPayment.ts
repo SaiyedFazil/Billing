@@ -58,16 +58,10 @@ export function useSplitPayment({
   const [cashGivenInput, setCashGivenInput] = useState("");
 
   // A refresh can switch a method off under a split on screen: drop its line,
-  // and with fewer than two left, report "not active" so the caller falls back
-  // to one method. Lines on methods that are all still enabled are used as
-  // they are — `keepEnabledLines` would re-make the last line "the rest" when
-  // the cashier has typed into the auto line, undoing their edit.
-  const kept: SplitLine[] | null =
-    rawLines.length === 0
-      ? null
-      : rawLines.every((line) => paymentMethods.includes(line.method))
-        ? rawLines
-        : keepEnabledLines(rawLines, paymentMethods);
+  // and with fewer than two left (or none, when not splitting), report "not
+  // active" so the caller falls back to one method. The other lines are kept
+  // exactly as they are, typed amounts and "the rest" alike.
+  const kept: SplitLine[] | null = keepEnabledLines(rawLines, paymentMethods);
 
   const resolved = kept ? resolveSplit(kept, total) : [];
   const status = splitStatus(resolved, total, cashGivenInput);

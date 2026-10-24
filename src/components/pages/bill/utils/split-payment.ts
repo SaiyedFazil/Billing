@@ -163,14 +163,18 @@ export function methodsToAdd(
 /**
  * Drops lines for methods the owner has switched off. Fewer than two lines
  * left is no longer a split, so the caller falls back to one method (`null`).
+ *
+ * Every other line stays exactly as it was. The cashier did not touch them,
+ * so no line turns into "the rest": a typed amount stays what was typed, and
+ * if the dropped line was the rest, the status shows the real shortfall
+ * (spec §9.2, §9.5). Removing a line by hand is `removeSplitLine`.
  */
 export function keepEnabledLines(
   lines: SplitLine[],
   enabled: readonly PaymentMethod[],
 ): SplitLine[] | null {
   const kept = lines.filter((line) => enabled.includes(line.method));
-  if (kept.length < 2) return null;
-  return kept.some((line) => line.auto) ? kept : lastLineAuto(kept);
+  return kept.length < 2 ? null : kept;
 }
 
 function lastLineAuto(lines: SplitLine[]): SplitLine[] {

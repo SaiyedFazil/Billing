@@ -757,10 +757,39 @@ check(
   threeLines,
 );
 check(
-  "keepEnabledLines: dropping the auto line makes the last line auto",
+  "keepEnabledLines: three lines with CARD disabled keep the other two as they were",
   keepEnabledLines(threeLines, ["CASH", "UPI", "OTHER"]),
-  [sl("CASH", "300", false), sl("UPI", "", true)],
+  [sl("CASH", "300", false), sl("UPI", "200.00", false)],
 );
+
+// The owner switches CARD off under CASH 300 / UPI 150 (typed) / CARD. UPI was
+// typed, so it must not turn back into "the rest" and paper over the ₹50.
+{
+  const typedUpi = typeSplitAmount(threeLines, "UPI", "150");
+  const NO_CARD: PaymentMethod[] = ["CASH", "UPI", "OTHER"];
+
+  for (const [label, lines] of [
+    ["CARD as the rest", typedUpi],
+    ["CARD typed as 50", typeSplitAmount(typedUpi, "CARD", "50")],
+  ] as const) {
+    const kept = keepEnabledLines(lines, NO_CARD);
+    check(`keepEnabledLines (${label}): typed lines stay as typed`, kept, [
+      sl("CASH", "300", false),
+      sl("UPI", "150", false),
+    ]);
+    const view = tillView(kept ?? [], TOTAL);
+    check(`keepEnabledLines (${label}): the shortfall shows`, view.status, {
+      kind: "SHORT",
+      amount: "50.00",
+    });
+    check(
+      `keepEnabledLines (${label}): SHORT text`,
+      view.text.text,
+      "Collect ₹50.00 more",
+    );
+  }
+}
+
 check(
   "keepEnabledLines: dropping a manual line keeps the auto line",
   keepEnabledLines(threeLines, ["CASH", "CARD"]),
