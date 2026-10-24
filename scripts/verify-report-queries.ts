@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import { add, compare, subtract, ZERO } from "../src/lib/utils/money";
+import { sellability } from "../src/lib/utils/stock";
 import { getReceipt, listBills } from "../src/server/bills/bills-queries";
 import { createBill } from "../src/server/bills/create-bill-service";
 import { getCashBook } from "../src/server/expenses/expenses-queries";
@@ -13,6 +14,11 @@ import {
   getSalesByDay,
   hasSplitBills,
 } from "../src/server/reports/reports-queries";
+import type { MenuItem } from "../src/types/item.types";
+import {
+  mismatchedOneMethodBills,
+  unbalancedBills,
+} from "./payment-audit/queries";
 
 let failures = 0;
 
@@ -126,43 +132,81 @@ async function main() {
   }
 
   // --- data audit: every bill's payment lines ----------------------------
-  // Voided bills included. Run after db:migrate on a copy of the live data:
-  // the backfill must leave every bill paid exactly as it was. Spec §6.4.
-  const [unbalanced] = (
-    await db.execute(sql`
-      SELECT count(*)::int AS n FROM bills b
-      WHERE b.total <> coalesce(
-        (SELECT sum(p.amount) FROM bill_payments p WHERE p.bill_id = b.id), 0)`)
-  ).rows as Array<{ n: number }>;
-  check("every bill's payment lines add up to its total", unbalanced.n === 0, {
-    bills: unbalanced.n,
-  });
+  // The same queries as the read-only `db:audit-payments`, the go-live proof
+  // on a copy of the live data. Spec §6.4.
+  const unbalanced = await unbalancedBills();
+  check(
+    "every bill's payment lines add up to its total",
+    unbalanced.length === 0,
+    { bills: unbalanced.length, first: unbalanced.slice(0, 10) },
+  );
 
-  const [mismatched] = (
-    await db.execute(sql`
-      SELECT count(*)::int AS n FROM bills b
-      WHERE b.payment_method <> 'SPLIT'
-        AND (
-          (SELECT count(*) FROM bill_payments p WHERE p.bill_id = b.id) <> 1
-          OR EXISTS (
-            SELECT 1 FROM bill_payments p
-            WHERE p.bill_id = b.id
-              AND (p.method, p.amount, p.tendered, p.change_due)
-                  IS DISTINCT FROM
-                  (b.payment_method, b.total, b.tendered, b.change_due)
-          )
-        )`)
-  ).rows as Array<{ n: number }>;
+  const mismatched = await mismatchedOneMethodBills();
   check(
     "every one-method bill has exactly one matching line",
-    mismatched.n === 0,
-    { bills: mismatched.n },
+    mismatched.length === 0,
+    { bills: mismatched.length, first: mismatched.slice(0, 10) },
   );
 
   // --- a split bill is counted under each method it used -------------------
-  // Read both reports, save a CASH + UPI split bill, read them again. The
-  // bill's id and cash part stay in variables for the checks that follow.
+  // These save a real bill, which cannot be deleted. Never run them on live
+  // data; db:audit-payments is the read-only check.
   const today = stats.businessDate;
+
+  const [superadmin] = (
+    await db.execute(
+      sql`SELECT id FROM users WHERE role = 'SUPERADMIN' LIMIT 1`,
+    )
+  ).rows as Array<{ id: string }>;
+  if (!superadmin) {
+    throw new Error("No superadmin found. Run `npm run db:seed` first.");
+  }
+
+  // Something the till could sell right now (getMenu lists active items
+  // only), priced above the ₹10.00 the probe puts on UPI, so the cash part is
+  // more than ₹0 too.
+  const menu = await getMenu();
+  const splitItem = menu
+    .flatMap((category) => category.items)
+    .find(
+      (item) =>
+        sellability(item) === "SELLABLE" && compare(item.price, "10.00") > 0,
+    );
+
+  if (splitItem) {
+    await verifySplitBill(today, superadmin.id, splitItem);
+  } else {
+    const reason =
+      "no active, available item priced above ₹10.00 with stock to sell";
+    console.log(`SKIP — a split bill in the reports and Cash book: ${reason}`);
+    console.log(`SKIP — a split bill in the Bills list and receipt: ${reason}`);
+  }
+
+  const allToday = await listBills({ from: today, to: today }, 1, 200);
+  check(
+    "a one-method row has no split payments",
+    allToday.rows
+      .filter((row) => row.paymentMethod !== "SPLIT")
+      .every((row) => row.splitPayments === null),
+  );
+
+  console.log(
+    failures === 0
+      ? "\nAll report query checks passed."
+      : `\n${failures} FAILURE(S)`,
+  );
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+/**
+ * Reads both reports, saves a CASH + UPI split bill of one `splitItem`, and
+ * reads them again; then finds that bill in the Bills list and on its receipt.
+ */
+async function verifySplitBill(
+  today: string,
+  createdBy: string,
+  splitItem: MenuItem,
+) {
   const methodNet = (rows: Awaited<ReturnType<typeof getPaymentBreakdown>>) =>
     new Map(rows.map((row) => [row.paymentMethod, row.net]));
   const sumNet = (rows: Awaited<ReturnType<typeof getPaymentBreakdown>>) =>
@@ -170,20 +214,6 @@ async function main() {
 
   const paymentsBefore = await getPaymentBreakdown(today, today);
   const cashBookBefore = await getCashBook(today, today);
-
-  const [superadmin] = (
-    await db.execute(
-      sql`SELECT id FROM users WHERE role = 'SUPERADMIN' LIMIT 1`,
-    )
-  ).rows as Array<{ id: string }>;
-  const menu = await getMenu();
-  const splitItem = menu[0]?.items[0];
-
-  if (!superadmin || !splitItem) {
-    throw new Error(
-      "No superadmin or menu found. Run `npm run db:seed` first.",
-    );
-  }
 
   const splitTotal = splitItem.price;
   const splitCash = subtract(splitTotal, "10.00");
@@ -200,7 +230,7 @@ async function main() {
       ],
       expectedTotal: splitTotal,
     },
-    superadmin.id,
+    createdBy,
   );
   if (!splitSaved.ok) {
     throw new Error(
@@ -309,14 +339,6 @@ async function main() {
     splitOnly.rows.map((row) => row.splitPayments),
   );
 
-  const allToday = await listBills(ledgerWhere, 1, 200);
-  check(
-    "a one-method row has no split payments",
-    allToday.rows
-      .filter((row) => row.paymentMethod !== "SPLIT")
-      .every((row) => row.splitPayments === null),
-  );
-
   const splitReceipt = await getReceipt(splitBillId);
   check(
     "the receipt lists a split bill's payments",
@@ -328,13 +350,6 @@ async function main() {
       compare(splitReceipt.payments[1].amount, "10.00") === 0,
     splitReceipt?.payments,
   );
-
-  console.log(
-    failures === 0
-      ? "\nAll report query checks passed."
-      : `\n${failures} FAILURE(S)`,
-  );
-  process.exit(failures === 0 ? 0 : 1);
 }
 
 main().catch((error) => {

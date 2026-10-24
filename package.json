@@ -21,6 +21,7 @@
     "db:import-menu": "tsx --env-file=.env.local scripts/import-menu.ts",
     "db:verify": "tsx --env-file=.env.local scripts/verify-constraints.ts",
     "db:verify-immutability": "tsx --env-file=.env.local scripts/verify-immutability.ts",
+    "db:audit-payments": "tsx --env-file=.env.local scripts/audit-payments.ts",
     "verify:money": "tsx scripts/verify-money.ts",
     "verify:retry": "tsx scripts/verify-retry.ts",
     "verify:bill": "tsx --env-file=.env.local scripts/verify-create-bill.ts",

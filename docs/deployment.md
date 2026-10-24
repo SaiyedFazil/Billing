@@ -73,12 +73,18 @@ order. Do it after closing, when no till is saving bills. Allow about an hour.
 
    ```bash
    npm run db:migrate
-   npm run verify:report-queries
+   npm run db:audit-payments
    ```
 
-   The `verify:report-queries` data audit checks that every bill's payment
-   lines add up to its total, and that every one-method bill has exactly one
-   line that matches it.
+   `db:audit-payments` only reads; it never writes. It checks that every
+   bill's payment lines add up to its total, and that every one-method bill
+   has exactly one line that matches it. It also prints the last 90 days'
+   takings per method, worked out both from the bills and from their payment
+   lines, and checks that the two agree. It ends with an error if anything
+   does not match.
+
+   Do not run `verify:report-queries` here or on the live database. It saves
+   a test bill, and a bill can never be deleted.
 
    Then compare the Sales report "By payment method" card and the Cash book for
    the last 90 days before and after the migration (run `npm run dev` against

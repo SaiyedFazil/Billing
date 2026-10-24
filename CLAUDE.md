@@ -237,7 +237,8 @@ npm run build            # the production build
 | `verify:audit-details`                                | every audit action reads as plain words (no DB)                |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book totals     |
 | `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                 |
-| `verify:report-queries`                               | report SQL against real data                                   |
+| `verify:report-queries`                               | report SQL against real data; saves a test bill                |
+| `db:audit-payments`                                   | every bill's payments add up; read-only, safe on live data     |
 | `verify:imagekit`                                     | image upload credentials                                       |
 
 The `db:*` and database `verify:*` checks run against whatever `DATABASE_URL`
