@@ -1,0 +1,2 @@
+ALTER TABLE "bill_payments" DROP CONSTRAINT "bill_payments_tender_matches";--> statement-breakpoint
+ALTER TABLE "bill_payments" ADD CONSTRAINT "bill_payments_tender_matches" CHECK (("bill_payments"."tendered" IS NULL AND "bill_payments"."change_due" IS NULL) OR ("bill_payments"."method" = 'CASH' AND "bill_payments"."tendered" IS NOT NULL AND "bill_payments"."change_due" IS NOT NULL AND "bill_payments"."tendered" >= "bill_payments"."amount" AND "bill_payments"."change_due" = "bill_payments"."tendered" - "bill_payments"."amount"));

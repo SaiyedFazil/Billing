@@ -54,9 +54,12 @@ export const billPayments = pgTable(
     // The balance trigger rejects a ₹0 line on a split bill.
     check("bill_payments_amount_non_negative", sql`${table.amount} >= 0`),
     check("bill_payments_position_positive", sql`${table.position} > 0`),
+    // Both IS NOT NULLs are needed: with only one of the pair set, the
+    // comparisons are NULL, and a CHECK that evaluates to NULL is treated as
+    // satisfied — cash given with no change would go straight through.
     check(
       "bill_payments_tender_matches",
-      sql`(${table.tendered} IS NULL AND ${table.changeDue} IS NULL) OR (${table.method} = 'CASH' AND ${table.tendered} >= ${table.amount} AND ${table.changeDue} = ${table.tendered} - ${table.amount})`,
+      sql`(${table.tendered} IS NULL AND ${table.changeDue} IS NULL) OR (${table.method} = 'CASH' AND ${table.tendered} IS NOT NULL AND ${table.changeDue} IS NOT NULL AND ${table.tendered} >= ${table.amount} AND ${table.changeDue} = ${table.tendered} - ${table.amount})`,
     ),
     // One line per method per bill. Also serves every lookup by bill.
     uniqueIndex("bill_payments_bill_method_idx").on(table.billId, table.method),

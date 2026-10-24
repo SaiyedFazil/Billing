@@ -437,6 +437,22 @@ async function verifyBillPaymentConstraints(userId: string) {
         VALUES (gen_random_uuid(), 'UPI', 100.00, 200.00, 100.00, 1)`,
     "bill_payments_tender_matches",
   );
+  // A CHECK that evaluates to NULL passes, so half a cash pair must be caught
+  // on its own: here the FK would otherwise be the first to object.
+  await expectViolation(
+    "a cash line with cash given also carries its change",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, tendered,
+        change_due, position)
+        VALUES (gen_random_uuid(), 'CASH', 100.00, 200.00, NULL, 1)`,
+    "bill_payments_tender_matches",
+  );
+  await expectViolation(
+    "a cash line with change also carries its cash given",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, tendered,
+        change_due, position)
+        VALUES (gen_random_uuid(), 'CASH', 100.00, NULL, 100.00, 1)`,
+    "bill_payments_tender_matches",
+  );
   await expectViolation(
     "a split bill keeps cash given on its cash line, not on the bill",
     billWithPayments({
