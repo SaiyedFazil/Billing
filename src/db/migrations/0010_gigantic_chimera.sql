@@ -1,0 +1,4 @@
+-- One ALTER TABLE, so the swap is atomic: if the ADD fails, the DROP is
+-- undone and the table keeps its CHECK. Joined by hand from drizzle-kit's
+-- DROP and ADD; the CHECK text is exactly as generated.
+ALTER TABLE "bill_payments" DROP CONSTRAINT "bill_payments_tender_matches", ADD CONSTRAINT "bill_payments_tender_matches" CHECK (("bill_payments"."tendered" IS NULL AND "bill_payments"."change_due" IS NULL) OR ("bill_payments"."method" = 'CASH' AND "bill_payments"."tendered" IS NOT NULL AND "bill_payments"."change_due" IS NOT NULL AND "bill_payments"."tendered" >= "bill_payments"."amount" AND "bill_payments"."change_due" = "bill_payments"."tendered" - "bill_payments"."amount"));

@@ -1,4 +1,8 @@
-import { PAYMENT_METHOD_LABELS } from "@/constants/payment-methods";
+import {
+  BILL_PAYMENT_METHOD_LABELS,
+  PAYMENT_METHOD_LABELS,
+  SPLIT,
+} from "@/constants/payment-methods";
 import { formatBillDate, formatBillTime } from "@/lib/utils/dates";
 import { formatReceiptAmount, isZero } from "@/lib/utils/money";
 import type { ReceiptData } from "@/types/bill.types";
@@ -13,6 +17,11 @@ export function Receipt80mm({
   narrow?: boolean;
 }) {
   const { shop } = receipt;
+  const isSplit = receipt.paymentMethod === SPLIT;
+  // Cash given and change belong to the cash line of a split bill.
+  const cashPayment = receipt.payments.find(
+    (payment) => payment.method === "CASH" && payment.tendered !== null,
+  );
 
   return (
     <div className={narrow ? "receipt receipt--58" : "receipt"}>
@@ -88,18 +97,51 @@ export function Receipt80mm({
             <td>TOTAL</td>
             <td className="amt">{formatReceiptAmount(receipt.total)}</td>
           </tr>
-          <tr>
-            <td>Paid: {PAYMENT_METHOD_LABELS[receipt.paymentMethod]}</td>
-            <td className="amt">
-              {formatReceiptAmount(receipt.tendered ?? receipt.total)}
-            </td>
-          </tr>
-          {receipt.changeDue !== null ? (
-            <tr>
-              <td>Change</td>
-              <td className="amt">{formatReceiptAmount(receipt.changeDue)}</td>
-            </tr>
-          ) : null}
+          {isSplit ? (
+            <>
+              {receipt.payments.map((payment) => (
+                <tr key={payment.method}>
+                  <td>Paid: {PAYMENT_METHOD_LABELS[payment.method]}</td>
+                  <td className="amt">{formatReceiptAmount(payment.amount)}</td>
+                </tr>
+              ))}
+              {cashPayment?.tendered != null ? (
+                <tr>
+                  <td>Cash given</td>
+                  <td className="amt">
+                    {formatReceiptAmount(cashPayment.tendered)}
+                  </td>
+                </tr>
+              ) : null}
+              {cashPayment?.changeDue != null ? (
+                <tr>
+                  <td>Change</td>
+                  <td className="amt">
+                    {formatReceiptAmount(cashPayment.changeDue)}
+                  </td>
+                </tr>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <tr>
+                <td>
+                  Paid: {BILL_PAYMENT_METHOD_LABELS[receipt.paymentMethod]}
+                </td>
+                <td className="amt">
+                  {formatReceiptAmount(receipt.tendered ?? receipt.total)}
+                </td>
+              </tr>
+              {receipt.changeDue !== null ? (
+                <tr>
+                  <td>Change</td>
+                  <td className="amt">
+                    {formatReceiptAmount(receipt.changeDue)}
+                  </td>
+                </tr>
+              ) : null}
+            </>
+          )}
         </tbody>
       </table>
 

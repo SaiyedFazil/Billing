@@ -23,13 +23,14 @@ export function ExportAllCard() {
       const stamp = new Date().toISOString().slice(0, 10);
       downloadTextFile(`bills-${stamp}.csv`, result.data.bills);
       downloadTextFile(`bill-items-${stamp}.csv`, result.data.billItems);
+      downloadTextFile(`bill-payments-${stamp}.csv`, result.data.billPayments);
       downloadTextFile(`items-${stamp}.csv`, result.data.items);
       downloadTextFile(
         `stock-movements-${stamp}.csv`,
         result.data.stockMovements,
       );
       downloadTextFile(`expenses-${stamp}.csv`, result.data.expenses);
-      toast.success("Five files downloaded");
+      toast.success("Six files downloaded");
     });
   }
 
@@ -45,8 +46,9 @@ export function ExportAllCard() {
               Export all data
             </h2>
             <p className="text-sm text-pretty text-muted-foreground">
-              Downloads every bill, every sold line, the current menu with its
-              stock, the stock history and every expense as five CSV files.{" "}
+              Downloads every bill, every sold line, every payment, the current
+              menu with its stock, the stock history and every expense as six
+              CSV files.{" "}
               <strong className="text-foreground">Do this once a month</strong>{" "}
               and keep the files somewhere other than this computer — the free
               database plan keeps only a short restore window.

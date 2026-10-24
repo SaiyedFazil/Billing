@@ -40,6 +40,14 @@ function sampleReceipt(shop: ReceiptData["shop"]): ReceiptData {
     paymentMethod: "CASH",
     tendered: "200.00",
     changeDue: "60.00",
+    payments: [
+      {
+        method: "CASH",
+        amount: "140.00",
+        tendered: "200.00",
+        changeDue: "60.00",
+      },
+    ],
     shop,
   };
 }

@@ -1,3 +1,4 @@
+import { compare } from "@/lib/utils/money";
 import { maxSellable, sellability } from "@/lib/utils/stock";
 import type { CartLine } from "@/types/bill.types";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
@@ -13,16 +14,22 @@ export function atStockCap(item: MenuItem, inCart: number): boolean {
  * can no longer be sold is dropped. Without this, a cashier whose save failed
  * on stock would re-submit the same doomed bill.
  *
- * `changed` names every line that moved, so the till can say so.
+ * Every kept line also takes the menu's price, so a price the owner changed
+ * while the bill was open shows on screen and in the total.
+ *
+ * `changed` names the lines whose quantity was cut or that were dropped;
+ * `repriced` names the kept lines whose price moved. A dropped line is only
+ * ever in `changed`.
  */
 export function clampLinesToMenu(
   lines: CartLine[],
   menu: MenuCategory[],
-): { lines: CartLine[]; changed: string[] } {
+): { lines: CartLine[]; changed: string[]; repriced: string[] } {
   const byId = new Map(
     menu.flatMap((category) => category.items).map((item) => [item.id, item]),
   );
   const changed: string[] = [];
+  const repriced: string[] = [];
   const next: CartLine[] = [];
 
   for (const line of lines) {
@@ -34,10 +41,11 @@ export function clampLinesToMenu(
     const maxQuantity = maxSellable(item);
     const quantity = Math.min(line.quantity, maxQuantity);
     if (quantity !== line.quantity) changed.push(line.name);
-    next.push({ ...line, quantity, maxQuantity });
+    if (compare(line.unitPrice, item.price) !== 0) repriced.push(line.name);
+    next.push({ ...line, unitPrice: item.price, quantity, maxQuantity });
   }
 
-  return { lines: next, changed };
+  return { lines: next, changed, repriced };
 }
 
 /** Items visible in the grid for the current tab and search term. */

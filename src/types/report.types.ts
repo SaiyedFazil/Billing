@@ -1,4 +1,7 @@
-import type { PaymentMethod } from "@/constants/payment-methods";
+import type {
+  BillPaymentMethod,
+  PaymentMethod,
+} from "@/constants/payment-methods";
 
 /**
  * Every money field below is RUPEES as an exact decimal string, e.g. "140.00".
@@ -46,17 +49,20 @@ export type BillLedgerRow = {
   createdAt: Date;
   /** Rupees, e.g. "140.00". */
   total: string;
-  paymentMethod: PaymentMethod;
+  /** The bill's label: one method, or SPLIT. */
+  paymentMethod: BillPaymentMethod;
   status: "COMPLETED" | "VOID";
   cashierName: string;
   lineCount: number;
+  /** A SPLIT bill's lines in position order; null for a one-method bill. */
+  splitPayments: Array<{ method: PaymentMethod; amount: string }> | null;
 };
 
 export type BillLedgerFilters = {
   from: string;
   to: string;
   cashierId?: string;
-  paymentMethod?: PaymentMethod;
+  paymentMethod?: BillPaymentMethod;
   billNumber?: number;
 };
 

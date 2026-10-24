@@ -65,7 +65,10 @@ export function BillTableRow({
         {row.lineCount}
       </TableCell>
       <TableCell>
-        <PaymentMethodLabel method={row.paymentMethod} />
+        <PaymentMethodLabel
+          method={row.paymentMethod}
+          splitPayments={row.splitPayments}
+        />
       </TableCell>
       <TableCell
         className={cn(

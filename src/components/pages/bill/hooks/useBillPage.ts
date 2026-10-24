@@ -11,8 +11,10 @@ import {
 import { toast } from "sonner";
 
 import {
+  type BillPaymentMethod,
   collectsTender,
   type PaymentMethod,
+  SPLIT,
 } from "@/constants/payment-methods";
 import {
   billTotal,
@@ -27,7 +29,17 @@ import { createBillAction } from "@/server/bills/bills-actions";
 import type { MenuCategory, MenuItem } from "@/types/item.types";
 
 import { atStockCap, filterItems, topSearchMatch } from "../utils/cart";
+import {
+  type PendingPriceChange,
+  priceChangeStep,
+} from "../utils/price-change";
+import {
+  canSplit,
+  dropsLeftoverSplit,
+  splitPayload,
+} from "../utils/split-payment";
 import { useCartReducer } from "./useCartReducer";
+import { useSplitPayment } from "./useSplitPayment";
 
 export function useBillPage({
   menu,
@@ -48,13 +60,16 @@ export function useBillPage({
     syncMenu,
   } = useCartReducer();
 
-  // A fresh menu (after a refresh, or a failed save) may hold less stock than
-  // the cart: cut the cart down to it and say so, rather than let the cashier
-  // re-submit a bill the server will refuse.
+  // A fresh menu (after a refresh, or a failed save) may hold less stock or
+  // different prices than the cart: bring the cart to it and say so, rather
+  // than let the cashier re-submit a bill the server will refuse.
   useEffect(() => {
-    const changed = syncMenu(menu);
+    const { changed, repriced } = syncMenu(menu);
     if (changed.length > 0) {
       toast.warning(`Updated to current stock: ${changed.join(", ")}`);
+    }
+    if (repriced.length > 0) {
+      toast(`Prices updated: ${repriced.join(", ")}`);
     }
   }, [menu, syncMenu]);
 
@@ -65,16 +80,12 @@ export function useBillPage({
   // The owner chooses which methods the till offers; the first enabled one is
   // the default. getEnabledPaymentMethods() never returns an empty list.
   const defaultMethod = paymentMethods[0];
-  const [selectedMethod, setPaymentMethod] =
-    useState<PaymentMethod>(defaultMethod);
-  // If the owner switches off the selected method while this till is open, a
-  // refresh drops it from the list — fall back rather than leave a button
-  // highlighted that is no longer there. The server rejects it either way.
-  const paymentMethod = paymentMethods.includes(selectedMethod)
-    ? selectedMethod
-    : defaultMethod;
+  const [selectedMethod, setSelectedMethod] =
+    useState<BillPaymentMethod>(defaultMethod);
   const [error, setError] = useState<string | null>(null);
-  const [priceChange, setPriceChange] = useState<string | null>(null);
+  const [priceChange, setPriceChange] = useState<PendingPriceChange | null>(
+    null,
+  );
 
   // One key per cart. A retry after a failure REUSES it, so retrying cannot
   // create a second bill. Reset only after a successful save. See spec §8.4.
@@ -105,9 +116,33 @@ export function useBillPage({
   const { subtotal, discount, total } = billTotal(lines, rawDiscount);
   const discountExceedsSubtotal = compare(rawDiscount, subtotal) > 0;
 
-  const tendered = collectsTender(paymentMethod)
-    ? parseRupeesOrZero(tenderedInput)
-    : null;
+  // Splitting needs two methods and something to split (a ₹0 bill has none).
+  const showSplit = paymentMethods.length >= 2;
+  const splitAvailable = canSplit(paymentMethods, total);
+  const split = useSplitPayment({ paymentMethods, total });
+  const { start: startSplitPayment, reset: resetSplit } = split;
+
+  // SPLIT only while a split really is on screen. Otherwise, if the owner
+  // switches off the selected method while this till is open, a refresh drops
+  // it from the list — fall back rather than leave a button highlighted that
+  // is no longer there (the same goes for a split left with fewer than two
+  // methods, or on a ₹0 bill). The server rejects it either way. The stale
+  // split state is cleared by the cashier's next tap on a method, or by the
+  // first item of the next order.
+  const paymentMethod: BillPaymentMethod =
+    selectedMethod === SPLIT
+      ? splitAvailable && split.active
+        ? SPLIT
+        : defaultMethod
+      : paymentMethods.includes(selectedMethod)
+        ? selectedMethod
+        : defaultMethod;
+  const splitting = paymentMethod === SPLIT;
+
+  // Cash given on a split goes with the cash line, so it is read apart from
+  // the one-method "Tendered" field.
+  const cashTendered = !splitting && collectsTender(paymentMethod);
+  const tendered = cashTendered ? parseRupeesOrZero(tenderedInput) : null;
   const changeDue =
     tendered !== null && tenderedInput.trim() && compare(tendered, total) >= 0
       ? subtract(tendered, total)
@@ -117,9 +152,32 @@ export function useBillPage({
     lines.length > 0 &&
     !discountExceedsSubtotal &&
     !isSaving &&
-    (!collectsTender(paymentMethod) ||
-      !tenderedInput.trim() ||
-      compare(tendered ?? ZERO, total) >= 0);
+    (splitting
+      ? split.status.kind === "PAID"
+      : !cashTendered ||
+        !tenderedInput.trim() ||
+        compare(tendered ?? ZERO, total) >= 0);
+
+  // Tapping Split starts a split (and keeps one already on screen); tapping
+  // any real method leaves it and discards the lines.
+  const setPaymentMethod = useCallback(
+    (method: BillPaymentMethod) => {
+      if (method === SPLIT) {
+        if (!splitting) startSplitPayment();
+      } else {
+        resetSplit();
+      }
+      setSelectedMethod(method);
+    },
+    [resetSplit, startSplitPayment, splitting],
+  );
+
+  // Back to the default method, with no split and no cash given.
+  const resetPayment = useCallback(() => {
+    setTenderedInput("");
+    setSelectedMethod(defaultMethod);
+    resetSplit();
+  }, [defaultMethod, resetSplit]);
 
   const addItem = useCallback(
     (item: MenuItem) => {
@@ -128,9 +186,16 @@ export function useBillPage({
         toast(`Only ${item.stockQuantity} ${item.name} in stock`);
         return;
       }
+      // An emptied cart keeps the last order's split on screen; it must not
+      // come back with this customer's first item. A method tapped before
+      // that item is kept. Done here, in the event, so search adds (through
+      // this function) are covered too.
+      if (dropsLeftoverSplit(lines, selectedMethod, split.lines.length)) {
+        resetPayment();
+      }
       addToCart(item);
     },
-    [addToCart, lines],
+    [addToCart, lines, resetPayment, selectedMethod, split.lines.length],
   );
 
   const setQuantity = useCallback(
@@ -158,13 +223,18 @@ export function useBillPage({
   const resetForNextCustomer = useCallback(() => {
     clear();
     setDiscountInput("");
-    setTenderedInput("");
-    setPaymentMethod(defaultMethod);
+    resetPayment();
     setSearch("");
     setError(null);
     setPriceChange(null);
     setIdempotencyKey(globalThis.crypto.randomUUID());
-  }, [clear, defaultMethod]);
+  }, [clear, resetPayment]);
+
+  // Cash given is optional: null means none was entered (or no cash line).
+  const splitTendered =
+    split.hasCashLine && split.cashGivenInput.trim()
+      ? parseRupeesOrZero(split.cashGivenInput)
+      : null;
 
   const submit = useCallback(
     (expectedTotal: string) => {
@@ -179,10 +249,13 @@ export function useBillPage({
           })),
           discount,
           paymentMethod,
-          tendered:
-            collectsTender(paymentMethod) && tenderedInput.trim()
+          tendered: splitting
+            ? splitTendered
+            : cashTendered && tenderedInput.trim()
               ? tendered
               : null,
+          // The one-method payload carries no `splitPayments` key at all.
+          ...(splitting ? { splitPayments: splitPayload(split.lines) } : {}),
           expectedTotal,
         });
 
@@ -195,7 +268,14 @@ export function useBillPage({
         }
 
         if (result.error.code === "PRICE_CHANGED") {
-          setPriceChange(result.error.message);
+          // Remember the menu we hold now; the refresh brings a different one,
+          // and the dialog stays on "Updating prices…" until it does.
+          setPriceChange({
+            message: result.error.message,
+            newTotal: result.error.fields?.total ?? null,
+            menu,
+          });
+          router.refresh();
           return;
         }
 
@@ -210,12 +290,17 @@ export function useBillPage({
       });
     },
     [
+      cashTendered,
       discount,
       idempotencyKey,
       lines,
+      menu,
       paymentMethod,
       resetForNextCustomer,
       router,
+      split.lines,
+      splitTendered,
+      splitting,
       tendered,
       tenderedInput,
     ],
@@ -223,16 +308,38 @@ export function useBillPage({
 
   const save = useCallback(() => submit(total), [submit, total]);
 
+  // What the dialog may offer: the bill must have caught up with the refreshed
+  // menu and reach exactly the server's new total.
+  const priceChangeState = useMemo(
+    () =>
+      priceChange
+        ? priceChangeStep(priceChange, menu, lines, rawDiscount)
+        : null,
+    [priceChange, menu, lines, rawDiscount],
+  );
+
   /**
-   * The cashier accepted the recalculated total. Re-submitting with the same
-   * idempotency key is safe — the rejected attempt never wrote anything.
+   * The cashier accepted the recalculated total. Only once the till has
+   * re-priced the bill to it (READY) — before that, `total` is the old one and
+   * would be refused again. Re-submitting with the same idempotency key is
+   * safe: the rejected attempt never wrote anything.
    */
   const confirmPriceChange = useCallback(() => {
+    if (priceChangeState !== "READY" || !priceChange) return;
     setPriceChange(null);
-    // Pull fresh prices into the menu for the next customer.
-    router.refresh();
+    // A split re-balanced itself to the new total: the cashier checks what
+    // each method now owes and presses Save (spec §9.4).
+    if (splitting) return;
+    // `READY` was worked out from the menu; `total` is what is on screen. Charge
+    // only when the two agree, so a stale total can never be sent.
+    if (
+      priceChange.newTotal === null ||
+      compare(total, priceChange.newTotal) !== 0
+    ) {
+      return;
+    }
     submit(total);
-  }, [router, submit, total]);
+  }, [priceChange, priceChangeState, splitting, submit, total]);
 
   const dismissPriceChange = useCallback(() => setPriceChange(null), []);
 
@@ -263,6 +370,9 @@ export function useBillPage({
     paymentMethods,
     paymentMethod,
     setPaymentMethod,
+    showSplit,
+    splitAvailable,
+    split,
     tenderedInput,
     setTenderedInput,
     changeDue,
@@ -270,7 +380,8 @@ export function useBillPage({
     canSave,
     isSaving,
     error,
-    priceChange,
+    priceChange: priceChange?.message ?? null,
+    priceChangeStep: priceChangeState,
     confirmPriceChange,
     dismissPriceChange,
     save,

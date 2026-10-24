@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SPLIT } from "@/constants/payment-methods";
 import { REPORT_ROUTES } from "@/lib/routes/report-routes";
 import { formatBillDate, formatBillTime } from "@/lib/utils/dates";
 import { formatINR, isZero } from "@/lib/utils/money";
@@ -29,7 +30,7 @@ function SummaryRow({
   label,
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -51,6 +52,10 @@ export function BillDetails({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  // Cash given and change belong to the cash line of a split bill.
+  const cashPayment = receipt.payments.find(
+    (payment) => payment.method === "CASH" && payment.tendered !== null,
+  );
 
   function handleReprint() {
     startTransition(async () => {
@@ -175,7 +180,33 @@ export function BillDetails({
               <SummaryRow label="Paid by">
                 <PaymentMethodLabel method={receipt.paymentMethod} />
               </SummaryRow>
-              {receipt.tendered !== null ? (
+              {receipt.paymentMethod === SPLIT ? (
+                <>
+                  {receipt.payments.map((payment) => (
+                    <SummaryRow
+                      key={payment.method}
+                      label={
+                        <PaymentMethodLabel
+                          method={payment.method}
+                          className="font-normal text-muted-foreground"
+                        />
+                      }
+                    >
+                      {formatINR(payment.amount)}
+                    </SummaryRow>
+                  ))}
+                  {cashPayment?.tendered != null ? (
+                    <>
+                      <SummaryRow label="Cash given">
+                        {formatINR(cashPayment.tendered)}
+                      </SummaryRow>
+                      <SummaryRow label="Change">
+                        {formatINR(cashPayment.changeDue ?? "0.00")}
+                      </SummaryRow>
+                    </>
+                  ) : null}
+                </>
+              ) : receipt.tendered !== null ? (
                 <>
                   <SummaryRow label="Tendered">
                     {formatINR(receipt.tendered)}

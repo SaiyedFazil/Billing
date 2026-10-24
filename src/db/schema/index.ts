@@ -7,6 +7,7 @@ export * from "./items";
 export * from "./bill-counters";
 export * from "./bills";
 export * from "./bill-items";
+export * from "./bill-payments";
 export * from "./stock-movements";
 export * from "./expense-categories";
 export * from "./expenses";

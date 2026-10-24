@@ -8,6 +8,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import type { PaymentMethod } from "@/constants/payment-methods";
+
 import { paymentMethodEnum, printerWidthEnum } from "./enums";
 import { users } from "./users";
 
@@ -32,8 +34,10 @@ export const shopSettings = pgTable(
     currencyCode: text("currency_code").notNull().default("INR"),
     // Which payment buttons the till offers. History is never filtered by it:
     // a bill keeps the method it was paid with even after it is switched off.
+    // Real methods only: the shop_settings_no_split_method CHECK refuses SPLIT.
     paymentMethods: paymentMethodEnum("payment_methods")
       .array()
+      .$type<PaymentMethod[]>()
       .notNull()
       .default(["CASH", "UPI", "CARD", "OTHER"]),
     // Drives business_date and every "today" report.
@@ -54,6 +58,11 @@ export const shopSettings = pgTable(
     check(
       "shop_settings_payment_methods_not_empty",
       sql`cardinality(${table.paymentMethods}) >= 1`,
+    ),
+    // SPLIT labels a bill; it is never a button the till can offer.
+    check(
+      "shop_settings_no_split_method",
+      sql`NOT ('SPLIT' = ANY(${table.paymentMethods}))`,
     ),
   ],
 );

@@ -14,7 +14,13 @@ import {
 
 import { ONLINE_EXPENSE_MODES } from "@/constants/expense-modes";
 import { db } from "@/db";
-import { bills, expenseCategories, expenses, users } from "@/db/schema";
+import {
+  billPayments,
+  bills,
+  expenseCategories,
+  expenses,
+  users,
+} from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
 import {
   buildCashBookDays,
@@ -52,14 +58,17 @@ export async function getCashBook(
 ): Promise<{ summary: CashBookSummary; days: CashBookDay[] }> {
   return withConnectionRetry(async () => {
     const [billRows, expenseRows] = await Promise.all([
-      // Voided bills are excluded, as in every other money figure.
+      // Voided bills are excluded, as in every other money figure. Summed from
+      // the payment lines, so a split bill's cash lands in cash and the rest
+      // online.
       db
         .select({
           date: bills.businessDate,
-          paymentMethod: bills.paymentMethod,
-          total: sql<string>`sum(${bills.total})::text`,
+          paymentMethod: billPayments.method,
+          total: sql<string>`sum(${billPayments.amount})::text`,
         })
-        .from(bills)
+        .from(billPayments)
+        .innerJoin(bills, eq(bills.id, billPayments.billId))
         .where(
           and(
             eq(bills.status, "COMPLETED"),
@@ -67,7 +76,7 @@ export async function getCashBook(
             lte(bills.businessDate, to),
           ),
         )
-        .groupBy(bills.businessDate, bills.paymentMethod),
+        .groupBy(bills.businessDate, billPayments.method),
       db
         .select({
           date: expenses.expenseDate,

@@ -2,9 +2,11 @@
 
 import { asc, eq } from "drizzle-orm";
 
+import { PAYMENT_METHOD_LABELS } from "@/constants/payment-methods";
 import { db } from "@/db";
 import {
   billItems,
+  billPayments,
   bills,
   categories,
   items,
@@ -21,6 +23,7 @@ import { listExpensesForExport } from "@/server/expenses/expenses-queries";
 export type ExportBundle = {
   bills: string;
   billItems: string;
+  billPayments: string;
   items: string;
   stockMovements: string;
   expenses: string;
@@ -68,6 +71,37 @@ export async function exportAllDataAction(): Promise<
       .innerJoin(bills, eq(bills.id, billItems.billId))
       .orderBy(asc(bills.businessDate), asc(bills.billNumber));
 
+    // One query for every payment line, voided bills included like the bills
+    // CSV. It feeds both the bill-payments file and the bills "Payment
+    // details" column, so there is never a query per bill.
+    const paymentRows = await db
+      .select({
+        billId: billPayments.billId,
+        businessDate: bills.businessDate,
+        billNumber: bills.billNumber,
+        method: billPayments.method,
+        amount: billPayments.amount,
+        tendered: billPayments.tendered,
+        changeDue: billPayments.changeDue,
+      })
+      .from(billPayments)
+      .innerJoin(bills, eq(bills.id, billPayments.billId))
+      .orderBy(
+        asc(bills.businessDate),
+        asc(bills.billNumber),
+        asc(billPayments.position),
+      );
+
+    // "Cash 400.00; UPI 100.00", in position order (the query's order).
+    const detailsByBill = new Map<string, string[]>();
+    for (const line of paymentRows) {
+      const parts = detailsByBill.get(line.billId) ?? [];
+      parts.push(
+        `${PAYMENT_METHOD_LABELS[line.method]} ${csvAmount(line.amount)}`,
+      );
+      detailsByBill.set(line.billId, parts);
+    }
+
     const itemRows = await db
       .select({
         name: items.name,
@@ -112,6 +146,10 @@ export async function exportAllDataAction(): Promise<
         { header: "Payment", value: (r) => r.paymentMethod },
         { header: "Status", value: (r) => r.status },
         { header: "Bill ID", value: (r) => r.id },
+        {
+          header: "Payment details",
+          value: (r) => (detailsByBill.get(r.id) ?? []).join("; "),
+        },
       ]),
       billItems: toCsv(lineRows, [
         { header: "Date", value: (r) => r.businessDate },
@@ -121,6 +159,21 @@ export async function exportAllDataAction(): Promise<
         { header: "Unit Price", value: (r) => csvAmount(r.unitPrice) },
         { header: "Qty", value: (r) => r.quantity },
         { header: "Line Total", value: (r) => csvAmount(r.lineTotal) },
+        { header: "Bill ID", value: (r) => r.billId },
+      ]),
+      billPayments: toCsv(paymentRows, [
+        { header: "Date", value: (r) => r.businessDate },
+        { header: "Bill No", value: (r) => r.billNumber },
+        { header: "Method", value: (r) => PAYMENT_METHOD_LABELS[r.method] },
+        { header: "Amount", value: (r) => csvAmount(r.amount) },
+        {
+          header: "Cash Given",
+          value: (r) => (r.tendered === null ? "" : csvAmount(r.tendered)),
+        },
+        {
+          header: "Change",
+          value: (r) => (r.changeDue === null ? "" : csvAmount(r.changeDue)),
+        },
         { header: "Bill ID", value: (r) => r.billId },
       ]),
       items: toCsv(itemRows, [

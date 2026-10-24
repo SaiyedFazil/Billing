@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gte,
   lte,
   sql,
@@ -11,8 +12,9 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db";
-import { billItems, bills, users } from "@/db/schema";
+import { billItems, billPayments, bills, users } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
+import { SPLIT, type PaymentMethod } from "@/constants/payment-methods";
 import { toAmount } from "@/lib/utils/money";
 import { getShopSettings } from "@/server/settings/settings-queries";
 import type { ReceiptData } from "@/types/bill.types";
@@ -56,11 +58,30 @@ export async function getReceipt(billId: string): Promise<ReceiptData | null> {
     .where(eq(billItems.billId, billId))
     .orderBy(asc(billItems.createdAt), asc(billItems.itemName));
 
+  // One line for a one-method bill, two to four for a split, in display order.
+  const payments = await db
+    .select({
+      method: billPayments.method,
+      amount: billPayments.amount,
+      tendered: billPayments.tendered,
+      changeDue: billPayments.changeDue,
+    })
+    .from(billPayments)
+    .where(eq(billPayments.billId, billId))
+    .orderBy(asc(billPayments.position));
+
   const settings = await getShopSettings();
 
   return {
     ...bill,
     lines,
+    payments: payments.map((payment) => ({
+      method: payment.method,
+      amount: toAmount(payment.amount),
+      tendered: payment.tendered === null ? null : toAmount(payment.tendered),
+      changeDue:
+        payment.changeDue === null ? null : toAmount(payment.changeDue),
+    })),
     shop: {
       name: settings.shopName,
       addressLine: settings.addressLine,
@@ -103,8 +124,24 @@ export async function listBills(
 
     if (filters.cashierId)
       conditions.push(eq(bills.createdBy, filters.cashierId));
-    if (filters.paymentMethod) {
-      conditions.push(eq(bills.paymentMethod, filters.paymentMethod));
+    if (filters.paymentMethod === SPLIT) {
+      conditions.push(eq(bills.paymentMethod, SPLIT));
+    } else if (filters.paymentMethod) {
+      // Any bill with a line in this method: a one-method bill, or a split
+      // that used it.
+      conditions.push(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(billPayments)
+            .where(
+              and(
+                eq(billPayments.billId, bills.id),
+                eq(billPayments.method, filters.paymentMethod),
+              ),
+            ),
+        ),
+      );
     }
     if (filters.billNumber !== undefined) {
       conditions.push(eq(bills.billNumber, filters.billNumber));
@@ -128,6 +165,22 @@ export async function listBills(
             (SELECT count(*)::int FROM ${billItems}
              WHERE ${billItems.billId} = ${bills.id})
           `,
+          // A split bill's lines for the row's hover text; NULL otherwise.
+          // Amounts are cast ::text so JSON never turns them into doubles.
+          splitPayments: sql<Array<{
+            method: PaymentMethod;
+            amount: string;
+          }> | null>`
+            (SELECT json_agg(
+               json_build_object(
+                 'method', ${billPayments.method},
+                 'amount', ${billPayments.amount}::text
+               ) ORDER BY ${billPayments.position}
+             )
+             FROM ${billPayments}
+             WHERE ${billPayments.billId} = ${bills.id}
+               AND ${bills.paymentMethod} = 'SPLIT')
+          `,
         })
         .from(bills)
         .innerJoin(users, eq(users.id, bills.createdBy))
@@ -142,6 +195,11 @@ export async function listBills(
       rows: rows.map((row) => ({
         ...row,
         total: toAmount(row.total),
+        splitPayments:
+          row.splitPayments?.map((part) => ({
+            method: part.method,
+            amount: toAmount(part.amount),
+          })) ?? null,
       })) satisfies BillLedgerRow[],
       total: totalRow?.value ?? 0,
       page,

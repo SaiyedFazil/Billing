@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 
 import { db } from "../src/db";
+import { add } from "../src/lib/utils/money";
 
 let failures = 0;
 
@@ -48,6 +49,17 @@ async function expectViolation(
   }
 }
 
+/** The mirror of expectViolation: a valid statement must go through. */
+async function expectAccepted(label: string, statement: SQL) {
+  try {
+    await db.execute(statement);
+    console.log(`PASS — ${label}: accepted`);
+  } catch (error) {
+    failures += 1;
+    console.error(`FAIL — ${label}: rejected:`, describe(error).split("\n")[0]);
+  }
+}
+
 async function main() {
   // --- fixtures -------------------------------------------------------
   // A user is needed for bills.created_by, a category for items.category_id.
@@ -77,25 +89,31 @@ async function main() {
   ).id;
 
   // --- bills ----------------------------------------------------------
-  await expectRejection(
+  // Named, not just "rejected": these bills have no payment line, so the
+  // deferred balance trigger would refuse them at commit even if the CHECK
+  // under test were gone.
+  await expectViolation(
     "total must equal subtotal minus discount",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
         VALUES (9001, '2026-01-01', 100.00, 10.00, 99.99, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+    "bills_total_matches",
   );
 
-  await expectRejection(
+  await expectViolation(
     "discount cannot exceed subtotal",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
         VALUES (9002, '2026-01-01', 100.00, 200.00, -100.00, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+    "bills_discount_within_subtotal",
   );
 
-  await expectRejection(
+  await expectViolation(
     "change must equal tendered minus total",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, tendered, change_due, idempotency_key, created_by)
         VALUES (9003, '2026-01-01', 100.00, 0.00, 100.00, 'CASH', 200.00, 50.00, gen_random_uuid(), ${userId}::uuid)`,
+    "bills_change_matches",
   );
 
   // --- items ----------------------------------------------------------
@@ -193,6 +211,16 @@ async function main() {
     sql`UPDATE shop_settings SET payment_methods = '{}'::payment_method[]`,
   );
 
+  // --- bill_payments --------------------------------------------------
+  // On a database that predates split payment this is one clean FAIL, not a
+  // crash that would strand the probe rows above.
+  if (await tableExists("bill_payments")) {
+    await verifyBillPaymentConstraints(userId);
+  } else {
+    failures += 1;
+    console.error("FAIL — the bill_payments table is missing; run db:migrate");
+  }
+
   // --- expenses -------------------------------------------------------
   // On a database that predates the cash book this is one clean FAIL, not a
   // crash that would strand the probe rows above.
@@ -204,6 +232,24 @@ async function main() {
   }
 
   // --- cleanup --------------------------------------------------------
+  // Payment lines and bills cannot be deleted by trigger; lift both for the
+  // probe bills only. The table is absent before split payment.
+  await db.execute(sql`
+    DO $$ BEGIN
+      IF to_regclass('bill_payments') IS NOT NULL THEN
+        ALTER TABLE bill_payments DISABLE TRIGGER bill_payments_immutable;
+        ALTER TABLE bills DISABLE TRIGGER bills_no_delete;
+        DELETE FROM bill_payments WHERE bill_id IN
+          (SELECT id FROM bills WHERE business_date = '2026-01-01'
+             AND bill_number BETWEEN 9010 AND 9099);
+        DELETE FROM bills WHERE business_date = '2026-01-01'
+          AND bill_number BETWEEN 9010 AND 9099;
+        ALTER TABLE bill_payments ENABLE TRIGGER bill_payments_immutable;
+        ALTER TABLE bills ENABLE TRIGGER bills_no_delete;
+      END IF;
+    END $$
+  `);
+
   // Expense categories cannot be deleted by trigger; lift it for the probe.
   await db.execute(sql`
     DO $$ BEGIN
@@ -248,6 +294,220 @@ async function tableExists(name: string): Promise<boolean> {
     sql`SELECT to_regclass(${name}) IS NOT NULL AS present`,
   );
   return (result.rows[0] as { present: boolean }).present;
+}
+
+type ProbePaymentLine = {
+  method: string;
+  amount: string;
+  tendered?: string;
+  changeDue?: string;
+};
+
+/**
+ * Split payment spec §6.3. The probe bills are dated 2026-01-01 and numbered
+ * from 9010 up; the cleanup in main() removes them.
+ */
+async function verifyBillPaymentConstraints(userId: string) {
+  /**
+   * A bill and its payment lines in ONE statement. Each db.execute() is its
+   * own transaction, so this is the only way the deferred balance check sees
+   * the bill and its lines together when it runs at commit.
+   */
+  const billWithPayments = ({
+    number,
+    method,
+    total,
+    discount = "0.00",
+    tendered = null,
+    changeDue = null,
+    lines,
+  }: {
+    number: number;
+    method: string;
+    total: string;
+    discount?: string;
+    tendered?: string | null;
+    changeDue?: string | null;
+    lines: ProbePaymentLine[];
+  }): SQL => {
+    const bill = sql`INSERT INTO bills (bill_number, business_date, subtotal,
+        discount, total, payment_method, tendered, change_due,
+        idempotency_key, created_by)
+      VALUES (${number}, '2026-01-01', ${add(total, discount)}, ${discount},
+        ${total}, ${method}, ${tendered}, ${changeDue}, gen_random_uuid(),
+        ${userId}::uuid)
+      RETURNING id`;
+    if (lines.length === 0) return sql`WITH b AS (${bill}) SELECT id FROM b`;
+
+    const rows = sql.join(
+      lines.map(
+        (line, index) =>
+          sql`(${line.method}::payment_method, ${line.amount}::numeric,
+            ${line.tendered ?? null}::numeric, ${line.changeDue ?? null}::numeric,
+            ${index + 1}::smallint)`,
+      ),
+      sql`, `,
+    );
+    return sql`WITH b AS (${bill})
+      INSERT INTO bill_payments (bill_id, method, amount, tendered, change_due,
+        position)
+      SELECT b.id, l.method, l.amount, l.tendered, l.change_due, l.position
+      FROM b, (VALUES ${rows}) AS l(method, amount, tendered, change_due,
+        position)`;
+  };
+
+  // Checked at commit by the deferred constraint triggers.
+  await expectViolation(
+    "a bill with no payment line is refused",
+    billWithPayments({
+      number: 9010,
+      method: "CASH",
+      total: "100.00",
+      lines: [],
+    }),
+    "bill_payments_balance",
+  );
+  await expectViolation(
+    "payment lines must add up to the bill total",
+    billWithPayments({
+      number: 9011,
+      method: "CASH",
+      total: "100.00",
+      lines: [{ method: "CASH", amount: "90.00" }],
+    }),
+    "bill_payments_balance",
+  );
+  await expectViolation(
+    "a split bill needs at least two lines",
+    billWithPayments({
+      number: 9012,
+      method: "SPLIT",
+      total: "100.00",
+      lines: [{ method: "CASH", amount: "100.00" }],
+    }),
+    "bill_payments_balance",
+  );
+  await expectViolation(
+    "every line of a split bill is more than ₹0",
+    billWithPayments({
+      number: 9013,
+      method: "SPLIT",
+      total: "100.00",
+      lines: [
+        { method: "CASH", amount: "100.00" },
+        { method: "UPI", amount: "0.00" },
+      ],
+    }),
+    "bill_payments_balance",
+  );
+  await expectViolation(
+    "a one-method bill's line has the bill's method",
+    billWithPayments({
+      number: 9014,
+      method: "UPI",
+      total: "100.00",
+      lines: [{ method: "CASH", amount: "100.00" }],
+    }),
+    "bill_payments_balance",
+  );
+  await expectViolation(
+    "a cash bill's line carries the bill's cash given and change",
+    billWithPayments({
+      number: 9015,
+      method: "CASH",
+      total: "100.00",
+      tendered: "200.00",
+      changeDue: "100.00",
+      lines: [{ method: "CASH", amount: "100.00" }],
+    }),
+    "bill_payments_balance",
+  );
+
+  // Checked on the row itself, so the bill a line names need not exist.
+  await expectViolation(
+    "a payment line is never SPLIT",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, position)
+        VALUES (gen_random_uuid(), 'SPLIT', 100.00, 1)`,
+    "bill_payments_not_split",
+  );
+  await expectViolation(
+    "only a cash line carries cash given and change",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, tendered,
+        change_due, position)
+        VALUES (gen_random_uuid(), 'UPI', 100.00, 200.00, 100.00, 1)`,
+    "bill_payments_tender_matches",
+  );
+  // A CHECK that evaluates to NULL passes, so half a cash pair must be caught
+  // on its own: here the FK would otherwise be the first to object.
+  await expectViolation(
+    "a cash line with cash given also carries its change",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, tendered,
+        change_due, position)
+        VALUES (gen_random_uuid(), 'CASH', 100.00, 200.00, NULL, 1)`,
+    "bill_payments_tender_matches",
+  );
+  await expectViolation(
+    "a cash line with change also carries its cash given",
+    sql`INSERT INTO bill_payments (bill_id, method, amount, tendered,
+        change_due, position)
+        VALUES (gen_random_uuid(), 'CASH', 100.00, NULL, 100.00, 1)`,
+    "bill_payments_tender_matches",
+  );
+  await expectViolation(
+    "a split bill keeps cash given on its cash line, not on the bill",
+    billWithPayments({
+      number: 9016,
+      method: "SPLIT",
+      total: "500.00",
+      tendered: "600.00",
+      changeDue: "100.00",
+      lines: [
+        {
+          method: "CASH",
+          amount: "400.00",
+          tendered: "500.00",
+          changeDue: "100.00",
+        },
+        { method: "UPI", amount: "100.00" },
+      ],
+    }),
+    "bills_split_has_no_tender",
+  );
+  await expectViolation(
+    "SPLIT is never an enabled till method",
+    sql`UPDATE shop_settings
+        SET payment_methods = '{CASH,SPLIT}'::payment_method[]`,
+    "shop_settings_no_split_method",
+  );
+
+  await expectAccepted(
+    "a split bill whose lines add up",
+    billWithPayments({
+      number: 9017,
+      method: "SPLIT",
+      total: "500.00",
+      lines: [
+        {
+          method: "CASH",
+          amount: "400.00",
+          tendered: "500.00",
+          changeDue: "100.00",
+        },
+        { method: "UPI", amount: "100.00" },
+      ],
+    }),
+  );
+  // A 100% discount: the one place a ₹0.00 line is allowed.
+  await expectAccepted(
+    "a ₹0.00 cash bill with one ₹0.00 line",
+    billWithPayments({
+      number: 9018,
+      method: "CASH",
+      total: "0.00",
+      discount: "10.00",
+      lines: [{ method: "CASH", amount: "0.00" }],
+    }),
+  );
 }
 
 async function verifyExpenseConstraints(userId: string) {

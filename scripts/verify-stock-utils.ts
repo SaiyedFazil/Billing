@@ -5,6 +5,7 @@ import {
   clampLinesToMenu,
   topSearchMatch,
 } from "../src/components/pages/bill/utils/cart";
+import { priceChangeStep } from "../src/components/pages/bill/utils/price-change";
 import {
   countByStatus,
   matchesStockFilter,
@@ -289,7 +290,11 @@ check(
     [line("a", "Coke", 5)],
     menu([menuItem("a", "Coke", tracked(3))]),
   ),
-  { lines: [{ ...line("a", "Coke", 3), maxQuantity: 3 }], changed: ["Coke"] },
+  {
+    lines: [{ ...line("a", "Coke", 3), maxQuantity: 3 }],
+    changed: ["Coke"],
+    repriced: [],
+  },
 );
 check(
   "a line whose item ran out is removed",
@@ -297,7 +302,7 @@ check(
     [line("a", "Coke", 2)],
     menu([menuItem("a", "Coke", tracked(0))]),
   ),
-  { lines: [], changed: ["Coke"] },
+  { lines: [], changed: ["Coke"], repriced: [] },
 );
 check(
   "a line whose item was marked Sold out is removed",
@@ -305,12 +310,12 @@ check(
     [line("a", "Coke", 2)],
     menu([menuItem("a", "Coke", tracked(9), false)]),
   ),
-  { lines: [], changed: ["Coke"] },
+  { lines: [], changed: ["Coke"], repriced: [] },
 );
 check(
   "a line whose item left the menu is removed",
   clampLinesToMenu([line("a", "Coke", 2)], menu([])),
-  { lines: [], changed: ["Coke"] },
+  { lines: [], changed: ["Coke"], repriced: [] },
 );
 check(
   "an untracked line is left alone",
@@ -318,7 +323,71 @@ check(
     [line("b", "Fries", 4)],
     menu([menuItem("b", "Fries", untracked)]),
   ),
-  { lines: [line("b", "Fries", 4)], changed: [] },
+  { lines: [line("b", "Fries", 4)], changed: [], repriced: [] },
+);
+check(
+  "a fresh menu re-prices a line",
+  clampLinesToMenu(
+    [line("a", "Coke", 1)],
+    menu([{ ...menuItem("a", "Coke", untracked), price: "70.00" }]),
+  ),
+  {
+    lines: [{ ...line("a", "Coke", 1), unitPrice: "70.00" }],
+    changed: [],
+    repriced: ["Coke"],
+  },
+);
+check(
+  "a price in another format is not a re-price",
+  clampLinesToMenu(
+    [line("a", "Coke", 1)],
+    menu([{ ...menuItem("a", "Coke", untracked), price: "30" }]),
+  ).repriced,
+  [],
+);
+
+// --- priceChangeStep --------------------------------------------------
+// The bill holds one Coke at ₹30.00; the owner raised it to ₹70.00, so the
+// server's new total is ₹70.00.
+const staleMenu = menu([menuItem("a", "Coke", untracked)]);
+const pending = { message: "x", newTotal: "70.00", menu: staleMenu };
+const coke1 = [line("a", "Coke", 1)];
+const cokeAt = (price: string, isAvailable = true) =>
+  menu([{ ...menuItem("a", "Coke", untracked, isAvailable), price }]);
+check(
+  "the same menu reference is still UPDATING",
+  priceChangeStep(pending, staleMenu, coke1, "0"),
+  "UPDATING",
+);
+check(
+  "a fresh menu that reaches the new total is READY",
+  priceChangeStep(pending, cokeAt("70.00"), coke1, "0"),
+  "READY",
+);
+check(
+  "a fresh menu that sold the item out is CHANGED_AGAIN",
+  priceChangeStep(pending, cokeAt("70.00", false), coke1, "0"),
+  "CHANGED_AGAIN",
+);
+check(
+  "a fresh menu with a different total is CHANGED_AGAIN",
+  priceChangeStep(pending, cokeAt("80.00"), coke1, "0"),
+  "CHANGED_AGAIN",
+);
+check(
+  "a missing new total is CHANGED_AGAIN",
+  priceChangeStep({ ...pending, newTotal: null }, cokeAt("70.00"), coke1, "0"),
+  "CHANGED_AGAIN",
+);
+check(
+  "a stock cut on a fresh menu is CHANGED_AGAIN",
+  priceChangeStep(
+    pending,
+    menu([{ ...menuItem("a", "Coke", tracked(1)), price: "70.00" }]),
+    [line("a", "Coke", 2)],
+    "0",
+  ),
+  "CHANGED_AGAIN",
 );
 
 // --- backup export ------------------------------------------------------

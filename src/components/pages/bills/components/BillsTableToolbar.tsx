@@ -10,8 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_METHODS,
+  BILL_PAYMENT_METHOD_LABELS,
+  BILL_PAYMENT_METHODS,
 } from "@/constants/payment-methods";
 
 const FIELD_LABEL = "text-muted-foreground text-xs font-semibold";
@@ -97,9 +97,9 @@ export function BillsTableToolbar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All methods</SelectItem>
-            {PAYMENT_METHODS.map((method) => (
+            {BILL_PAYMENT_METHODS.map((method) => (
               <SelectItem key={method} value={method}>
-                {PAYMENT_METHOD_LABELS[method]}
+                {BILL_PAYMENT_METHOD_LABELS[method]}
               </SelectItem>
             ))}
           </SelectContent>
