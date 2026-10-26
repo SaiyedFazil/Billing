@@ -67,10 +67,6 @@ async function cleanup() {
     await db.execute(
       sql`DELETE FROM expense_categories WHERE name ILIKE ${`${PROBE_PREFIX}%`}`,
     );
-    await db.execute(sql`
-      DELETE FROM audit_log WHERE actor_id IN
-        (SELECT id FROM users WHERE username = ${PROBE_USER})
-    `);
     await db.execute(sql`DELETE FROM users WHERE username = ${PROBE_USER}`);
   } finally {
     await db.execute(

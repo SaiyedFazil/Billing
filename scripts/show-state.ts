@@ -50,15 +50,6 @@ async function main() {
   console.log("--- bill counters ---");
   console.table((await db.execute(sql`SELECT * FROM bill_counters`)).rows);
 
-  console.log("--- recent audit log ---");
-  console.table(
-    (
-      await db.execute(
-        sql`SELECT action, entity_type, created_at FROM audit_log ORDER BY created_at DESC LIMIT 10`,
-      )
-    ).rows,
-  );
-
   process.exit(0);
 }
 
