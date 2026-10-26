@@ -18,7 +18,7 @@ The system is used by two kinds of people:
 - **Admin** — the person at the counter. Creates bills, reprints them, views
   sales statistics.
 - **Superadmin** — the owner. Everything an admin can do, plus managing the
-  menu, prices, user accounts, shop settings, and the audit log.
+  menu, prices, user accounts and shop settings.
 
 Scale is small: one outlet, one or two tills, on the order of 100–300 bills a
 day. The system runs entirely on free hosting tiers until the client chooses to
@@ -320,31 +320,13 @@ for the first to commit, then gets the next number. This is the correct
 trade-off here: contention is nil at one or two tills, and gaplessness is worth
 more than parallelism.
 
-### 6.8 `audit_log`
+### 6.8 `audit_log` (removed 2026-10-27)
 
-| Column      | Type                               |
-| ----------- | ---------------------------------- |
-| id          | uuid PK                            |
-| actor_id    | uuid NULL → users.id               |
-| action      | text NOT NULL                      |
-| entity_type | text NOT NULL                      |
-| entity_id   | uuid NULL                          |
-| before      | jsonb NULL                         |
-| after       | jsonb NULL                         |
-| ip          | text NULL                          |
-| user_agent  | text NULL                          |
-| created_at  | timestamptz NOT NULL default now() |
-
-Logged actions: `ITEM_CREATED`, `ITEM_UPDATED`, `ITEM_PRICE_CHANGED`,
-`ITEM_DELETED`, `CATEGORY_CREATED`, `CATEGORY_UPDATED`, `CATEGORY_DELETED`,
-`USER_CREATED`, `USER_UPDATED`, `USER_DEACTIVATED`, `USER_PASSWORD_RESET`,
-`SETTINGS_UPDATED`, `BILL_REPRINTED`, `BILL_VOIDED`, `LOGIN_FAILED`,
-`LOGIN_LOCKED`.
-
-Indexes: `(created_at DESC)`, `(actor_id)`, `(entity_type, entity_id)`.
-
-`ITEM_PRICE_CHANGED` is recorded as its own action so price history is directly
-queryable without a separate table.
+The owner asked for the audit log to be removed: changes are no longer
+logged, stored or shown. Migration `0011_drop_audit_log` dropped the table,
+and the Audit page, every log write and the reprint-logging action went with
+it. Price history went with the log; each bill still keeps the prices it was
+sold at.
 
 ### 6.9 `shop_settings` — singleton row
 
@@ -409,7 +391,6 @@ a superadmin.
 | Toggle item availability ("sold out")              |   —   |     ✓      |
 | Manage users, reset passwords                      |   —   |     ✓      |
 | Shop settings and receipt footer                   |   —   |     ✓      |
-| View audit log                                     |   —   |     ✓      |
 | Export all data                                    |   —   |     ✓      |
 
 ### 7.2 Enforcement
@@ -440,8 +421,7 @@ Deactivated users are rejected by the guard even if they hold a valid JWT.
 
 Failed attempts are counted on the `users` row. Five consecutive failures lock
 the account for five minutes via `locked_until`. No Redis or third-party
-service is required. `LOGIN_FAILED` and `LOGIN_LOCKED` are written to
-`audit_log`.
+service is required.
 
 Minimum password length is 8 characters. There is no email-based password
 reset; a superadmin resets passwords directly, which is the correct model for a
@@ -597,9 +577,8 @@ replacing the printer is a dropdown change rather than a code change.
 handover): set the thermal printer as the system default; in Chrome, disable
 headers and footers and set margins to none.
 
-**Reprints are logged.** Any bill can be reopened from the ledger and
-reprinted, and every reprint writes `BILL_REPRINTED` to `audit_log`. Without
-this, "reprint" becomes an untraceable way to issue duplicate receipts.
+**Reprints.** Any bill can be reopened from the ledger and reprinted. Since
+the audit log was removed (§6.8), a reprint is not recorded.
 
 ---
 
@@ -612,7 +591,6 @@ this, "reprint" becomes an untraceable way to issue duplicate receipts.
 | `/reports/items`  | Date range → item, category, quantity sold, revenue, share of total. Sorted by revenue descending. CSV export. |
 | `/bills`          | Every bill, filterable by date range, cashier, payment method and bill number. Click through to detail.        |
 | `/bills/[id]`     | Full bill with all lines, cashier, timestamp, and a reprint action. The auditor's view.                        |
-| `/manage/audit`   | Superadmin only. Actor, action, entity, before → after, timestamp. Filterable.                                 |
 
 All report queries read `bill_items` **snapshot** columns and never join to
 `items` for name or price. Aggregation is done in SQL with `GROUP BY`, not in
@@ -739,8 +717,9 @@ Delete performs a **soft delete** (`is_active = false`) behind a confirmation
 that states plainly: _past bills keep this item; it disappears from the billing
 screen._ A hard delete would either orphan sales history or cascade it away.
 
-Every create, update and delete writes to `audit_log` with before/after JSON.
-Price changes are recorded as `ITEM_PRICE_CHANGED` specifically.
+Creates, updates and deletes are not logged (§6.8). Bills keep the name and
+price each item had when it was sold, so a price change never rewrites a past
+bill.
 
 ### 12.2 Image upload flow
 
@@ -805,8 +784,7 @@ billing/
 │  │  │     ├─ items/page.tsx
 │  │  │     ├─ categories/page.tsx
 │  │  │     ├─ users/page.tsx
-│  │  │     ├─ settings/page.tsx
-│  │  │     └─ audit/page.tsx
+│  │  │     └─ settings/page.tsx
 │  │  ├─ print/[billId]/page.tsx            no shell, 80mm print CSS
 │  │  └─ api/auth/[...nextauth]/route.ts
 │  │
@@ -887,15 +865,10 @@ billing/
 │  │     │  │  ├─ reset-password-dialog/ResetPasswordDialog.tsx
 │  │     │  │  ├─ components/DeactivateUserConfirmation.tsx
 │  │     │  │  └─ hooks/useUsersTab.ts
-│  │     │  ├─ settings/
-│  │     │  │  ├─ ShopSettingsTab.tsx
-│  │     │  │  ├─ components/ReceiptPreview.tsx
-│  │     │  │  └─ hooks/useShopSettingsTab.ts
-│  │     │  └─ audit/
-│  │     │     ├─ AuditLogTab.tsx
-│  │     │     ├─ AuditLogColumns.tsx
-│  │     │     ├─ components/AuditDiffDialog.tsx
-│  │     │     └─ hooks/useAuditLogTab.ts
+│  │     │  └─ settings/
+│  │     │     ├─ ShopSettingsTab.tsx
+│  │     │     ├─ components/ReceiptPreview.tsx
+│  │     │     └─ hooks/useShopSettingsTab.ts
 │  │     ├─ login/
 │  │     │  ├─ LoginPage.tsx
 │  │     │  └─ components/LoginForm.tsx
@@ -921,12 +894,9 @@ billing/
 │  │  │  ├─ users-actions.ts
 │  │  │  └─ users-queries.ts
 │  │  ├─ reports/reports-queries.ts
-│  │  ├─ settings/
-│  │  │  ├─ settings-actions.ts
-│  │  │  └─ settings-queries.ts
-│  │  └─ audit/
-│  │     ├─ audit-queries.ts
-│  │     └─ write-audit-log.ts
+│  │  └─ settings/
+│  │     ├─ settings-actions.ts
+│  │     └─ settings-queries.ts
 │  │
 │  ├─ db/
 │  │  ├─ schema/
@@ -937,7 +907,6 @@ billing/
 │  │  │  ├─ bills.ts
 │  │  │  ├─ bill-items.ts
 │  │  │  ├─ bill-counters.ts
-│  │  │  ├─ audit-log.ts
 │  │  │  ├─ shop-settings.ts
 │  │  │  └─ index.ts
 │  │  ├─ index.ts                           drizzle + Neon Pool (§4.3)
@@ -987,13 +956,11 @@ billing/
 │  │  ├─ user.types.ts
 │  │  ├─ report.types.ts
 │  │  ├─ settings.types.ts
-│  │  ├─ audit.types.ts
 │  │  └─ next-auth.d.ts
 │  │
 │  ├─ constants/
 │  │  ├─ payment-methods.ts
-│  │  ├─ roles.ts
-│  │  └─ audit-actions.ts
+│  │  └─ roles.ts
 │  │
 │  ├─ auth.config.ts
 │  ├─ auth.ts
@@ -1070,7 +1037,7 @@ functions readable in isolation.
 | Global hooks                   | kebab-case          | `use-debounce.ts`        |
 | `server/`, `db/`, `lib/` files | kebab-case          | `create-bill-service.ts` |
 | Types                          | `<domain>.types.ts` | `bill.types.ts`          |
-| Route folders                  | kebab-case          | `administration/audit/`  |
+| Route folders                  | kebab-case          | `administration/items/`  |
 
 **8. Path alias** `@/*` → `src/*`, declared in `tsconfig.json`.
 
