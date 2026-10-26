@@ -23,8 +23,8 @@ const money = (name: string) => numeric(name, { precision: 10, scale: 2 });
  * duplicates a sale.
  *
  * An expense is never deleted — a mistake is cancelled with a reason, and an
- * active expense may be edited (each edit is audited). Triggers reject DELETE
- * and any UPDATE of a cancelled row. See the cash book spec §6.3.
+ * active expense may be edited. Triggers reject DELETE and any UPDATE of a
+ * cancelled row. See the cash book spec §6.3.
  */
 export const expenses = pgTable(
   "expenses",

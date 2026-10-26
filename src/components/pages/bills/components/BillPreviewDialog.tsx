@@ -40,7 +40,6 @@ export function BillPreviewDialog({
   receipt,
   error,
   isLoading,
-  isReprinting,
   isOpen,
   onClose,
   onReprint,
@@ -49,7 +48,6 @@ export function BillPreviewDialog({
   receipt: ReceiptData | null;
   error: string | null;
   isLoading: boolean;
-  isReprinting: boolean;
   isOpen: boolean;
   onClose: () => void;
   onReprint: () => void;
@@ -96,13 +94,9 @@ export function BillPreviewDialog({
           <Button type="button" variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button
-            type="button"
-            disabled={!receipt || isReprinting}
-            onClick={onReprint}
-          >
+          <Button type="button" disabled={!receipt} onClick={onReprint}>
             <Printer className="size-4" />
-            {isReprinting ? "Opening…" : "Reprint"}
+            Reprint
           </Button>
         </DialogFooter>
       </DialogContent>

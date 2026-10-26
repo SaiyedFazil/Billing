@@ -129,7 +129,6 @@ export function BillsTab({
         receipt={preview.receipt}
         error={preview.error}
         isLoading={preview.isLoading}
-        isReprinting={preview.isReprinting}
         isOpen={preview.isOpen}
         onClose={preview.close}
         onReprint={preview.reprint}

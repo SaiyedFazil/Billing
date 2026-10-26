@@ -14,7 +14,6 @@ import {
   createUserSchema,
   resetPasswordSchema,
 } from "@/lib/validation/user-schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
 import { countActiveSuperadmins } from "@/server/users/users-queries";
 
 export async function createUserAction(
@@ -56,20 +55,6 @@ export async function createUserAction(
         createdBy: actor.id,
       })
       .returning({ id: users.id });
-
-    // The password is never logged, in any form. Every superadmin can read
-    // the audit log.
-    await writeAuditLog({
-      actorId: actor.id,
-      action: "USER_CREATED",
-      entityType: "user",
-      entityId: created.id,
-      after: {
-        username: parsed.data.username,
-        name: parsed.data.name,
-        role: parsed.data.role,
-      },
-    });
 
     revalidatePath(ADMIN_ROUTES.users);
     return ok(created);
@@ -114,15 +99,6 @@ export async function setUserActiveAction(payload: {
       })
       .where(eq(users.id, payload.id));
 
-    await writeAuditLog({
-      actorId: actor.id,
-      action: payload.isActive ? "USER_UPDATED" : "USER_DEACTIVATED",
-      entityType: "user",
-      entityId: payload.id,
-      before: { isActive: before.isActive },
-      after: { isActive: payload.isActive },
-    });
-
     revalidatePath(ADMIN_ROUTES.users);
     return ok(null);
   });
@@ -132,7 +108,7 @@ export async function resetPasswordAction(
   payload: unknown,
 ): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const actor = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = resetPasswordSchema.safeParse(payload);
     if (!parsed.success) {
@@ -159,13 +135,6 @@ export async function resetPasswordAction(
       .where(eq(users.id, parsed.data.id));
 
     // Records THAT it happened, never the password itself.
-    await writeAuditLog({
-      actorId: actor.id,
-      action: "USER_PASSWORD_RESET",
-      entityType: "user",
-      entityId: parsed.data.id,
-      after: { username: before.username },
-    });
 
     revalidatePath(ADMIN_ROUTES.users);
     return ok(null);

@@ -12,8 +12,6 @@ import {
   paymentMethodsSchema,
   settingsSchema,
 } from "@/lib/validation/settings-schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
-import { getShopSettings } from "@/server/settings/settings-queries";
 
 export async function updateSettingsAction(
   payload: unknown,
@@ -39,29 +37,11 @@ export async function updateSettingsAction(
       });
     }
 
-    const before = await getShopSettings();
-
     // No WHERE clause: shop_settings holds exactly one row, enforced by the
     // shop_settings_singleton CHECK constraint.
     await db
       .update(shopSettings)
       .set({ ...parsed.data, updatedBy: actor.id, updatedAt: new Date() });
-
-    await writeAuditLog({
-      actorId: actor.id,
-      action: "SETTINGS_UPDATED",
-      entityType: "shop_settings",
-      before: {
-        shopName: before.shopName,
-        addressLine: before.addressLine,
-        phone: before.phone,
-        receiptFooter: before.receiptFooter,
-        receiptShowLogo: before.receiptShowLogo,
-        printerWidth: before.printerWidth,
-        timezone: before.timezone,
-      },
-      after: parsed.data,
-    });
 
     revalidatePath(ADMIN_ROUTES.settings);
     // Every receipt renders these values.
@@ -91,21 +71,11 @@ export async function updatePaymentMethodsAction(
       );
     }
 
-    const before = await getShopSettings();
-
     // No WHERE clause: shop_settings holds exactly one row.
     await db.update(shopSettings).set({
       paymentMethods: parsed.data.paymentMethods,
       updatedBy: actor.id,
       updatedAt: new Date(),
-    });
-
-    await writeAuditLog({
-      actorId: actor.id,
-      action: "SETTINGS_UPDATED",
-      entityType: "shop_settings",
-      before: { paymentMethods: before.paymentMethods },
-      after: { paymentMethods: parsed.data.paymentMethods },
     });
 
     revalidatePath(ADMIN_ROUTES.settings);

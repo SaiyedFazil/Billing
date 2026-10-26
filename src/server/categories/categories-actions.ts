@@ -13,7 +13,6 @@ import {
   categorySchema,
   updateCategorySchema,
 } from "@/lib/validation/category-schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
 import { countActiveItemsInCategory } from "@/server/categories/categories-queries";
 
 /** Case-insensitive duplicate check among ACTIVE categories only. */
@@ -37,7 +36,7 @@ export async function createCategoryAction(
   payload: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = categorySchema.safeParse(payload);
     if (!parsed.success) {
@@ -61,14 +60,6 @@ export async function createCategoryAction(
       .values({ name: parsed.data.name, sortOrder: parsed.data.sortOrder })
       .returning({ id: categories.id });
 
-    await writeAuditLog({
-      actorId: user.id,
-      action: "CATEGORY_CREATED",
-      entityType: "category",
-      entityId: created.id,
-      after: parsed.data,
-    });
-
     revalidatePath(ADMIN_ROUTES.categories);
     revalidatePath("/bill");
     return ok(created);
@@ -79,7 +70,7 @@ export async function updateCategoryAction(
   payload: unknown,
 ): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = updateCategorySchema.safeParse(payload);
     if (!parsed.success) {
@@ -112,15 +103,6 @@ export async function updateCategoryAction(
       .set({ ...values, updatedAt: new Date() })
       .where(eq(categories.id, id));
 
-    await writeAuditLog({
-      actorId: user.id,
-      action: "CATEGORY_UPDATED",
-      entityType: "category",
-      entityId: id,
-      before: { name: before.name, sortOrder: before.sortOrder },
-      after: values,
-    });
-
     revalidatePath(ADMIN_ROUTES.categories);
     revalidatePath("/bill");
     return ok(null);
@@ -131,7 +113,7 @@ export async function deleteCategoryAction(payload: {
   id: string;
 }): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const before = await db.query.categories.findFirst({
       where: eq(categories.id, payload.id),
@@ -156,14 +138,6 @@ export async function deleteCategoryAction(payload: {
       .update(categories)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(categories.id, payload.id));
-
-    await writeAuditLog({
-      actorId: user.id,
-      action: "CATEGORY_DELETED",
-      entityType: "category",
-      entityId: payload.id,
-      before: { name: before.name, sortOrder: before.sortOrder },
-    });
 
     revalidatePath(ADMIN_ROUTES.categories);
     revalidatePath("/bill");

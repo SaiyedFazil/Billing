@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
-import { auditLog, expenseCategories, expenses, users } from "../src/db/schema";
+import { expenseCategories, expenses, users } from "../src/db/schema";
 import { presetRange, shiftIsoDate } from "../src/lib/utils/date-range";
 import { businessDate } from "../src/lib/utils/dates";
 import { add, ZERO } from "../src/lib/utils/money";
@@ -97,10 +97,9 @@ async function main() {
     .returning({ id: users.id });
 
   const probe = async (letter: string) => {
-    const result = await createExpenseCategory(
-      { name: `${PROBE_PREFIX} ${letter}` },
-      user.id,
-    );
+    const result = await createExpenseCategory({
+      name: `${PROBE_PREFIX} ${letter}`,
+    });
     if (!result.ok) throw new Error(`setup: ${result.error.message}`);
     return result.data.id;
   };
@@ -181,7 +180,7 @@ async function main() {
   );
 
   // --- categories on create --------------------------------------------
-  const retireB = await retireExpenseCategory(categoryB, user.id);
+  const retireB = await retireExpenseCategory(categoryB);
   const onRetired = await createExpense(
     input({ categoryId: categoryB }),
     user.id,
@@ -205,27 +204,15 @@ async function main() {
     }),
     user.id,
   );
-  const [audit] = await db
-    .select({ before: auditLog.before, after: auditLog.after })
-    .from(auditLog)
-    .where(
-      and(
-        eq(auditLog.action, "EXPENSE_UPDATED"),
-        eq(auditLog.entityId, editable),
-      ),
-    );
   check(
-    "edit writes EXPENSE_UPDATED with before and after",
-    edit.ok &&
-      (audit?.before as { amount?: string })?.amount === "100.00" &&
-      (audit?.after as { amount?: string })?.amount === "120.50" &&
-      (await amountOf(editable)) === "120.50",
-    { edit, audit },
+    "an edit saves the new amount",
+    edit.ok && (await amountOf(editable)) === "120.50",
+    edit,
   );
 
   const onA = await createExpense(input({ categoryId: categoryA }), user.id);
   if (!onA.ok) throw new Error("setup: could not create on Probe A");
-  await retireExpenseCategory(categoryA, user.id);
+  await retireExpenseCategory(categoryA);
   const keepRetired = await updateExpense(
     updateExpenseSchema.parse({
       ...input({ categoryId: categoryA, note: "still on A" }),
@@ -306,7 +293,7 @@ async function main() {
     { id: toCancel.data.id, reason: "Wrong amount" },
     user.id,
   );
-  await retireExpenseCategory(categoryE, user.id);
+  await retireExpenseCategory(categoryE);
 
   const { summary } = await getCashBook(probeRange.from, probeRange.to);
   check(
@@ -414,20 +401,19 @@ async function main() {
 
   // --- category names -----------------------------------------------------
   const categoryD = await probe("D");
-  const rename = await renameExpenseCategory(
-    { id: categoryD, name: `${PROBE_PREFIX.toLowerCase()} c` },
-    user.id,
-  );
+  const rename = await renameExpenseCategory({
+    id: categoryD,
+    name: `${PROBE_PREFIX.toLowerCase()} c`,
+  });
   check(
     "renaming to an active name in another case is CONFLICT",
     errorOf(rename)?.code === "CONFLICT" &&
       errorOf(rename)?.fields?.name === "Already in use",
     rename,
   );
-  const duplicate = await createExpenseCategory(
-    { name: `${PROBE_PREFIX.toUpperCase()} C` },
-    user.id,
-  );
+  const duplicate = await createExpenseCategory({
+    name: `${PROBE_PREFIX.toUpperCase()} C`,
+  });
   check(
     "adding an active name in another case is CONFLICT",
     errorOf(duplicate)?.code === "CONFLICT",
@@ -451,7 +437,7 @@ async function main() {
           sql`${expenseCategories.id} <> ${categoryC}`,
         ),
       );
-    const last = await retireExpenseCategory(categoryC, user.id);
+    const last = await retireExpenseCategory(categoryC);
     check(
       "the last active category cannot be retired",
       errorOf(last)?.code === "CONFLICT" &&

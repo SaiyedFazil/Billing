@@ -5,7 +5,6 @@ import {
   LayoutGrid,
   type LucideIcon,
   ReceiptText,
-  ShieldCheck,
   Store,
   TrendingUp,
   Users,
@@ -42,7 +41,6 @@ const MANAGE: NavSection = {
     { href: ADMIN_ROUTES.categories, label: "Categories", icon: LayoutGrid },
     { href: ADMIN_ROUTES.users, label: "Accounts", icon: Users },
     { href: ADMIN_ROUTES.settings, label: "Settings", icon: Store },
-    { href: ADMIN_ROUTES.audit, label: "Audit", icon: ShieldCheck },
   ],
 };
 

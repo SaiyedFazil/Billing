@@ -2,13 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
-import { toast } from "sonner";
 
 import { REPORT_ROUTES } from "@/lib/routes/report-routes";
-import {
-  getBillReceiptAction,
-  reprintBillAction,
-} from "@/server/bills/bills-actions";
+import { getBillReceiptAction } from "@/server/bills/bills-actions";
 import type { ReceiptData } from "@/types/bill.types";
 import type { BillLedgerRow } from "@/types/report.types";
 
@@ -25,7 +21,6 @@ export function useBillPreview() {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, startLoading] = useTransition();
-  const [isReprinting, startReprinting] = useTransition();
 
   // Opening a second row before the first response lands would otherwise let
   // the stale reply overwrite the newer one.
@@ -58,31 +53,12 @@ export function useBillPreview() {
 
   const reprint = useCallback(() => {
     if (!bill) return;
-    const { id } = bill;
+    const href = REPORT_ROUTES.print(bill.id);
 
-    // Opened synchronously, before any await: a popup blocker stops a
-    // window.open() that happens after one. It is pointed at the receipt only
-    // once the reprint has been recorded, so an unlogged copy is never handed
-    // out — that audit trail is the whole point of reprintBillAction.
-    const tab = window.open("", "_blank");
-
-    startReprinting(async () => {
-      const result = await reprintBillAction({ billId: id });
-
-      if (!result.ok) {
-        tab?.close();
-        toast.error(result.error.message);
-        return;
-      }
-
-      if (tab) {
-        tab.location.replace(REPORT_ROUTES.print(id));
-        return;
-      }
-      // The browser blocked the tab — fall back to the bill details page's
-      // behaviour and print in this one.
-      router.push(REPORT_ROUTES.print(id));
-    });
+    // Opened straight from the click, so a popup blocker lets it through. If
+    // the browser blocks the tab anyway, print in this one, as the bill
+    // details page does.
+    if (!window.open(href, "_blank")) router.push(href);
   }, [bill, router]);
 
   return {
@@ -90,7 +66,6 @@ export function useBillPreview() {
     receipt,
     error,
     isLoading,
-    isReprinting,
     isOpen: bill !== null,
     open,
     close,

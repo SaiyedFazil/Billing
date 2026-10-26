@@ -26,7 +26,7 @@
     "verify:retry": "tsx scripts/verify-retry.ts",
     "verify:bill": "tsx --env-file=.env.local scripts/verify-create-bill.ts",
     "verify:stock": "tsx --env-file=.env.local scripts/verify-stock.ts",
-    "verify:offline": "npm run verify:money && npm run verify:retry && npm run verify:reports && npm run verify:stock-utils && npm run verify:cash-book-utils && npm run verify:split-payment && npm run verify:menu-import && npm run verify:audit-details && npm run typecheck && npm run lint && npm run format:check",
+    "verify:offline": "npm run verify:money && npm run verify:retry && npm run verify:reports && npm run verify:stock-utils && npm run verify:cash-book-utils && npm run verify:split-payment && npm run verify:menu-import && npm run typecheck && npm run lint && npm run format:check",
     "verify:all": "npm run verify:offline && npm run db:verify && npm run db:verify-immutability && npm run verify:bill && npm run verify:stock && npm run verify:expenses && npm run verify:categories && npm run verify:items && npm run verify:users && npm run verify:report-queries && npm run verify:imagekit",
     "verify:categories": "tsx --env-file=.env.local scripts/verify-categories.ts",
     "verify:items": "tsx --env-file=.env.local scripts/verify-items.ts",
@@ -39,7 +39,6 @@
     "verify:cash-book-utils": "tsx scripts/verify-cash-book-utils.ts",
     "verify:split-payment": "tsx scripts/verify-split-payment.ts",
     "verify:menu-import": "tsx scripts/verify-menu-import.ts",
-    "verify:audit-details": "tsx scripts/verify-audit-details.ts",
     "verify:expenses": "tsx --env-file=.env.local scripts/verify-expenses.ts"
   },
   "dependencies": {
