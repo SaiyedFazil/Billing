@@ -134,8 +134,6 @@ export async function resetPasswordAction(
       })
       .where(eq(users.id, parsed.data.id));
 
-    // Records THAT it happened, never the password itself.
-
     revalidatePath(ADMIN_ROUTES.users);
     return ok(null);
   });

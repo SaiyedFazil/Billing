@@ -37,7 +37,6 @@ async function findCategory(id: string) {
   const [category] = await db
     .select({
       id: expenseCategories.id,
-      name: expenseCategories.name,
       isActive: expenseCategories.isActive,
     })
     .from(expenseCategories)
