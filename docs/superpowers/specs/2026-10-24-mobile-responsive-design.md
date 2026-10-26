@@ -24,10 +24,10 @@ its date column. Everything else was laid out for a wide screen, and it shows:
   reach Save & Print, the cashier scrolls past every item on the menu. The
   search box takes focus on load, which on a phone pops the keyboard up over
   half the screen.
-- **Tables.** Nine tables scroll sideways. The Bills table is about 900px
+- **Tables.** Eight tables scroll sideways. The Bills table is about 900px
   wide, so on a 360px phone the total and status are off-screen.
 - **Filters and forms.** Filter fields have fixed widths (`w-40`, `w-44`,
-  `w-52`, `w-72`); some dialogs keep two fields side by side at 360px; many
+  `w-52`); some dialogs keep two fields side by side at 360px; many
   buttons are 32–36px tall, under the 40px a finger needs.
 - **Printing.** After Save & Print the receipt page calls `window.print()`
   once. On a phone there is no Ctrl+P, so if that print sheet is dismissed or
@@ -167,8 +167,8 @@ table uses the pattern the Cash book's expense table already has:
 - Each table chooses the width at which it folds (`sm`, `md` or `lg`), as
   wide as it needs so that it never scrolls sideways at that width.
 
-**6.7 Paging footers.** The four "Showing 1–25 of 300 · Previous · Next"
-footers (Bills, Audit, Cash book expenses, spreadsheet) wrap cleanly at 360px
+**6.7 Paging footers.** The three "Showing 1–25 of 300 · Previous · Next"
+footers (Bills, Cash book expenses, spreadsheet) wrap cleanly at 360px
 with 40px buttons. Pulling them into one shared component is allowed but not
 required.
 
@@ -310,9 +310,9 @@ the receipt preview dialog.
 
 ### 7.13 Audit log
 
-The activity filter is full width on phones (it is `w-72`). The table folds
-who and the entity type under the action; the time stays visible; Details
-stays a button. The diff dialog wraps long values instead of overflowing.
+Removed. The owner asked for the audit log to be taken out of the app
+entirely (2026-10-27); that work lands before this one, so there is no
+Audit page to make responsive.
 
 ### 7.14 Login
 
@@ -327,11 +327,6 @@ The receipt itself is unchanged. Below 1024px, the screen-only area under it
 phone has no Ctrl+P, and iPhone Safari may refuse the automatic print once
 the tap that started Save & Print is a few seconds old. On a desktop the area
 is unchanged.
-
-Print is the phone's Ctrl+P, not a reprint: it is not logged as
-`BILL_REPRINTED`, exactly as Ctrl+P on this page is not logged today. The
-page is only ever reached after a sale or after a logged reprint. The
-Reprint buttons on the Bills pages stay the logged way to issue a copy later.
 
 On phones, Back to billing replaces the receipt's history entry rather than
 adding one, so the back gesture from the till does not land on the receipt
@@ -350,14 +345,13 @@ address bar, reload or browser menu, and differs in four ways that matter:
 
 - **Every way out is on the page.** The receipt page's Print and Back to
   billing buttons (§7.15) are the only way to print again or leave.
-- **Reprint from the Bills list stays in the same tab.** Today it logs the
-  reprint, then opens the receipt with `window.open`. An installed iPhone app
-  sends that tab to Safari, which has separate cookies, so the cashier lands
-  on the login page. When the app runs installed
-  (`(display-mode: standalone)`) and the viewport is below 1024px, the
-  preview's Reprint logs the reprint and then goes to the receipt in the
-  same tab, as Reprint on the bill details page already does. The order
-  stays the same: logged first, then shown. Elsewhere it is unchanged.
+- **Reprint from the Bills list stays in the same tab.** The preview's
+  Reprint opens the receipt in a new tab. An installed iPhone app sends that
+  tab to Safari, which has separate cookies, so the cashier lands on the
+  login page. When the app runs installed (`(display-mode: standalone)`)
+  and the viewport is below 1024px, the preview's Reprint goes to the
+  receipt in the same tab, as Reprint on the bill details page already does.
+  Elsewhere it is unchanged.
 - **Back closes the app** when there is no history, so the till's sheet must
   own the back gesture (§7.1).
 - **iPhone home indicator.** If on a device the bottom bill bar sits under
@@ -429,7 +423,9 @@ account is created on the test database for the cashier runs.
 
 **Branch.** The work goes on `feature/mobile-responsive`, cut from `test`
 (which holds every merged feature, including split payment and the
-spreadsheet), and merges back into `test` like the features before it.
+spreadsheet), and merges back into `test` like the features before it. The
+audit log removal is merged into `test` first and this branch is rebased
+onto it, so the desktop baseline already has no Audit page.
 
 ## 10. Decisions
 
@@ -445,6 +441,10 @@ spreadsheet), and merges back into `test` like the features before it.
   (§7.17).
 - The real-phone test runs on a Netlify deploy preview against the
   development database (§9).
+- The audit log is removed from the app and the database before this work
+  (§7.13).
+- Testing uses the Playwright already installed on the development PC
+  (`C:\Users\MohammedFazil-PC\node_modules`, v1.59.1, with its Chromium).
 
 **The builder's calls, made in this design (the owner may overrule any):**
 
@@ -457,8 +457,6 @@ spreadsheet), and merges back into `test` like the features before it.
 - A Print button on the phone receipt page (§7.15).
 - The cashier's back gesture closes the bill sheet (§7.1).
 - The work branches from `test`, not `main` (§9).
-- The receipt page's phone Print button is not logged as a reprint, like
-  Ctrl+P today (§7.15).
 - Desktop wins over §6.9 at exactly 1024px (§6.9).
 - A till PC narrower than 1024px with a mouse keeps search autofocus and
   gets the side-by-side tablet till, an improvement on today's stacked one

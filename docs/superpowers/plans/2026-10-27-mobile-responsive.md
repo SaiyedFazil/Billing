@@ -2,10 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Every screen works on phones (360px up) and tablets for owner and
-cashier, while laptop and desktop (1024px and up) stay pixel-identical.
+**Goal:** Part 1 removes the audit log from the app and the database (owner's
+request, 2026-10-27). Part 2 makes every screen work on phones (360px up) and
+tablets for owner and cashier, while laptop and desktop (1024px and up) stay
+pixel-identical.
 
-**Architecture:** Phone and tablet styles are added only through
+**Architecture (Part 1):** Delete the audit log end to end: the Audit page
+and its menu link, every `writeAuditLog` call, the reprint-logging action,
+the audit helpers, types and verify script, then the `audit_log` table
+through a Drizzle migration. Nothing else changes behaviour.
+
+**Architecture (Part 2):** Phone and tablet styles are added only through
 `max-lg:` / `max-md:` / `max-sm:` Tailwind variants (or base classes whose
 current value is restored at `lg:`), so desktop CSS is untouched. The till
 gets a phone bill bar and a bottom sheet around the one existing
@@ -15,12 +22,15 @@ and tablet sizes, and a pixel diff at desktop sizes against the branch-point
 code running side by side on the same database.
 
 **Tech Stack:** Next.js 16 App Router, React 19, Tailwind CSS v4.3,
-shadcn/ui on `radix-ui`, Playwright + pixelmatch (harness only, outside the
-repo).
+shadcn/ui on `radix-ui`, Drizzle + Neon Postgres. Testing uses the
+Playwright 1.59.1 already installed at `C:\Users\MohammedFazil-PC\node_modules`
+(harness only, outside the repo).
 
 **Spec:** `docs/superpowers/specs/2026-10-24-mobile-responsive-design.md`
+(Part 2). Part 1 has no separate spec: its decisions are listed under
+Part 1 below.
 
-## Global Constraints
+## Global Constraints (Part 2)
 
 - At 1024px and wider every page looks and behaves exactly as today; extra
   elements hidden at that width are fine, anything visible renders
@@ -44,11 +54,11 @@ repo).
   live shop database (§9).
 - Ember tokens, not hex; Prettier sorts classes; LF endings; no dependency
   added to `package.json` (CLAUDE.md, §9).
-- Branch `feature/mobile-responsive` (cut from `test`). One commit per task,
+- Branch `feature/mobile-responsive` (rebased onto `test` after Part 1). One commit per task,
   after `npm run typecheck` and `npm run lint` pass. Commit messages end with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-## Review Focus
+## Review Focus (Part 2)
 
 1. **Six-figure amounts** (₹12,34,567.00) in KPI cards, the till total, the
    bill bar and table amount cells at 360px and 640px must fit, not clip.
@@ -61,12 +71,294 @@ repo).
    the menu `inert`, the page scroll-locked, or the bill hidden. Pinned by
    Task 4's `resize-closes` state.
 4. **Back after Save & Print** must not land on the receipt and print again.
-   Pinned by Task 16's `back-after-print` state.
+   Pinned by Task 15's `back-after-print` state.
 5. **Long names** (a 45-character item, category or cashier name) must wrap
    in phone rows and till cards, not push the page sideways. Pinned by the
    harness `stressText` option in Tasks 3, 6, 10, 11, 12.
 
 ---
+
+## Part 1 — Remove the audit log
+
+The owner does not want changes logged, displayed or stored (2026-10-27).
+
+**Decisions:**
+
+- Everything that exists only for the audit log goes: the Audit page, its
+  sidebar link and route, `writeAuditLog` and every call to it,
+  `listAuditLog`, `reprintBillAction`, the `audit-actions` constants, the
+  `audit-details` helpers and their verify script, the audit types, and the
+  `audit_log` table with its indexes and foreign key. "No dead code" means
+  also every variable, `before` read, transaction return value, import,
+  prop and state that only fed a log entry.
+- **Reprint** stops being an action. From the Bills preview it opens
+  `/print/[id]` in a new tab straight away; from the bill details page it is
+  a link to `/print/[id]`. The "Opening…" waiting labels go, because there
+  is nothing to wait for. The receipt page still shows "not found" for a
+  missing bill.
+- **Sign-in lockout stays exactly as it is.** It lives on
+  `users.failed_attempts` and `users.locked_until`, not in the log.
+- **Kept, because they are not the audit log:** `stock_movements` (the stock
+  history), the bill immutability triggers, `db:audit-payments` and
+  `scripts/payment-audit/` (a payments consistency check), and the word
+  "audit" where it means checking records ("laid out for audit", "the
+  auditor's view").
+- **Price history goes with the log.** Bills keep their snapshot prices, so
+  receipts and reports are unaffected.
+- **The table is dropped without a backup**, as the owner asked. Migration
+  `0011` drops it on the development database now, and on any other
+  database when it is next migrated.
+- Old plans and feature specs stay as written (they are history); the
+  product spec gets a dated amendment.
+- Branch `feature/remove-audit-log`, cut from `test`; merged into `test`
+  locally (no push) before Part 2 starts.
+
+**Review focus (Part 1):**
+
+1. **Sign-in lockout** still locks after 5 wrong passwords and clears on a
+   good one. Pinned by Task A1 Step 2.
+2. **Reprint from the Bills preview** opens the receipt and is not blocked
+   as a pop-up: `window.open` runs directly in the click handler. Checked in
+   Task A1 Step 9.
+3. **The menu import** still runs with no audit rows to write. Pinned by
+   Task A1 Step 8's dry run and `verify:menu-import` in `verify:offline`.
+4. **Expense edits** still show "Edited": that flag comes from
+   `updated_at`, not the log. Pinned by `verify:expenses` in Task A1 Step 8.
+5. **A fresh database** still migrates from `0000` to `0011` cleanly, and
+   `db-drop-all` still resets one that has not run `0011`. Checked by
+   Task A2 Step 2's review of the generated SQL and the kept `IF EXISTS`
+   line.
+
+---
+
+### Task A1: Remove the audit log from the code
+
+**Files:**
+
+- Delete: `src/app/(app)/administration/audit/page.tsx`
+- Delete: `src/components/pages/administration/audit/` (`AuditLogTab.tsx`,
+  `AuditLogColumns.tsx`, `components/AuditDiffDialog.tsx`)
+- Delete: `src/server/audit/` (`write-audit-log.ts`, `audit-queries.ts`)
+- Delete: `src/types/audit.types.ts`, `src/lib/utils/audit-details.ts`,
+  `src/constants/audit-actions.ts`, `scripts/verify-audit-details.ts`
+- Modify: `src/components/layout/navigation.ts` (the Audit link and the
+  `ShieldCheck` import), `src/lib/routes/administration-routes.ts` (`audit`)
+- Modify: `src/server/bills/bills-actions.ts` (delete `reprintBillAction`;
+  `getBillReceiptAction`'s comment no longer mentions audit entries)
+- Modify: `src/components/pages/bills/hooks/useBillPreview.ts`,
+  `components/BillPreviewDialog.tsx`, `BillsTab.tsx` (no `isReprinting`)
+- Modify: `src/components/pages/bills/bill-details/BillDetails.tsx`
+- Modify: `src/server/items/items-actions.ts`,
+  `src/server/categories/categories-actions.ts`,
+  `src/server/users/users-actions.ts`, `src/server/users/login-attempts.ts`,
+  `src/server/settings/settings-actions.ts`,
+  `src/server/expenses/expenses-service.ts`,
+  `src/server/stock/stock-service.ts`
+- Modify: `src/db/schema/expenses.ts` (the "each edit is audited" comment)
+- Modify: `scripts/import-menu.ts` (no audit rows),
+  `scripts/menu-import/menu-card-2026-08-11.ts` (`MENU_CARD_SOURCE`'s
+  comment: it now only names the card in the import summary)
+- Modify: `scripts/verify-items.ts`, `scripts/verify-stock.ts`,
+  `scripts/verify-users.ts`, `scripts/verify-expenses.ts` (drop the checks
+  that assert audit rows; keep every other check)
+- Modify: `package.json` (`verify:audit-details` and its place in
+  `verify:offline`)
+
+**Interfaces:**
+
+- Produces: `useBillPreview()` returns everything it does today except
+  `isReprinting`; `reprint()` is synchronous and calls
+  `window.open(REPORT_ROUTES.print(id), "_blank")`. `BillPreviewDialog` loses
+  its `isReprinting` prop. Part 2's Task 6 builds on this `reprint()`.
+- After this task the only code naming the audit log is the schema file
+  `src/db/schema/audit-log.ts`, its export in `src/db/schema/index.ts`, and
+  raw SQL against the table in `scripts/verify-expenses.ts` (test cleanup),
+  `scripts/show-state.ts`, `scripts/dump-json.ts` and
+  `scripts/db-drop-all.ts`. Task A2 removes those.
+
+- [ ] **Step 1: Branch and record the starting point**
+
+```bash
+git checkout test
+git checkout -b feature/remove-audit-log
+npx tsc --noEmit --noUnusedLocals --noUnusedParameters > ../unused-before.txt
+```
+
+The last file is outside the repo; Step 6 compares against it.
+
+- [ ] **Step 2: Pin the sign-in lockout before touching it**
+
+Add a check to `scripts/verify-users.ts`, using the file's existing probe
+and `check()` pattern: a probe user; `registerFailedLogin(username)` called
+`MAX_FAILED_ATTEMPTS` (5) times; then `failedAttempts === 5` and
+`lockedUntil` is in the future (check name: `five wrong passwords lock the
+account`); then `clearFailedLogins(id)`; then `failedAttempts === 0` and
+`lockedUntil === null` (check name: `a successful sign-in clears the
+lock`). Clean the probe up the way the file's other probes are.
+Run: `npm run verify:users`
+Expected: PASS, before any removal (it pins today's behaviour).
+
+- [ ] **Step 3: Run the removal check and see it fail**
+
+Run: `git grep -n -E "writeAuditLog|audit-actions|AuditAction|AUDIT_ACTION|audit-details|audit\.types|server/audit|reprintBillAction|isReprinting|ADMIN_ROUTES\.audit|administration/audit|verify:audit-details" -- src scripts package.json`
+Expected: many matches.
+
+- [ ] **Step 4: Delete the files and the call sites**
+
+Delete the files listed above. In every modified file, remove the
+`writeAuditLog` call and then whatever only fed it, for example: the
+`getShopSettings()` reads in `settings-actions.ts`; `editable()` in
+`expenses-service.ts`; `placedAt` returned from the item transactions when
+nothing else uses it; the `LOCKOUT_MINUTES` / `MAX_FAILED_ATTEMPTS`
+re-export and its comment in `login-attempts.ts` (nothing imports them from
+there). A `before` read that also guards a not-found or conflict check
+stays. `BillDetails`' Reprint becomes `<Button asChild>` around
+`<Link href={REPORT_ROUTES.print(billId)}>`, with the same icon and label,
+and its transition, toast and router imports go if nothing else uses them.
+
+- [ ] **Step 5: Run the removal check and see it pass**
+
+Run: the Step 3 `git grep` command.
+Expected: no matches.
+
+- [ ] **Step 6: Typecheck, lint, format, offline checks, build**
+
+Run: `npx next typegen` (refreshes `.next/types` after the deleted route),
+then `npm run verify:offline`, then `npm run build`.
+Expected: all pass; the build's route list has no `/administration/audit`.
+
+- [ ] **Step 7: Check for dead code**
+
+Run: `npx tsc --noEmit --noUnusedLocals --noUnusedParameters > ../unused-after.txt`
+Expected: `../unused-after.txt` has no line that `../unused-before.txt`
+lacks. ESLint (Step 6) already reports unused imports.
+
+- [ ] **Step 8: Run the database checks**
+
+Run: `npm run verify:items`, `npm run verify:stock`, `npm run verify:users`,
+`npm run verify:expenses`, `npm run verify:categories`, `npm run verify:bill`,
+`npm run db:import-menu -- --dry-run`
+Expected: all pass, including Step 2's two lockout checks; the dry run
+previews without errors (development database, allowed).
+
+- [ ] **Step 9: Look at the app**
+
+With `npm run dev`, as owner: the sidebar's Manage section reads Items,
+Categories, Accounts, Settings; `/administration/audit` shows the not-found
+page; Reprint in the Bills preview opens the receipt in a new tab; Reprint on
+a bill's page opens its receipt.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add -A src scripts package.json
+git commit -m "refactor: remove the audit log from the app"
+```
+
+---
+
+### Task A2: Drop the `audit_log` table
+
+**Files:**
+
+- Delete: `src/db/schema/audit-log.ts`
+- Modify: `src/db/schema/index.ts` (its export)
+- Create: `src/db/migrations/0011_drop_audit_log.sql` and its
+  `meta/0011_snapshot.json` and `_journal.json` entry (generated)
+- Modify: `scripts/verify-expenses.ts` (the `DELETE FROM audit_log` cleanup),
+  `scripts/show-state.ts` (the recent audit log section),
+  `scripts/dump-json.ts` (`"audit_log"` in `TABLES`)
+- Modify: `scripts/db-drop-all.ts`: keep `DROP TABLE IF EXISTS audit_log
+CASCADE` (a database that has not run `0011` yet still has the table, and
+  re-running `0000` would collide with it) and say so in a comment.
+
+- [ ] **Step 1: Confirm the table exists**
+
+Write a one-off script outside the repo, `../check-audit-table.ts`, that
+imports `db` from the repo's `src/db` and prints the result of
+`select to_regclass('public.audit_log') as t`. Run it with
+`npx tsx --env-file=.env.local ../check-audit-table.ts`.
+Expected: `{ t: 'audit_log' }`.
+
+- [ ] **Step 2: Remove the schema and generate the migration**
+
+Delete the schema file and its export, then
+`npm run db:generate -- --name drop_audit_log`.
+Expected: a new `0011_drop_audit_log.sql` whose only statements drop the
+`audit_log` foreign key, its three indexes and the table (dropping the table
+covers the indexes). Nothing else in the file. If drizzle-kit asks a
+question, the answer must keep every other table as it is.
+
+- [ ] **Step 3: Clean the scripts** listed above.
+
+- [ ] **Step 4: Migrate the development database**
+
+Run: `npm run db:migrate`, then the Step 1 command.
+Expected: migrate applies `0011`; the check prints `{ t: null }`.
+
+- [ ] **Step 5: Run everything**
+
+Run: `git grep -n -i -E "audit_log|auditLog" -- src scripts ":!src/db/migrations"`
+Expected: only `scripts/db-drop-all.ts`. Then delete `../check-audit-table.ts`.
+Run: `npx next typegen`, `npm run verify:all`, `npm run build`
+Expected: all pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add -A src/db scripts
+git commit -m "feat(db): drop the audit_log table"
+```
+
+---
+
+### Task A3: Docs, then merge into `test`
+
+**Files:**
+
+- Modify: `README.md` (the audit log feature bullet)
+- Modify: `docs/deployment.md` (the menu import "audit log as System" line;
+  a note that migration `0011` permanently drops `audit_log` when it runs on
+  a database)
+- Modify: `CLAUDE.md` (the `verify:audit-details` row in Verification)
+- Modify: `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md`:
+  §6.8's heading gets "(removed 2026-10-27)" and its body becomes one
+  paragraph saying the owner asked for the audit log to be removed; the
+  `View audit log` permission row, the `/manage/audit` route row and the
+  audit lines of the directory tree are deleted; the §9 reprint sentence and
+  the "Every create, update and delete writes to `audit_log`" line say that
+  reprints and changes are not logged. Milestone history (M4, M6) stays.
+
+- [ ] **Step 1: Run the docs check and see it fail**
+
+Run: `git grep -n -i -E "audit log|audit_log|verify:audit-details" -- README.md CLAUDE.md docs/deployment.md`
+Expected: matches.
+
+- [ ] **Step 2: Edit the docs** as listed.
+
+- [ ] **Step 3: Run the docs check and see it pass**
+
+Run: the Step 1 command.
+Expected: only the new `0011` note in `docs/deployment.md`.
+Run: `npm run format:check`. Expected: pass.
+
+- [ ] **Step 4: Commit and merge**
+
+```bash
+git add README.md CLAUDE.md docs
+git commit -m "docs: the audit log is removed"
+git checkout test
+git merge --no-ff feature/remove-audit-log -m "Merge feature/remove-audit-log: remove the audit log from the app and the database"
+git checkout feature/mobile-responsive
+git rebase test
+```
+
+Expected: the merge and the rebase finish without conflicts (Part 2's two
+docs commits touch no Part 1 file). Nothing is pushed.
+
+---
+
+## Part 2 — Mobile responsive
 
 ### Task 1: The QA harness and the desktop baseline
 
@@ -74,15 +366,18 @@ No repo commit: everything here lives outside the repo (spec §9).
 
 **Files:**
 
-- Create: `D:\Fazil Projects\Freelance\Billing-qa\package.json` (type
-  `module`; deps `playwright`, `pixelmatch`, `pngjs`)
+- Create: `D:\Fazil Projects\Freelance\Billing-qa\playwright.mjs`: loads
+  the Playwright already installed on this PC, v1.59.1, with
+  `createRequire("C:/Users/MohammedFazil-PC/node_modules/")` and re-exports
+  `chromium` (its Chromium 1217 is already downloaded). Nothing is
+  installed; `Billing-qa` has no `package.json` dependencies.
 - Create: `D:\Fazil Projects\Freelance\Billing-qa\run.mjs` (CLI)
 - Create: `D:\Fazil Projects\Freelance\Billing-qa\checks.mjs`
 - Create: `D:\Fazil Projects\Freelance\Billing-qa\routes.mjs`
 - Create: `D:\Fazil Projects\Freelance\Billing-qa\setup.mjs`
 - Create: `D:\Fazil Projects\Freelance\Billing-baseline\` (a
-  `git worktree add --detach` of commit `b6365bf`, with `.env.local` copied
-  in and `npm ci` run)
+  `git worktree add --detach` of `test` after Task A3 merged the audit log
+  removal, with `.env.local` copied in and `npm ci` run)
 
 **Interfaces:**
 
@@ -90,8 +385,9 @@ No repo commit: everything here lives outside the repo (spec §9).
   - `node run.mjs <route|all> [--phone|--desktop]`, run from `Billing-qa`.
     Exit 0 and `PASS <route>` when clean; otherwise exit 1 and one line per
     failure: `FAIL <route> <state> <role> <w>x<h> <check>: <detail>`.
-  - Screenshots in `Billing-qa/out/<route>/<state>/<role>-<w>x<h>.png`,
-    desktop diffs in `.../diff-<w>x<h>.png`.
+  - Screenshots in `Billing-qa/out/<route>/<state>/<role>-<w>x<h>.png`;
+    a failed desktop diff saves `.../baseline-<w>x<h>.png` and
+    `.../current-<w>x<h>.png`.
   - A route entry shape that later tasks extend with states:
 
 ```js
@@ -125,7 +421,7 @@ firstBillId }`.
 - [ ] **Step 1: Start both servers**
 
 In the repo: `npm run dev` (port 3000, run in the background).
-Create the baseline: `git worktree add --detach "../Billing-baseline" b6365bf`,
+Create the baseline: `git worktree add --detach "../Billing-baseline" test`,
 copy `.env.local` into it, `npm ci` there, then start it in the background
 with `AUTH_URL=http://localhost:3001 npx next dev -p 3001` (process env wins
 over `.env.local`, so sign-in redirects stay on 3001).
@@ -144,7 +440,7 @@ to `Billing-qa/.env` as `QA_CASHIER_PASSWORD`); then saves
 `.auth/<server>-cashier.json` for both servers. Signs in once per role per
 server; never retries a failed sign-in (the app locks accounts).
 Also confirms the dev database has at least one bill, one expense, one item
-with stock tracking on, and one audit entry; if there is no bill, saves one
+with stock tracking on; if there is no bill, saves one
 through the till at 1366×768. Stores the newest bill's id as `firstBillId`.
 
 - [ ] **Step 3: Write `checks.mjs`**
@@ -171,7 +467,9 @@ innerWidth`, or (unless the state allows it) any visible
 At desktop viewports the only check is the diff: screenshot the same state
 on 3001 (baseline) and 3000 (current), each stabilised by re-shooting until
 two consecutive full-page shots match (at most 6 tries, 500ms apart), then
-`pixelmatch` with threshold 0.1. Any differing pixel fails.
+compare the two PNG buffers byte for byte (same machine, same Chromium, so
+identical pixels give identical bytes). Any difference fails, and the pair
+is saved as `baseline-<w>x<h>.png` and `current-<w>x<h>.png` to look at.
 
 - [ ] **Step 4: Write `routes.mjs` with a `default` state for every route**
 
@@ -192,7 +490,6 @@ two consecutive full-page shots match (at most 6 tries, 500ms apart), then
 | categories       | `/administration/categories`            | owner          |                          |
 | users            | `/administration/users`                 | owner          |                          |
 | settings         | `/administration/settings`              | owner          |                          |
-| audit            | `/administration/audit`                 | owner          |                          |
 | not-found        | `/no-such-page`                         | owner          |                          |
 | admin-as-cashier | `/administration/items`                 | cashier        | the "Not allowed" screen |
 
@@ -542,8 +839,7 @@ git commit -m "feat(responsive): phone bill bar and bottom sheet at the till"
 - `bills/installed-reprint` (390×844, `initScript` makes
   `matchMedia("(display-mode: standalone)").matches` true): open the
   preview, click Reprint; assert no `popup` event within 2s and the page
-  URL becomes `/print/<that bill's id>`; then, as owner, `/administration/audit`
-  shows a newest row labelled as a reprint.
+  URL becomes `/print/<that bill's id>`.
 - `bill-details/default` with `stressText` setting the first item name to
   `Paneer Tikka Butter Masala Special Cheese Combo`.
 
@@ -564,10 +860,10 @@ failures; `installed-reprint` fails (a popup opens).
   # spanning both), fields full width; `sm:` and up restores today's widths.
 - Bill details items table below `sm`: Unit price hidden and shown under
   the name as `₹x each`; the name cell wraps (`max-sm:whitespace-normal`).
-- `useBillPreview.reprint`: when `isInstalledApp() && isBelowDesktop()`,
-  open no tab; await `reprintBillAction`; on success `router.push` to
-  `REPORT_ROUTES.print(id)`; on failure toast the error. Every other case
-  keeps today's blank-tab-first flow. Logged first, then shown.
+- `useBillPreview.reprint` (simplified in Task A1 to open
+  `REPORT_ROUTES.print(id)` in a new tab): when
+  `isInstalledApp() && isBelowDesktop()`, `router.push` there in the same
+  tab instead. Every other case is unchanged.
 
 - [ ] **Step 4: Run** both routes. Expected: PASS, desktop diffs included.
 
@@ -864,35 +1160,7 @@ own account`.
 
 ---
 
-### Task 14: Audit log
-
-**Files:**
-
-- Modify: `src/components/pages/administration/audit/AuditLogTab.tsx`,
-  `AuditLogColumns.tsx`, `components/AuditDiffDialog.tsx`
-- Test: `Billing-qa/routes.mjs` (`audit`)
-
-- [ ] **Step 1: Add the test states**: `default` asserts the activity
-      filter is at least `viewportWidth - 40` px wide below `sm`; `details`:
-      click the first `Details` button.
-
-- [ ] **Step 2: Run** `node run.mjs audit`. Expected: FAIL on the filter
-      width and `sideScroll`.
-
-- [ ] **Step 3: Implement**: the filter is full width below `sm`; the table
-      folds below `lg` (who and entity type under the action; visible When,
-      What, Details); below `sm` When also moves into the folded lines, first;
-      the diff dialog wraps long values (`break-words`) instead of overflowing.
-
-- [ ] **Step 4: Run** `node run.mjs audit`. Expected: PASS, desktop
-      included.
-
-- [ ] **Step 5: Look, then typecheck, lint, format, commit**
-      (`feat(responsive): audit log on phones`).
-
----
-
-### Task 15: Login and error pages
+### Task 14: Login and error pages
 
 **Files:**
 
@@ -916,7 +1184,7 @@ own account`.
 
 ---
 
-### Task 16: Receipt page and the phone printer guide
+### Task 15: Receipt page and the phone printer guide
 
 **Files:**
 
@@ -966,7 +1234,7 @@ opened.
 
 ---
 
-### Task 17: Project guide, full verification, hand-off
+### Task 16: Project guide, full verification, hand-off
 
 **Files:**
 
