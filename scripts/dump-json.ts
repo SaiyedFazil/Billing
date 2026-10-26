@@ -20,7 +20,6 @@ const TABLES = [
   "bill_items",
   "bill_payments",
   "bill_counters",
-  "audit_log",
   "shop_settings",
 ] as const;
 

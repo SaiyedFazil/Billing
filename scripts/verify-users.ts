@@ -1,8 +1,13 @@
 import { eq, sql } from "drizzle-orm";
 
+import { MAX_FAILED_ATTEMPTS } from "../src/constants/sign-in";
 import { db } from "../src/db";
 import { users } from "../src/db/schema";
 import { hashPassword, verifyPassword } from "../src/lib/auth/password";
+import {
+  clearFailedLogins,
+  registerFailedLogin,
+} from "../src/server/users/login-attempts";
 import { countActiveSuperadmins } from "../src/server/users/users-queries";
 
 let failures = 0;
@@ -85,16 +90,35 @@ async function main() {
     newHash.startsWith("$2") && !newHash.includes("NewProbe"),
   );
 
-  await db.execute(sql`DELETE FROM users WHERE username = 'invariant-probe'`);
+  // Wrong passwords lock the account; a good sign-in clears the lock.
+  for (let attempt = 0; attempt < MAX_FAILED_ATTEMPTS; attempt += 1) {
+    await registerFailedLogin("invariant-probe");
+  }
+  const locked = (await db.query.users.findFirst({
+    where: eq(users.id, probe.id),
+  }))!;
+  check(
+    "five wrong passwords lock the account",
+    locked.failedAttempts === MAX_FAILED_ATTEMPTS &&
+      locked.lockedUntil !== null &&
+      locked.lockedUntil > new Date(),
+    { failedAttempts: locked.failedAttempts, lockedUntil: locked.lockedUntil },
+  );
 
-  // No credentials anywhere in the audit log.
-  const [leaks] = (
-    await db.execute(sql`
-      SELECT count(*)::int AS n FROM audit_log
-      WHERE before::text ILIKE '%password%' OR after::text ILIKE '%password%'
-         OR before::text ILIKE '%hash%'     OR after::text ILIKE '%hash%'`)
-  ).rows as Array<{ n: number }>;
-  check("no credentials appear in the audit log", leaks.n === 0, leaks);
+  await clearFailedLogins(probe.id);
+  const cleared = (await db.query.users.findFirst({
+    where: eq(users.id, probe.id),
+  }))!;
+  check(
+    "a successful sign-in clears the lock",
+    cleared.failedAttempts === 0 && cleared.lockedUntil === null,
+    {
+      failedAttempts: cleared.failedAttempts,
+      lockedUntil: cleared.lockedUntil,
+    },
+  );
+
+  await db.execute(sql`DELETE FROM users WHERE username = 'invariant-probe'`);
 
   console.log(
     failures === 0 ? "\nAll user checks passed." : `\n${failures} FAILURE(S)`,

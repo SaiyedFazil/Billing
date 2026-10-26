@@ -152,6 +152,13 @@ production deploy → Publish deploy). Do not use a plain `pg_restore` of the
 step 1 dump for this: over a migrated database it does not remove
 `bill_payments` and its triggers cleanly.
 
+### The audit log is dropped (0011)
+
+The owner asked for the audit log to be removed (2026-10-27).
+`0011_drop_audit_log.sql` drops the `audit_log` table and every row in it.
+Running `db:migrate` on a database applies it, and after that the old log
+cannot be read back, except from a backup taken before the migration.
+
 ### The hand-written trigger migration
 
 `0001_immutability_triggers.sql` is written by hand because drizzle-kit does
@@ -190,9 +197,9 @@ left as it is. A line marked `!` is on the menu with a different price or
 category from the card; correct it in Administration > Items if the card is
 right.
 
-Every change is written in one transaction, so the till never sees half a menu,
-and each is in the audit log as "System". For a new menu card, add a file
-beside the current one and point `scripts/import-menu.ts` at it.
+Every change is written in one transaction, so the till never sees half a
+menu. For a new menu card, add a file beside the current one and point
+`scripts/import-menu.ts` at it.
 
 ## Backups — read this
 

@@ -1,13 +1,7 @@
 import { asc, eq, inArray } from "drizzle-orm";
 
-import type { AuditAction } from "../src/constants/audit-actions";
 import { db } from "../src/db";
-import {
-  auditLog,
-  categories,
-  items,
-  type NewAuditLogRow,
-} from "../src/db/schema";
+import { categories, items } from "../src/db/schema";
 import { toAmount } from "../src/lib/utils/money";
 import {
   MENU_CARD,
@@ -36,10 +30,8 @@ import {
  * Everything is written in one transaction, so the till never sees half a
  * menu and a failure leaves nothing changed. A dry run makes the same writes
  * and then rolls them back, which proves the real run will also pass every
- * database constraint. Every change is audited, as the admin screens do.
+ * database constraint.
  */
-
-type AuditRow = NewAuditLogRow & { action: AuditAction };
 
 /** Thrown at the end of a dry run to roll its transaction back. */
 class DryRunRollback extends Error {}
@@ -96,11 +88,8 @@ async function readCurrentMenu(): Promise<CurrentMenu> {
  * from the callback commits. See CLAUDE.md rule 6.
  */
 async function applyPlan(plan: MenuPlan, dryRun: boolean) {
-  const source = MENU_CARD_SOURCE;
-
   try {
     await db.transaction(async (tx) => {
-      const audit: AuditRow[] = [];
       const now = new Date();
 
       // Retire first, so the fresh "Burgers" can take the name the old one is
@@ -117,15 +106,6 @@ async function applyPlan(plan: MenuPlan, dryRun: boolean) {
               oldItems.map((item) => item.id),
             ),
           );
-        for (const item of oldItems) {
-          audit.push({
-            action: "ITEM_DELETED",
-            entityType: "item",
-            entityId: item.id,
-            before: { name: item.name, price: item.price },
-            after: { source },
-          });
-        }
       }
       if (oldCategories.length > 0) {
         await tx
@@ -137,15 +117,6 @@ async function applyPlan(plan: MenuPlan, dryRun: boolean) {
               oldCategories.map((category) => category.id),
             ),
           );
-        for (const category of oldCategories) {
-          audit.push({
-            action: "CATEGORY_DELETED",
-            entityType: "category",
-            entityId: category.id,
-            before: { name: category.name, sortOrder: category.sortOrder },
-            after: { source },
-          });
-        }
       }
 
       for (const group of plan.categories) {
@@ -161,34 +132,20 @@ async function applyPlan(plan: MenuPlan, dryRun: boolean) {
               .update(categories)
               .set({ sortOrder: category.sortOrder, updatedAt: now })
               .where(eq(categories.id, categoryId));
-            audit.push({
-              action: "CATEGORY_UPDATED",
-              entityType: "category",
-              entityId: categoryId,
-              before: { sortOrder: category.existing.sortOrder },
-              after: { sortOrder: category.sortOrder, source },
-            });
           }
         } else if (category.status === "new") {
-          const values = { name: group.name, sortOrder: category.sortOrder };
           const [created] = await tx
             .insert(categories)
-            .values(values)
+            .values({ name: group.name, sortOrder: category.sortOrder })
             .returning({ id: categories.id });
           categoryId = created.id;
-          audit.push({
-            action: "CATEGORY_CREATED",
-            entityType: "category",
-            entityId: created.id,
-            after: { ...values, source },
-          });
         } else {
           continue;
         }
 
         // A kept item only ever moves into its place on the card. Like
-        // renumberCategory, that is not an edit to the item, so it is neither
-        // audited nor timestamped.
+        // renumberCategory, that is not an edit to the item, so it is not
+        // timestamped.
         for (const item of group.items) {
           if (
             item.action === "keep" &&
@@ -217,33 +174,7 @@ async function applyPlan(plan: MenuPlan, dryRun: boolean) {
 
         // Untracked, like any item created without stock: it bills exactly as
         // items did before stock existed, so no stock_movements row is due.
-        const created = await tx.insert(items).values(toAdd).returning({
-          id: items.id,
-          name: items.name,
-          price: items.price,
-          sortOrder: items.sortOrder,
-        });
-        for (const row of created) {
-          audit.push({
-            action: "ITEM_CREATED",
-            entityType: "item",
-            entityId: row.id,
-            after: {
-              name: row.name,
-              categoryId,
-              price: row.price,
-              sortOrder: row.sortOrder,
-              source,
-            },
-          });
-        }
-      }
-
-      // One statement, inside the transaction: an import that committed with
-      // only part of its history logged would be harder to trust than none.
-      // actorId stays null, which the audit screen shows as "System".
-      if (audit.length > 0) {
-        await tx.insert(auditLog).values(audit);
+        await tx.insert(items).values(toAdd);
       }
 
       if (dryRun) throw new DryRunRollback();

@@ -2,7 +2,6 @@ import { and, count, eq, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
 import {
-  auditLog,
   billCounters,
   bills,
   categories,
@@ -347,17 +346,6 @@ async function main() {
       !missing.ok && missing.error.code === "NOT_FOUND",
       missing,
     );
-
-    const [audited] = await db
-      .select({ n: count() })
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.entityId, tracked.id),
-          eq(auditLog.action, "STOCK_ADJUSTED"),
-        ),
-      );
-    check("each adjustment is audited", audited.n === 2, audited);
 
     // --- two bills on different days cannot deadlock --------------------
     // Inserting a bill line takes FOR KEY SHARE on its item (the foreign

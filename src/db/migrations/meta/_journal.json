@@ -78,6 +78,13 @@
       "when": 1792818393675,
       "tag": "0010_gigantic_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793052158893,
+      "tag": "0011_drop_audit_log",
+      "breakpoints": true
     }
   ]
 }

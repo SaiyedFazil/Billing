@@ -37,6 +37,8 @@ async function main() {
   await db.execute(sql`DROP TABLE IF EXISTS bill_payments CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bills CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS bill_counters CASCADE`);
+  // Migration 0011 drops audit_log. A database that has not run 0011 yet
+  // still has it, and re-running 0000 after this script would collide with it.
   await db.execute(sql`DROP TABLE IF EXISTS audit_log CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS items CASCADE`);
   await db.execute(sql`DROP TABLE IF EXISTS categories CASCADE`);

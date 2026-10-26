@@ -17,7 +17,7 @@
 
 import type { MenuCardCategory } from "./plan";
 
-/** Recorded on every audit row the import writes, so its origin is traceable. */
+/** Names this card in the import summary. */
 export const MENU_CARD_SOURCE = "menu-card-2026-08-11";
 
 export const MENU_CARD: MenuCardCategory[] = [

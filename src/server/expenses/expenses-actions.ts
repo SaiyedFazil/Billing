@@ -89,14 +89,12 @@ export async function createExpenseCategoryAction(
   payload: unknown,
 ): Promise<ActionResult<{ id: string }>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = expenseCategorySchema.safeParse(payload);
     if (!parsed.success) return invalid(parsed.error);
 
-    return revalidateOnSuccess(
-      await createExpenseCategory(parsed.data, user.id),
-    );
+    return revalidateOnSuccess(await createExpenseCategory(parsed.data));
   });
 }
 
@@ -104,14 +102,12 @@ export async function updateExpenseCategoryAction(
   payload: unknown,
 ): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = updateExpenseCategorySchema.safeParse(payload);
     if (!parsed.success) return invalid(parsed.error);
 
-    return revalidateOnSuccess(
-      await renameExpenseCategory(parsed.data, user.id),
-    );
+    return revalidateOnSuccess(await renameExpenseCategory(parsed.data));
   });
 }
 
@@ -119,14 +115,12 @@ export async function retireExpenseCategoryAction(
   payload: unknown,
 ): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const user = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = z.object({ id: z.uuid() }).safeParse(payload);
     if (!parsed.success) return invalid(parsed.error);
 
-    return revalidateOnSuccess(
-      await retireExpenseCategory(parsed.data.id, user.id),
-    );
+    return revalidateOnSuccess(await retireExpenseCategory(parsed.data.id));
   });
 }
 

@@ -11,5 +11,4 @@ export * from "./bill-payments";
 export * from "./stock-movements";
 export * from "./expense-categories";
 export * from "./expenses";
-export * from "./audit-log";
 export * from "./shop-settings";

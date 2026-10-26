@@ -34,8 +34,6 @@ takings on a live dashboard.
 - Sales and "What's selling" reports with date-range presets and CSV export.
 - Manage items (with photos), categories, cashier accounts and shop settings,
   with a live receipt preview.
-- Audit log of every menu, price, account and settings change, failed sign-ins
-  and reprints.
 - One-click export of all data as CSV for off-site backup.
 
 **Built to keep the books right**

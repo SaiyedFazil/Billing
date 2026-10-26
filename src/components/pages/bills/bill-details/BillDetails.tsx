@@ -2,9 +2,6 @@
 
 import { ArrowLeft, Info, Printer } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { toast } from "sonner";
 
 import { PaymentMethodLabel } from "@/components/custom/PaymentMethodLabel";
 import { TableCard } from "@/components/custom/TableCard";
@@ -23,7 +20,6 @@ import { SPLIT } from "@/constants/payment-methods";
 import { REPORT_ROUTES } from "@/lib/routes/report-routes";
 import { formatBillDate, formatBillTime } from "@/lib/utils/dates";
 import { formatINR, isZero } from "@/lib/utils/money";
-import { reprintBillAction } from "@/server/bills/bills-actions";
 import type { ReceiptData } from "@/types/bill.types";
 
 function SummaryRow({
@@ -50,24 +46,10 @@ export function BillDetails({
   receipt: ReceiptData;
   status: "COMPLETED" | "VOID";
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   // Cash given and change belong to the cash line of a split bill.
   const cashPayment = receipt.payments.find(
     (payment) => payment.method === "CASH" && payment.tendered !== null,
   );
-
-  function handleReprint() {
-    startTransition(async () => {
-      const result = await reprintBillAction({ billId });
-      if (!result.ok) {
-        toast.error(result.error.message);
-        return;
-      }
-      // The reprint is logged before the print view opens.
-      router.push(REPORT_ROUTES.print(billId));
-    });
-  }
 
   return (
     <div className="space-y-6">
@@ -99,9 +81,11 @@ export function BillDetails({
           receipt.shop.timezone,
         )} · billed by ${receipt.cashierName}`}
         actions={
-          <Button onClick={handleReprint} disabled={isPending}>
-            <Printer />
-            {isPending ? "Opening…" : "Reprint"}
+          <Button asChild>
+            <Link href={REPORT_ROUTES.print(billId)}>
+              <Printer />
+              Reprint
+            </Link>
           </Button>
         }
       />

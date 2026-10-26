@@ -6,7 +6,6 @@ import type { Transaction } from "@/db/transaction";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { planAdjustment, startsTracking } from "@/lib/utils/stock";
 import type { AdjustStockInput } from "@/lib/validation/stock-schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
 
 /**
  * Every change to a stock count goes through this file, and always writes a
@@ -176,20 +175,6 @@ export async function adjustStock(
     }
     throw error;
   }
-
-  await writeAuditLog({
-    actorId: userId,
-    action: "STOCK_ADJUSTED",
-    entityType: "item",
-    entityId: input.itemId,
-    before: { stockQuantity: result.before },
-    after: {
-      stockQuantity: result.after,
-      mode: input.mode,
-      reason: input.reason,
-      note: input.note || null,
-    },
-  });
 
   return ok(result);
 }

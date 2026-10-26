@@ -13,7 +13,6 @@ import type {
   UpdateExpenseCategoryInput,
   UpdateExpenseInput,
 } from "@/lib/validation/expense-schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
 import { getShopTimezone } from "@/server/settings/settings-queries";
 
 /**
@@ -56,25 +55,6 @@ async function findByIdempotencyKey(key: string) {
   return existing ?? null;
 }
 
-/** The six fields the owner can change, as they go into the audit log. */
-function editable(row: {
-  expenseDate: string;
-  amount: string;
-  mode: string;
-  categoryId: string;
-  paidTo: string | null;
-  note: string | null;
-}) {
-  return {
-    expenseDate: row.expenseDate,
-    amount: row.amount,
-    mode: row.mode,
-    categoryId: row.categoryId,
-    paidTo: row.paidTo,
-    note: row.note,
-  };
-}
-
 export async function createExpense(
   input: CreateExpenseInput,
   userId: string,
@@ -100,21 +80,6 @@ export async function createExpense(
       .insert(expenses)
       .values({ ...input, createdBy: userId })
       .returning({ id: expenses.id });
-
-    await writeAuditLog({
-      actorId: userId,
-      action: "EXPENSE_CREATED",
-      entityType: "expense",
-      entityId: created.id,
-      after: {
-        expenseDate: input.expenseDate,
-        amount: input.amount,
-        mode: input.mode,
-        categoryName: category.name,
-        paidTo: input.paidTo,
-        note: input.note,
-      },
-    });
 
     return ok(created);
   } catch (error) {
@@ -164,15 +129,6 @@ export async function updateExpense(
     .returning({ id: expenses.id });
   if (!updated) return fail("CONFLICT", CANCELLED_EXPENSE);
 
-  await writeAuditLog({
-    actorId: userId,
-    action: "EXPENSE_UPDATED",
-    entityType: "expense",
-    entityId: id,
-    before: editable(before),
-    after: editable(values),
-  });
-
   return ok(null);
 }
 
@@ -202,14 +158,6 @@ export async function cancelExpense(
       : fail("NOT_FOUND", MISSING_EXPENSE);
   }
 
-  await writeAuditLog({
-    actorId: userId,
-    action: "EXPENSE_CANCELLED",
-    entityType: "expense",
-    entityId: input.id,
-    after: { reason: input.reason },
-  });
-
   return ok(null);
 }
 
@@ -235,7 +183,6 @@ function nameConflict<T>(): ActionResult<T> {
 
 export async function createExpenseCategory(
   input: ExpenseCategoryInput,
-  userId: string,
 ): Promise<ActionResult<{ id: string }>> {
   if (await nameIsTaken(input.name)) return nameConflict();
 
@@ -244,14 +191,6 @@ export async function createExpenseCategory(
       .insert(expenseCategories)
       .values({ name: input.name })
       .returning({ id: expenseCategories.id });
-
-    await writeAuditLog({
-      actorId: userId,
-      action: "EXPENSE_CATEGORY_CREATED",
-      entityType: "expense_category",
-      entityId: created.id,
-      after: { name: input.name },
-    });
 
     return ok(created);
   } catch (error) {
@@ -264,7 +203,6 @@ export async function createExpenseCategory(
 
 export async function renameExpenseCategory(
   input: UpdateExpenseCategoryInput,
-  userId: string,
 ): Promise<ActionResult<null>> {
   const before = await findCategory(input.id);
   if (!before?.isActive) return fail("NOT_FOUND", MISSING_CATEGORY);
@@ -282,15 +220,6 @@ export async function renameExpenseCategory(
     throw error;
   }
 
-  await writeAuditLog({
-    actorId: userId,
-    action: "EXPENSE_CATEGORY_UPDATED",
-    entityType: "expense_category",
-    entityId: input.id,
-    before: { name: before.name },
-    after: { name: input.name },
-  });
-
   return ok(null);
 }
 
@@ -301,7 +230,6 @@ export async function renameExpenseCategory(
  */
 export async function retireExpenseCategory(
   id: string,
-  userId: string,
 ): Promise<ActionResult<null>> {
   const before = await findCategory(id);
   if (!before?.isActive) return fail("NOT_FOUND", MISSING_CATEGORY);
@@ -331,14 +259,6 @@ export async function retireExpenseCategory(
     )
     .returning({ id: expenseCategories.id });
   if (!retired) return lastCategory;
-
-  await writeAuditLog({
-    actorId: userId,
-    action: "EXPENSE_CATEGORY_RETIRED",
-    entityType: "expense_category",
-    entityId: id,
-    before: { name: before.name },
-  });
 
   return ok(null);
 }

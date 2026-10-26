@@ -3,10 +3,6 @@ import { eq, sql } from "drizzle-orm";
 import { LOCKOUT_MINUTES, MAX_FAILED_ATTEMPTS } from "@/constants/sign-in";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { writeAuditLog } from "@/server/audit/write-audit-log";
-
-// Defined in constants so the audit log screen can explain a lockout too.
-export { LOCKOUT_MINUTES, MAX_FAILED_ATTEMPTS };
 
 /**
  * Records a failed sign-in and locks the account after MAX_FAILED_ATTEMPTS
@@ -35,14 +31,6 @@ export async function registerFailedLogin(username: string): Promise<void> {
         : null,
     })
     .where(eq(users.id, user.id));
-
-  await writeAuditLog({
-    actorId: user.id,
-    action: shouldLock ? "LOGIN_LOCKED" : "LOGIN_FAILED",
-    entityType: "user",
-    entityId: user.id,
-    after: { failedAttempts: attempts, locked: shouldLock },
-  });
 }
 
 /** Clears the counter after a successful sign-in. */

@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { db } from "../src/db";
-import { auditLog, categories, items } from "../src/db/schema";
+import { categories, items } from "../src/db/schema";
 import { compare } from "../src/lib/utils/money";
 import { renumberCategory } from "../src/server/items/item-order-service";
 
@@ -23,14 +23,13 @@ async function main() {
     .where(eq(categories.isActive, true))
     .limit(1);
 
-  await db.execute(sql`DELETE FROM audit_log WHERE entity_type = 'item-probe'`);
-  await db.execute(sql`DELETE FROM items WHERE name = 'Audit Probe Item'`);
+  await db.execute(sql`DELETE FROM items WHERE name = 'Price Probe Item'`);
 
   const [created] = await db
     .insert(items)
     .values({
       categoryId: category.id,
-      name: "Audit Probe Item",
+      name: "Price Probe Item",
       price: "50.00",
     })
     .returning({ id: items.id });
@@ -50,29 +49,6 @@ async function main() {
     stored?.price,
   );
 
-  // Simulate what updateItemAction writes on a price change.
-  await db.insert(auditLog).values({
-    action: "ITEM_PRICE_CHANGED",
-    entityType: "item-probe",
-    entityId: created.id,
-    before: { price: "50.00" },
-    after: { price: "75.55" },
-  });
-
-  const [logged] = await db
-    .select({ before: auditLog.before, after: auditLog.after })
-    .from(auditLog)
-    .where(eq(auditLog.entityId, created.id))
-    .orderBy(desc(auditLog.createdAt))
-    .limit(1);
-
-  check(
-    "price history is queryable from the audit log",
-    (logged?.before as { price: string })?.price === "50.00" &&
-      (logged?.after as { price: string })?.price === "75.55",
-    logged,
-  );
-
   // Soft delete must free the name within the category.
   await db
     .update(items)
@@ -82,7 +58,7 @@ async function main() {
     .insert(items)
     .values({
       categoryId: category.id,
-      name: "Audit Probe Item",
+      name: "Price Probe Item",
       price: "1.00",
     })
     .returning({ id: items.id });
@@ -187,9 +163,8 @@ async function main() {
     sql`DELETE FROM categories WHERE name = 'Order Probe Category'`,
   );
 
-  await db.execute(sql`DELETE FROM audit_log WHERE entity_type = 'item-probe'`);
   await db.execute(
-    sql`DELETE FROM items WHERE name IN ('Audit Probe Item', 'Negative Probe')`,
+    sql`DELETE FROM items WHERE name IN ('Price Probe Item', 'Negative Probe')`,
   );
 
   console.log(

@@ -234,7 +234,6 @@ npm run build            # the production build
 | `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation, spreadsheet helpers (no DB) |
 | `verify:split-payment`                                | split payment rules and the till's split maths (no DB)                              |
 | `verify:menu-import`                                  | card is valid, adds no duplicate, replace is exact (no DB)                          |
-| `verify:audit-details`                                | every audit action reads as plain words (no DB)                                     |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book and spreadsheet totals          |
 | `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                                      |
 | `verify:report-queries`                               | report SQL against real data; saves a test bill                                     |
