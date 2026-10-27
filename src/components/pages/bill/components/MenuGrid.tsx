@@ -22,6 +22,7 @@ export function MenuGrid({
   onSelect,
   quantityByItemId,
   toneByCategoryId,
+  inert,
 }: {
   categories: MenuCategory[];
   activeCategoryId: string | null;
@@ -33,9 +34,16 @@ export function MenuGrid({
   onSelect: (item: MenuItem) => void;
   quantityByItemId: Map<string, number>;
   toneByCategoryId: Map<string, CategoryTone>;
+  /** Behind the phone's open bill sheet, out of reach. */
+  inert: boolean;
 }) {
   return (
-    <section aria-label="Menu" className="flex min-h-0 min-w-0 flex-col gap-4">
+    // On a phone the bottom padding keeps the last cards clear of the bill bar.
+    <section
+      aria-label="Menu"
+      inert={inert}
+      className="flex min-h-0 min-w-0 flex-col gap-4 max-md:pb-[calc(5rem+env(safe-area-inset-bottom))]"
+    >
       {/* On a phone, search and the category chips stay under the top bar
           while the menu scrolls. From md the wrapper dissolves, so the two
           sit in the section exactly as before. */}

@@ -6,10 +6,13 @@ import { TableEmptyState } from "@/components/custom/TableEmptyState";
 import type { PaymentMethod } from "@/constants/payment-methods";
 import type { MenuCategory } from "@/types/item.types";
 
+import { BillBar } from "./components/BillBar";
+import { BillSheet } from "./components/BillSheet";
 import { CartPanel } from "./components/CartPanel";
 import { MenuGrid } from "./components/MenuGrid";
 import { PriceChangedDialog } from "./components/PriceChangedDialog";
 import { useBillPage } from "./hooks/useBillPage";
+import { useBillSheet } from "./hooks/useBillSheet";
 
 export function BillPage({
   menu,
@@ -19,6 +22,7 @@ export function BillPage({
   paymentMethods: PaymentMethod[];
 }) {
   const bill = useBillPage({ menu, paymentMethods });
+  const { open, openSheet, closeSheet, barRef } = useBillSheet();
 
   // Hooks have already run, so an early return here is safe.
   if (menu.length === 0) {
@@ -48,31 +52,43 @@ export function BillPage({
         onSelect={bill.addItem}
         quantityByItemId={bill.quantityByItemId}
         toneByCategoryId={bill.toneByCategoryId}
+        inert={open}
       />
 
-      <CartPanel
-        lines={bill.lines}
+      {/* Phones: a sheet over the menu. From md: the bill column, as before. */}
+      <BillSheet open={open} onClose={closeSheet}>
+        <CartPanel
+          lines={bill.lines}
+          itemCount={bill.itemCount}
+          onSetQuantity={bill.setQuantity}
+          onRemove={bill.removeItem}
+          subtotal={bill.subtotal}
+          discountInput={bill.discountInput}
+          onDiscountChange={bill.setDiscountInput}
+          discountExceedsSubtotal={bill.discountExceedsSubtotal}
+          total={bill.total}
+          paymentMethods={bill.paymentMethods}
+          paymentMethod={bill.paymentMethod}
+          onPaymentMethodChange={bill.setPaymentMethod}
+          tenderedInput={bill.tenderedInput}
+          onTenderedChange={bill.setTenderedInput}
+          changeDue={bill.changeDue}
+          showSplit={bill.showSplit}
+          splitAvailable={bill.splitAvailable}
+          split={bill.split}
+          canSave={bill.canSave}
+          isSaving={bill.isSaving}
+          error={bill.error}
+          onSave={bill.save}
+        />
+      </BillSheet>
+
+      <BillBar
+        ref={barRef}
         itemCount={bill.itemCount}
-        onSetQuantity={bill.setQuantity}
-        onRemove={bill.removeItem}
-        subtotal={bill.subtotal}
-        discountInput={bill.discountInput}
-        onDiscountChange={bill.setDiscountInput}
-        discountExceedsSubtotal={bill.discountExceedsSubtotal}
         total={bill.total}
-        paymentMethods={bill.paymentMethods}
-        paymentMethod={bill.paymentMethod}
-        onPaymentMethodChange={bill.setPaymentMethod}
-        tenderedInput={bill.tenderedInput}
-        onTenderedChange={bill.setTenderedInput}
-        changeDue={bill.changeDue}
-        showSplit={bill.showSplit}
-        splitAvailable={bill.splitAvailable}
-        split={bill.split}
-        canSave={bill.canSave}
-        isSaving={bill.isSaving}
-        error={bill.error}
-        onSave={bill.save}
+        expanded={open}
+        onOpen={openSheet}
       />
 
       <PriceChangedDialog

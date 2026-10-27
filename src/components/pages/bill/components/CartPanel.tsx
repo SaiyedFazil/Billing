@@ -72,14 +72,17 @@ export function CartPanel({
   return (
     <aside
       aria-label="Current bill"
-      className="relative flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lift md:h-full"
+      className="relative flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lift max-md:overflow-visible max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-full"
     >
       <header className="flex items-center gap-3 px-5 pt-5 pb-2">
         <span className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
           <ReceiptText className="size-5" />
         </span>
         <div>
-          <h2 className="font-heading text-xl leading-tight font-bold">
+          <h2
+            id="current-bill-title"
+            className="font-heading text-xl leading-tight font-bold"
+          >
             Current bill
           </h2>
           <p className="text-[13px] text-muted-foreground">
@@ -90,7 +93,9 @@ export function CartPanel({
         </div>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1 px-5">
+      {/* In the phone sheet, lines keep some height even when the keyboard
+          leaves little room; the sheet itself then scrolls. */}
+      <ScrollArea className="min-h-0 flex-1 px-5 max-md:min-h-24">
         {lines.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
