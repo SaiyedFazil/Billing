@@ -33,10 +33,10 @@ export function BillPage({
     );
   }
 
-  // Desktop pins the till to the viewport so the cart never scrolls away;
-  // phones scroll the page naturally instead.
+  // Tablets and desktops pin the till to the viewport (under the tablet's
+  // top bar) so the cart never scrolls away; phones scroll the page instead.
   return (
-    <div className="grid grid-cols-1 gap-5 p-4 sm:p-5 lg:h-dvh lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_404px] xl:px-6">
+    <div className="grid grid-cols-1 gap-5 p-4 sm:p-5 md:h-[calc(100dvh-3.5rem)] md:grid-cols-[minmax(0,1fr)_320px] md:overflow-hidden lg:h-dvh lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_404px] xl:px-6">
       <MenuGrid
         categories={bill.categories}
         activeCategoryId={bill.activeCategoryId}

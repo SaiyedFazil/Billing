@@ -6,7 +6,7 @@ import { formatINR, lineTotal } from "@/lib/utils/money";
 import type { CartLine as CartLineType } from "@/types/bill.types";
 
 const STEP_BUTTON =
-  "bg-card text-foreground flex size-8.5 cursor-pointer items-center justify-center rounded-full shadow-[0_1px_2px_rgb(28_23_20/0.1)] transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50";
+  "bg-card text-foreground flex size-8.5 max-lg:size-10 cursor-pointer items-center justify-center rounded-full shadow-[0_1px_2px_rgb(28_23_20/0.1)] transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50";
 
 export function CartLine({
   line,
@@ -65,7 +65,7 @@ export function CartLine({
             disabled={disabled}
             aria-label={`Remove ${line.name}`}
             onClick={() => onRemove(line.itemId)}
-            className="flex size-8.5 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex size-8.5 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 max-lg:size-10"
           >
             <X className="size-4" />
           </button>

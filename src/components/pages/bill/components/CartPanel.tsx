@@ -72,7 +72,7 @@ export function CartPanel({
   return (
     <aside
       aria-label="Current bill"
-      className="relative flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lift lg:h-full"
+      className="relative flex min-h-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-lift md:h-full"
     >
       <header className="flex items-center gap-3 px-5 pt-5 pb-2">
         <span className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
