@@ -80,7 +80,7 @@ export function CreateUpdateItemDialog({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="item-category">Category</Label>
               <Select
@@ -123,7 +123,7 @@ export function CreateUpdateItemDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 items-end gap-4">
+          <div className="grid items-end gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="item-sort">Display order</Label>
               <Input
