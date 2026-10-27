@@ -5,17 +5,18 @@ prints thermal receipts; the owner manages the menu, accounts and settings and
 reads the sales reports. Next.js 16 App Router, Drizzle + Neon Postgres,
 Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 
-| Doc                                                            | What it holds                                   |
-| -------------------------------------------------------------- | ----------------------------------------------- |
-| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md` | The product spec (§ numbers cited in code)      |
-| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`   | The Ember visual design                         |
-| `docs/superpowers/specs/2026-10-18-stock-management-design.md` | Per-item stock tracking                         |
-| `docs/superpowers/specs/2026-10-20-cash-book-design.md`        | Cash book: money in vs owner-entered money out  |
-| `docs/superpowers/specs/2026-10-24-split-payment-design.md`    | Split payment: one bill paid by several methods |
-| `docs/superpowers/plans/`                                      | Implementation plans, one per piece of work     |
-| `docs/deployment.md`                                           | Netlify + Neon setup, migrations, backups       |
-| `docs/printer-setup.md`                                        | One-time thermal printer setup on the till      |
-| `docs/brand/README.md`                                         | The Mobito logo files and where each one goes   |
+| Doc                                                             | What it holds                                   |
+| --------------------------------------------------------------- | ----------------------------------------------- |
+| `docs/superpowers/specs/2026-08-23-fastfood-billing-design.md`  | The product spec (§ numbers cited in code)      |
+| `docs/superpowers/specs/2026-09-19-ember-redesign-design.md`    | The Ember visual design                         |
+| `docs/superpowers/specs/2026-10-18-stock-management-design.md`  | Per-item stock tracking                         |
+| `docs/superpowers/specs/2026-10-20-cash-book-design.md`         | Cash book: money in vs owner-entered money out  |
+| `docs/superpowers/specs/2026-10-24-split-payment-design.md`     | Split payment: one bill paid by several methods |
+| `docs/superpowers/specs/2026-10-24-mobile-responsive-design.md` | Phones and tablets: what changes below 1024px   |
+| `docs/superpowers/plans/`                                       | Implementation plans, one per piece of work     |
+| `docs/deployment.md`                                            | Netlify + Neon setup, migrations, backups       |
+| `docs/printer-setup.md`                                         | One-time thermal printer setup on the till      |
+| `docs/brand/README.md`                                          | The Mobito logo files and where each one goes   |
 
 ## Commands
 
@@ -156,7 +157,19 @@ utilities through `@theme inline`.
 - **Colour-coded data** comes from one place: payment methods via
   `PaymentMethodLabel` / `PAYMENT_METHOD_DOT`, categories via
   `categoryTone(index)`.
-- **Touch targets** on the till are at least 40px.
+- **Touch targets** on the till are at least 40px, and everywhere below 1024px.
+- **Phones and tablets** (below `lg`, 1024px) get their styles only through
+  `max-lg:` / `max-md:` / `max-sm:` variants, or a base class whose desktop
+  value comes back at `lg:`. Nothing changes at 1024px and up. A grid that is
+  one column below `lg` says `grid-cols-1`, or wide content (a chart, a table)
+  widens the column past the screen.
+- **Tables on a phone** never scroll sideways (the Cash book's days view and
+  the expense spreadsheet are the exceptions). Low-priority columns fold into
+  the main cell as a muted second line, and a row of icon actions becomes one
+  `RowActionsMenu` below the fold width.
+- **Behaviour that differs on a phone** asks `src/lib/utils/viewport.ts`
+  (`isBelowDesktop`, `hasNoFinePointer`, `isInstalledApp`), never pointer type
+  alone: the till may be a touchscreen PC.
 - **The receipt is not part of the design system.**
   `src/components/pages/print/` and `receipt.css` stay monospace
   black-on-white for thermal printers.
