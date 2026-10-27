@@ -36,7 +36,9 @@ export function BillsTableToolbar({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-[20px] border bg-card p-4 shadow-card">
+    // On a phone the fields pair up in two columns (From | To, Cashier |
+    // Payment) and the bill number takes a row of its own.
+    <div className="flex flex-wrap items-end gap-3 rounded-[20px] border bg-card p-4 shadow-card max-sm:grid max-sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor="bills-from" className={FIELD_LABEL}>
           From
@@ -45,7 +47,7 @@ export function BillsTableToolbar({
           id="bills-from"
           type="date"
           value={from}
-          className="w-40"
+          className="w-full sm:w-40"
           disabled={disabled}
           onChange={(event) => onFilterChange("from", event.target.value)}
         />
@@ -58,7 +60,7 @@ export function BillsTableToolbar({
           id="bills-to"
           type="date"
           value={to}
-          className="w-40"
+          className="w-full sm:w-40"
           disabled={disabled}
           onChange={(event) => onFilterChange("to", event.target.value)}
         />
@@ -71,7 +73,7 @@ export function BillsTableToolbar({
           disabled={disabled}
           onValueChange={(value) => onFilterChange("cashierId", value)}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +94,7 @@ export function BillsTableToolbar({
           disabled={disabled}
           onValueChange={(value) => onFilterChange("paymentMethod", value)}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -106,7 +108,7 @@ export function BillsTableToolbar({
         </Select>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 max-sm:col-span-2">
         <Label htmlFor="bills-number" className={FIELD_LABEL}>
           Bill #
         </Label>
@@ -115,7 +117,7 @@ export function BillsTableToolbar({
           inputMode="numeric"
           value={billNumber}
           placeholder="Any"
-          className="w-28 font-mono"
+          className="w-full font-mono sm:w-28"
           disabled={disabled}
           onChange={(event) => {
             const next = event.target.value;

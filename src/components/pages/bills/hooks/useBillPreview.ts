@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
 
 import { REPORT_ROUTES } from "@/lib/routes/report-routes";
+import { isBelowDesktop, isInstalledApp } from "@/lib/utils/viewport";
 import { getBillReceiptAction } from "@/server/bills/bills-actions";
 import type { ReceiptData } from "@/types/bill.types";
 import type { BillLedgerRow } from "@/types/report.types";
@@ -55,9 +56,14 @@ export function useBillPreview() {
     if (!bill) return;
     const href = REPORT_ROUTES.print(bill.id);
 
+    // Installed on a phone, a new tab would open in the browser instead,
+    // signed out: print in this one, as the bill details page does.
+    if (isInstalledApp() && isBelowDesktop()) {
+      router.push(href);
+      return;
+    }
     // Opened straight from the click, so a popup blocker lets it through. If
-    // the browser blocks the tab anyway, print in this one, as the bill
-    // details page does.
+    // the browser blocks the tab anyway, print in this one too.
     if (!window.open(href, "_blank")) router.push(href);
   }, [bill, router]);
 

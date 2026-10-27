@@ -154,4 +154,11 @@
   html {
     @apply font-sans;
   }
+  /* On a phone a date field opens its picker on tap, so the calendar icon
+     only takes the room the date needs. */
+  @media (width < 40rem) {
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      display: none;
+    }
+  }
 }
