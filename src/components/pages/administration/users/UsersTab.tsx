@@ -18,7 +18,7 @@ import type { UserRow } from "@/types/user.types";
 import { CreateUserDialog } from "./create-user-dialog/CreateUserDialog";
 import { useUsersTab } from "./hooks/useUsersTab";
 import { ResetPasswordDialog } from "./reset-password-dialog/ResetPasswordDialog";
-import { USER_HEADERS, UserTableRow } from "./UsersColumns";
+import { USER_COLUMNS, UserTableRow } from "./UsersColumns";
 
 export function UsersTab({
   users,
@@ -46,14 +46,12 @@ export function UsersTab({
         <Table>
           <TableHeader>
             <TableRow>
-              {USER_HEADERS.map((header, index) => (
+              {USER_COLUMNS.map((column, index) => (
                 <TableHead
-                  key={header || `col-${index}`}
-                  className={
-                    index === USER_HEADERS.length - 1 ? "text-right" : ""
-                  }
+                  key={column.label || `col-${index}`}
+                  className={"className" in column ? column.className : ""}
                 >
-                  {header}
+                  {column.label}
                 </TableHead>
               ))}
             </TableRow>
