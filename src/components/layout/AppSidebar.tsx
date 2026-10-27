@@ -206,7 +206,7 @@ export function AppSidebar({
             type="submit"
             aria-label="Sign out"
             title="Sign out"
-            className="flex size-9 cursor-pointer items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white"
+            className="flex size-9 cursor-pointer items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white max-lg:size-10"
           >
             <LogOut className="size-4.5" />
           </button>

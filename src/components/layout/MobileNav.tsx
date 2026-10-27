@@ -2,6 +2,7 @@
 
 import { Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useState } from "react";
 
@@ -20,6 +21,8 @@ export function MobileNav({
   shopName: string;
 }) {
   const [open, setOpen] = useState(false);
+  // On the till itself the link would lead back to the page you are on.
+  const onTill = usePathname() === NEW_BILL_HREF;
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-3 bg-sidebar px-3 text-white lg:hidden">
@@ -52,7 +55,7 @@ export function MobileNav({
               <button
                 type="button"
                 aria-label="Close menu"
-                className="absolute top-5 right-3 flex size-9 cursor-pointer items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white"
+                className="absolute top-5 right-3 flex size-10 cursor-pointer items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white"
               >
                 <X className="size-5" />
               </button>
@@ -71,13 +74,15 @@ export function MobileNav({
         />
       </span>
 
-      <Link
-        href={NEW_BILL_HREF}
-        className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold shadow-brand"
-      >
-        <Plus className="size-4" strokeWidth={2.5} />
-        New bill
-      </Link>
+      {onTill ? null : (
+        <Link
+          href={NEW_BILL_HREF}
+          className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold shadow-brand"
+        >
+          <Plus className="size-4" strokeWidth={2.5} />
+          New bill
+        </Link>
+      )}
     </header>
   );
 }

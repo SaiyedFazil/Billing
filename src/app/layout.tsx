@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/AppProviders";
@@ -30,6 +30,17 @@ export const metadata: Metadata = {
   },
   description: "Counter billing for Mobito.",
   applicationName: "Mobito",
+};
+
+/**
+ * Phones only; a desktop browser ignores both. The theme colour is the
+ * `--sidebar` token as a literal, as in manifest.ts, so Android's browser bar
+ * runs into the top bar. `resizes-content` shrinks the layout when the
+ * keyboard opens, so dialogs and the bill sheet stay above it.
+ */
+export const viewport: Viewport = {
+  themeColor: "#1c1714",
+  interactiveWidget: "resizes-content",
 };
 
 /**
