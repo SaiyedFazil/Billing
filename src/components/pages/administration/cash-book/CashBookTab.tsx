@@ -5,6 +5,8 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  Download,
+  Ellipsis,
   Plus,
   Scale,
   Sheet,
@@ -19,7 +21,14 @@ import { TableEmptyState } from "@/components/custom/TableEmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ExportCsvButton } from "@/components/pages/reports/components/ExportCsvButton";
 import { ReportDateRangeBar } from "@/components/pages/reports/components/ReportDateRangeBar";
+import { useCsvExport } from "@/components/pages/reports/hooks/useCsvExport";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -84,6 +93,10 @@ export function CashBookTab({
   const expenseForm = useExpenseForm({ today, categories });
   const cancel = useCancelExpense();
   const categoryManager = useExpenseCategories();
+  const csvFilename = `cash-book-${from}-to-${to}.csv`;
+  const exportCsv = () => exportExpensesCsvAction({ from, to });
+  // The phone's More menu exports through the same hook as the button.
+  const csv = useCsvExport({ filename: csvFilename, onExport: exportCsv });
 
   const lastPage = Math.max(
     1,
@@ -106,17 +119,45 @@ export function CashBookTab({
         description="Money in from bills and money out from expenses, cash and online."
         actions={
           <>
+            {/* On a phone Export CSV and Categories move into More, so the
+                header keeps one row: More and Add expense. */}
             <ExportCsvButton
-              filename={`cash-book-${from}-to-${to}.csv`}
-              onExport={() => exportExpensesCsvAction({ from, to })}
+              filename={csvFilename}
+              onExport={exportCsv}
+              className="max-sm:hidden"
             />
             <Button
               variant="outline"
               onClick={() => categoryManager.setOpen(true)}
+              className="max-sm:hidden"
             >
               <Tags />
               Categories
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="More"
+                  className="sm:hidden"
+                >
+                  <Ellipsis className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem disabled={csv.isPending} onSelect={csv.run}>
+                  <Download />
+                  {csv.isPending ? "Preparing…" : "Export CSV"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => categoryManager.setOpen(true)}
+                >
+                  <Tags />
+                  Categories
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={expenseForm.openCreate}>
               <Plus />
               Add expense
@@ -213,7 +254,7 @@ export function CashBookTab({
                 onCategoryChange={tab.setCategory}
               />
               {/* Opens the same list, read-only, with the range and filters. */}
-              <Button variant="outline" asChild>
+              <Button variant="outline" className="max-sm:w-full" asChild>
                 <Link
                   href={expenseListHref(ADMIN_ROUTES.cashBookSpreadsheet, {
                     from,
