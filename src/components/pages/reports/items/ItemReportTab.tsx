@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { PresetMap } from "@/lib/utils/report-params";
 import { exportItemsCsvAction } from "@/server/reports/reports-actions";
 import type { ItemSalesRow } from "@/types/report.types";
@@ -19,6 +20,7 @@ import type { ItemSalesRow } from "@/types/report.types";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { ReportDateRangeBar } from "../components/ReportDateRangeBar";
 import {
+  ITEM_REPORT_FOLDED,
   ITEM_REPORT_HEADERS,
   ITEM_REPORT_NUMERIC,
   ItemReportRow,
@@ -65,9 +67,10 @@ export function ItemReportTab({
                 {ITEM_REPORT_HEADERS.map((header) => (
                   <TableHead
                     key={header}
-                    className={
-                      ITEM_REPORT_NUMERIC.has(header) ? "text-right" : ""
-                    }
+                    className={cn(
+                      ITEM_REPORT_NUMERIC.has(header) && "text-right",
+                      ITEM_REPORT_FOLDED[header],
+                    )}
                   >
                     {header}
                   </TableHead>

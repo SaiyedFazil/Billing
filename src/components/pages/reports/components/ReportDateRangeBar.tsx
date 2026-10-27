@@ -57,7 +57,7 @@ export function ReportDateRangeBar({
       <div
         role="group"
         aria-label="Date range"
-        className="flex flex-wrap gap-1 rounded-[14px] border bg-card p-1 shadow-card"
+        className="flex flex-wrap gap-1 rounded-[14px] border bg-card p-1 shadow-card max-sm:w-full"
       >
         {RANGE_PRESETS.map((preset) => {
           const active = preset === activePreset;
@@ -69,7 +69,8 @@ export function ReportDateRangeBar({
               disabled={isPending}
               onClick={() => apply(presets[preset].from, presets[preset].to)}
               className={cn(
-                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                // On a phone the presets grow to fill their rows.
+                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 max-lg:h-10 max-sm:flex-auto",
                 active
                   ? "bg-foreground font-semibold text-background"
                   : "font-medium text-foreground/80 hover:bg-muted",
@@ -81,35 +82,41 @@ export function ReportDateRangeBar({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Label
-          htmlFor="range-from"
-          className="text-[13px] text-muted-foreground"
-        >
-          From
-        </Label>
-        <Input
-          id="range-from"
-          type="date"
-          value={from}
-          className="w-40"
-          disabled={isPending}
-          onChange={(event) => apply(event.target.value, to)}
-        />
-        <Label
-          htmlFor="range-to"
-          className="ml-1 text-[13px] text-muted-foreground"
-        >
-          To
-        </Label>
-        <Input
-          id="range-to"
-          type="date"
-          value={to}
-          className="w-40"
-          disabled={isPending}
-          onChange={(event) => apply(from, event.target.value)}
-        />
+      {/* On a phone From and To are two equal columns, each label above its
+          field. From sm the pair wrappers dissolve into the row as before. */}
+      <div className="flex flex-wrap items-center gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:gap-3">
+        <div className="flex flex-col gap-1.5 sm:contents">
+          <Label
+            htmlFor="range-from"
+            className="text-[13px] text-muted-foreground"
+          >
+            From
+          </Label>
+          <Input
+            id="range-from"
+            type="date"
+            value={from}
+            className="w-full sm:w-40"
+            disabled={isPending}
+            onChange={(event) => apply(event.target.value, to)}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5 sm:contents">
+          <Label
+            htmlFor="range-to"
+            className="text-[13px] text-muted-foreground sm:ml-1"
+          >
+            To
+          </Label>
+          <Input
+            id="range-to"
+            type="date"
+            value={to}
+            className="w-full sm:w-40"
+            disabled={isPending}
+            onChange={(event) => apply(from, event.target.value)}
+          />
+        </div>
       </div>
     </div>
   );
