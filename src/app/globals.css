@@ -179,3 +179,13 @@
     }
   }
 }
+
+/* Toasts belong to the screen, never the paper. The toaster lives in the root
+   layout, so the "Bill #… saved" toast follows the till onto /print and was
+   caught by the print dialog that opens there. Outside any layer, and
+   !important, so it beats the toaster's own injected styles. */
+@media print {
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}
