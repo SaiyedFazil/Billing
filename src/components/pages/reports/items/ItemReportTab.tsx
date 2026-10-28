@@ -18,6 +18,7 @@ import { exportItemsCsvAction } from "@/server/reports/reports-actions";
 import type { ItemSalesRow } from "@/types/report.types";
 
 import { ExportCsvButton } from "../components/ExportCsvButton";
+import { ExportCsvMenu } from "../components/ExportCsvMenu";
 import { ReportDateRangeBar } from "../components/ReportDateRangeBar";
 import {
   ITEM_REPORT_FOLDED,
@@ -40,6 +41,7 @@ export function ItemReportTab({
   return (
     <div className="space-y-6">
       <PageHeader
+        className="max-sm:gap-y-0"
         title="What's selling"
         description="Ranked by revenue. Names and prices are as they were at the time of sale."
         actions={
@@ -47,11 +49,23 @@ export function ItemReportTab({
             filename={`items-${from}-to-${to}.csv`}
             onExport={() => exportItemsCsvAction({ from, to })}
             disabled={rows.length === 0}
+            className="max-sm:hidden"
           />
         }
       />
 
-      <ReportDateRangeBar from={from} to={to} presets={presets} />
+      <ReportDateRangeBar
+        from={from}
+        to={to}
+        presets={presets}
+        phoneActions={
+          <ExportCsvMenu
+            filename={`items-${from}-to-${to}.csv`}
+            onExport={() => exportItemsCsvAction({ from, to })}
+            disabled={rows.length === 0}
+          />
+        }
+      />
 
       {rows.length === 0 ? (
         <TableEmptyState

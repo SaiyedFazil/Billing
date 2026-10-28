@@ -26,6 +26,7 @@ import { exportSalesCsvAction } from "@/server/reports/reports-actions";
 import type { PaymentBreakdownRow, SalesByDayRow } from "@/types/report.types";
 
 import { ExportCsvButton } from "../components/ExportCsvButton";
+import { ExportCsvMenu } from "../components/ExportCsvMenu";
 import { ReportDateRangeBar } from "../components/ReportDateRangeBar";
 import { PaymentBreakdownCard } from "./components/PaymentBreakdownCard";
 import {
@@ -64,6 +65,7 @@ export function SalesReportTab({
   return (
     <div className="space-y-6">
       <PageHeader
+        className="max-sm:gap-y-0"
         title="Sales"
         description="Takings per day. Voided bills are excluded."
         actions={
@@ -71,11 +73,23 @@ export function SalesReportTab({
             filename={`sales-${from}-to-${to}.csv`}
             onExport={() => exportSalesCsvAction({ from, to })}
             disabled={rows.length === 0}
+            className="max-sm:hidden"
           />
         }
       />
 
-      <ReportDateRangeBar from={from} to={to} presets={presets} />
+      <ReportDateRangeBar
+        from={from}
+        to={to}
+        presets={presets}
+        phoneActions={
+          <ExportCsvMenu
+            filename={`sales-${from}-to-${to}.csv`}
+            onExport={() => exportSalesCsvAction({ from, to })}
+            disabled={rows.length === 0}
+          />
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard

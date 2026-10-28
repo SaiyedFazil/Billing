@@ -11,6 +11,7 @@ export function PageHeader({
   actions,
   leading,
   className,
+  actionsClassName,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -19,6 +20,7 @@ export function PageHeader({
   /** Sits left of the title, e.g. a back button. */
   leading?: React.ReactNode;
   className?: string;
+  actionsClassName?: string;
 }) {
   return (
     <header
@@ -46,7 +48,11 @@ export function PageHeader({
         </div>
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        <div
+          className={cn("flex flex-wrap items-center gap-2", actionsClassName)}
+        >
+          {actions}
+        </div>
       ) : null}
     </header>
   );

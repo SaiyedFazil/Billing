@@ -149,7 +149,10 @@ actions keeps its primary action as a button and moves the rest into a
 **6.5 Filter bars.** Below `sm`, fixed-width fields fill the width: a
 two-column grid for pairs (From | To, Cashier | Payment) and full width for
 single fields. All filters stay visible; none are hidden behind a Filters
-button.
+button. The one exception is the date-range presets (Today … This month):
+below `sm` they are a single dropdown that opens below the field at the
+field's width, and a typed range shows "Custom range". From `sm` they are the
+row of buttons, unchanged.
 
 **6.6 Tables.** Below 1024px, no table scrolls sideways except the Cash
 book's days table and the expense spreadsheet (§7.8, §7.9). Every other
@@ -248,20 +251,25 @@ and that tapping a bar shows its tooltip; apply §6.9 to the KPI values.
 
 ### 7.4 Sales report
 
-Date-range bar per §6.5: the presets fill the width, From and To are two
-equal columns underneath. Three KPIs per §6.9. The daily table folds bills
-and discount under the date. The payment breakdown card already stacks.
+Date-range bar per §6.5: the presets are one dropdown, with the "⋯ More" menu
+(holding Export CSV) beside it, and From and To are two equal columns
+underneath. Three KPIs per §6.9. The daily table folds bills and discount
+under the date. The payment breakdown card already stacks.
 
 ### 7.5 What's selling
 
-The table folds the category and the share bar under the item name; quantity
+The date bar is as in §7.4, with Export CSV in the "⋯ More" menu beside the
+dropdown. The table folds the category and the share bar under the item name; quantity
 and revenue stay on the right.
 
 ### 7.6 Cash book
 
-Header actions per §6.4: Add expense stays a button; Export CSV and
-Categories go in the "⋯ More" menu on phones. The view tabs, the date bar,
-the KPIs and the "Open spreadsheet" row must not overflow at 360px. The
+Header actions per §6.4: Add expense stays a button and fills the row, with the
+"⋯ More" menu to its right holding Export CSV and Categories. The two view
+tabs are equal halves, centred. The three totals (money in, money out, net)
+show on the Expenses view only, at every screen size; Day by day has its own
+columns. The view tabs, the date bar, the KPIs and the "Open spreadsheet" row
+must not overflow at 360px. The
 expense table already folds; check it at 360px. The expense, categories and
 cancel dialogs per §6.8.
 

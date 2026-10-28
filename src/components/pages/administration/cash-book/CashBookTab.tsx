@@ -116,11 +116,12 @@ export function CashBookTab({
     <div className="space-y-6">
       <PageHeader
         title="Cash book"
+        actionsClassName="max-sm:w-full"
         description="Money in from bills and money out from expenses, cash and online."
         actions={
           <>
             {/* On a phone Export CSV and Categories move into More, so the
-                header keeps one row: More and Add expense. */}
+                header keeps one row: Add expense, then More. */}
             <ExportCsvButton
               filename={csvFilename}
               onExport={exportCsv}
@@ -134,6 +135,10 @@ export function CashBookTab({
               <Tags />
               Categories
             </Button>
+            <Button onClick={expenseForm.openCreate} className="max-sm:flex-1">
+              <Plus />
+              Add expense
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -145,7 +150,7 @@ export function CashBookTab({
                   <Ellipsis className="size-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem disabled={csv.isPending} onSelect={csv.run}>
                   <Download />
                   {csv.isPending ? "Preparing…" : "Export CSV"}
@@ -158,52 +163,53 @@ export function CashBookTab({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={expenseForm.openCreate}>
-              <Plus />
-              Add expense
-            </Button>
           </>
         }
       />
 
-      {/* The tabs switch the table below; the range and totals are shared. */}
+      {/* The tabs switch the table below and share the date range. The
+          totals are the Expenses view's; the days table has its own columns. */}
       <Tabs value={tab.view} onValueChange={tab.setView} className="gap-6">
         <CashBookViewTabs />
 
         <ReportDateRangeBar from={from} to={to} presets={presets} />
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <StatCard
-            tone="basil"
-            icon={ArrowDownLeft}
-            label="Money in (bills)"
-            value={formatINR(summary.moneyIn.total)}
-            hint={<CashSplitLine split={summary.moneyIn} />}
-          />
-          <StatCard
-            tone="mustard"
-            icon={ArrowUpRight}
-            label="Money out (expenses)"
-            value={formatINR(summary.moneyOut.total)}
-            hint={<CashSplitLine split={summary.moneyOut} />}
-          />
-          <StatCard
-            tone="hero"
-            icon={Scale}
-            label="Net (in − out)"
-            value={formatINR(summary.net.total)}
-            hint={
-              <>
-                <CashSplitLine split={summary.net} />
-                {/* The minus sign carries it: destructive red fails contrast
+        {tab.view === "expenses" ? (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <StatCard
+              tone="basil"
+              icon={ArrowDownLeft}
+              label="Money in (bills)"
+              value={formatINR(summary.moneyIn.total)}
+              hint={<CashSplitLine split={summary.moneyIn} />}
+            />
+            <StatCard
+              tone="mustard"
+              icon={ArrowUpRight}
+              label="Money out (expenses)"
+              value={formatINR(summary.moneyOut.total)}
+              hint={<CashSplitLine split={summary.moneyOut} />}
+            />
+            <StatCard
+              tone="hero"
+              icon={Scale}
+              label="Net (in − out)"
+              value={formatINR(summary.net.total)}
+              hint={
+                <>
+                  <CashSplitLine split={summary.net} />
+                  {/* The minus sign carries it: destructive red fails contrast
                     on the dark hero card. */}
-                {isNegative(summary.net.total) ? (
-                  <span className="mt-1 block">More went out than came in</span>
-                ) : null}
-              </>
-            }
-          />
-        </div>
+                  {isNegative(summary.net.total) ? (
+                    <span className="mt-1 block">
+                      More went out than came in
+                    </span>
+                  ) : null}
+                </>
+              }
+            />
+          </div>
+        ) : null}
 
         <TabsContent value="expenses" className="space-y-4">
           <TableCard
