@@ -118,11 +118,14 @@ scripts/                   verify-* checks and DB utilities, run with tsx
 
 - **`src/app/`** — a `page.tsx` guards, fetches, exports `metadata` and renders
   one component from `src/components/pages/`.
-- **Loading** — one `(app)/loading.tsx` shows `PageLoader` (a centred
-  spinner) the moment a link is clicked, while the page's queries run. The
-  shell's own query (the shop name) streams behind a `Suspense` in
-  `(app)/layout.tsx`; never `await` a query in that layout, or the screen
-  stays blank until it returns.
+- **Loading** — every page change shows `PageLoader` (a centred spinner)
+  from the click until the data is there, in two halves that look the same:
+  `usePendingNavigation` in `AppShell` covers the wait before the new page
+  takes over (Next skips `loading.tsx` when a link's prefetch has not
+  finished), and one `(app)/loading.tsx` covers the page's own queries. The
+  shell's shop-name query streams behind a `Suspense` in `(app)/layout.tsx`;
+  never `await` a query in that layout, or the screen stays blank until it
+  returns.
 - **Pages** — logic lives in `hooks/use<Feature>Tab.ts`, not in the component.
   Table pages split into `XTab.tsx`, `XColumns.tsx` and `hooks/useXTab.ts`;
   page-only pieces go in the feature's `components/`.
