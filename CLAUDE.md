@@ -167,6 +167,9 @@ utilities through `@theme inline`.
   the expense spreadsheet are the exceptions). Low-priority columns fold into
   the main cell as a muted second line, and a row of icon actions becomes one
   `RowActionsMenu` below the fold width.
+- **Date-range presets** (`ReportDateRangeBar`) are one dropdown below `sm`
+  and the button row from `sm`. A page's phone-only extras (the Export CSV
+  "⋯ More" menu) go in its `phoneActions` slot, beside the dropdown.
 - **Behaviour that differs on a phone** asks `src/lib/utils/viewport.ts`
   (`isBelowDesktop`, `hasNoFinePointer`, `isInstalledApp`), never pointer type
   alone: the till may be a touchscreen PC.

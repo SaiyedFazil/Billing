@@ -1,10 +1,18 @@
 "use client";
 
+import { CalendarDays } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   isValidIsoDate,
@@ -18,6 +26,7 @@ export function ReportDateRangeBar({
   to,
   presets,
   keepParams,
+  phoneActions,
 }: {
   from: string;
   to: string;
@@ -28,6 +37,8 @@ export function ReportDateRangeBar({
    * change keeps only from and to, which resets the page and every filter.
    */
   keepParams?: Record<string, string>;
+  /** Sits beside the preset dropdown on a phone, e.g. a More menu. */
+  phoneActions?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,10 +65,45 @@ export function ReportDateRangeBar({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* On a phone the five presets are one dropdown; a custom range matches
+          none, so it shows the placeholder. From sm the buttons below are
+          shown as before. */}
+      <div className="flex items-center gap-2 max-sm:w-full sm:contents">
+        <Select
+          value={activePreset ?? ""}
+          disabled={isPending}
+          onValueChange={(value) => {
+            const preset = RANGE_PRESETS.find((entry) => entry === value);
+            if (preset) apply(presets[preset].from, presets[preset].to);
+          }}
+        >
+          <SelectTrigger
+            className="min-w-0 flex-1 *:data-[slot=select-value]:flex-1 *:data-[slot=select-value]:justify-start sm:hidden"
+            aria-label="Date range"
+          >
+            <CalendarDays className="text-muted-foreground" />
+            <SelectValue placeholder="Custom range" />
+          </SelectTrigger>
+          <SelectContent
+            position="popper"
+            side="bottom"
+            align="start"
+            className="w-(--radix-select-trigger-width)"
+          >
+            {RANGE_PRESETS.map((preset) => (
+              <SelectItem key={preset} value={preset}>
+                {RANGE_PRESET_LABELS[preset]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {phoneActions}
+      </div>
+
       <div
         role="group"
         aria-label="Date range"
-        className="flex flex-wrap gap-1 rounded-[14px] border bg-card p-1 shadow-card max-sm:w-full"
+        className="flex flex-wrap gap-1 rounded-[14px] border bg-card p-1 shadow-card max-sm:hidden"
       >
         {RANGE_PRESETS.map((preset) => {
           const active = preset === activePreset;
@@ -69,8 +115,7 @@ export function ReportDateRangeBar({
               disabled={isPending}
               onClick={() => apply(presets[preset].from, presets[preset].to)}
               className={cn(
-                // On a phone the presets grow to fill their rows.
-                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 max-lg:h-10 max-sm:flex-auto",
+                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 max-lg:h-10",
                 active
                   ? "bg-foreground font-semibold text-background"
                   : "font-medium text-foreground/80 hover:bg-muted",
