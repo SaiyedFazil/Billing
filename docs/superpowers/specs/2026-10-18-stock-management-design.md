@@ -50,7 +50,7 @@ explained afterwards (who, when, why).
 
 - Any change in behaviour for an item whose tracking is off. Untracked items
   must bill exactly as today.
-- A stock problem that burns a bill number or leaves a gap in the day's
+- A stock problem that burns a bill number or leaves a gap in the
   sequence.
 - A count that goes below zero, by race or otherwise.
 - A stock count that changes with no history row explaining it.

@@ -22,6 +22,8 @@ export const bills = pgTable(
   "bills",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // One running number for the life of the shop: never reset, never
+    // repeated. See spec §6.7.
     billNumber: integer("bill_number").notNull(),
     // Shop-local date, computed in application code so the day boundary is
     // unambiguous at midnight. See spec §6.11.
@@ -54,10 +56,7 @@ export const bills = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("bills_date_number_idx").on(
-      table.businessDate,
-      table.billNumber,
-    ),
+    uniqueIndex("bills_number_idx").on(table.billNumber),
     uniqueIndex("bills_idempotency_key_idx").on(table.idempotencyKey),
 
     // These hold because numeric is exact. They would fail under float, which

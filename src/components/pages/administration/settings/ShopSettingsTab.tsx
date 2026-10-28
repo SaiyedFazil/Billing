@@ -255,9 +255,9 @@ export function ShopSettingsTab({
                   id="shop-timezone-hint"
                   className="text-xs text-pretty text-muted-foreground"
                 >
-                  Decides which day a sale counts towards and when bill
-                  numbering restarts at #1. Changing it affects future bills
-                  only — bills already issued keep the date they were given.
+                  Decides which day a sale counts towards. Changing it affects
+                  future bills only — bills already issued keep the date they
+                  were given.
                 </p>
               </div>
 

@@ -159,6 +159,29 @@ The owner asked for the audit log to be removed (2026-10-27).
 Running `db:migrate` on a database applies it, and after that the old log
 cannot be read back, except from a backup taken before the migration.
 
+### Bill numbers become one running sequence (0012)
+
+Bill numbers used to restart at #1 every day, so the same number appeared on
+every day's first bill (2026-10-28). `0012_running_bill_number.sql` makes them
+one sequence for the life of the shop. **It renumbers every existing bill
+once**, oldest first, so the whole history becomes #1, #2, #3 … with no repeats.
+A receipt printed before this migration shows the old number, which no longer
+matches the system.
+
+Do it after closing, when no till is saving bills, and **back up first**. The
+old and new code do not work against each other's schema (the old code writes a
+counter row per day), so migrate and deploy straight away:
+
+1. Take a Neon backup or a `pg_dump` and note the time.
+2. `npm run db:migrate` against the live database. It is a single
+   all-or-nothing block that ends by checking the numbers are exactly 1…N, so a
+   failure leaves the database as it was.
+3. Deploy the new build at once.
+4. Save one test bill, check its number is the previous highest plus one, and
+   void it (a voided bill keeps its number).
+
+To undo it, restore from the step 1 backup and redeploy the previous build.
+
 ### The hand-written trigger migration
 
 `0001_immutability_triggers.sql` is written by hand because drizzle-kit does

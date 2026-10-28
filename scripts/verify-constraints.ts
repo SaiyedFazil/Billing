@@ -5,6 +5,13 @@ import { add } from "../src/lib/utils/money";
 
 let failures = 0;
 
+/**
+ * Probe bills are numbered from here. Real bill numbers are one running
+ * sequence from 1, so a probe can never collide with a real bill however long
+ * the shop trades (an integer holds up to 2,147,483,647).
+ */
+const PROBE_BILL_BASE = 2_100_000_000;
+
 async function expectRejection(label: string, statement: SQL) {
   try {
     await db.execute(statement);
@@ -96,7 +103,7 @@ async function main() {
     "total must equal subtotal minus discount",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
-        VALUES (9001, '2026-01-01', 100.00, 10.00, 99.99, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+        VALUES (${PROBE_BILL_BASE + 1}, '2026-01-01', 100.00, 10.00, 99.99, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
     "bills_total_matches",
   );
 
@@ -104,7 +111,7 @@ async function main() {
     "discount cannot exceed subtotal",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, idempotency_key, created_by)
-        VALUES (9002, '2026-01-01', 100.00, 200.00, -100.00, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
+        VALUES (${PROBE_BILL_BASE + 2}, '2026-01-01', 100.00, 200.00, -100.00, 'CASH', gen_random_uuid(), ${userId}::uuid)`,
     "bills_discount_within_subtotal",
   );
 
@@ -112,7 +119,7 @@ async function main() {
     "change must equal tendered minus total",
     sql`INSERT INTO bills (bill_number, business_date, subtotal, discount,
         total, payment_method, tendered, change_due, idempotency_key, created_by)
-        VALUES (9003, '2026-01-01', 100.00, 0.00, 100.00, 'CASH', 200.00, 50.00, gen_random_uuid(), ${userId}::uuid)`,
+        VALUES (${PROBE_BILL_BASE + 3}, '2026-01-01', 100.00, 0.00, 100.00, 'CASH', 200.00, 50.00, gen_random_uuid(), ${userId}::uuid)`,
     "bills_change_matches",
   );
 
@@ -233,17 +240,20 @@ async function main() {
 
   // --- cleanup --------------------------------------------------------
   // Payment lines and bills cannot be deleted by trigger; lift both for the
-  // probe bills only. The table is absent before split payment.
+  // probe bills only. The table is absent before split payment. A DO block
+  // takes no bind parameters, so the range is written into the statement.
+  const PROBE_FROM = sql.raw(String(PROBE_BILL_BASE + 10));
+  const PROBE_TO = sql.raw(String(PROBE_BILL_BASE + 99));
   await db.execute(sql`
     DO $$ BEGIN
       IF to_regclass('bill_payments') IS NOT NULL THEN
         ALTER TABLE bill_payments DISABLE TRIGGER bill_payments_immutable;
         ALTER TABLE bills DISABLE TRIGGER bills_no_delete;
         DELETE FROM bill_payments WHERE bill_id IN
-          (SELECT id FROM bills WHERE business_date = '2026-01-01'
-             AND bill_number BETWEEN 9010 AND 9099);
-        DELETE FROM bills WHERE business_date = '2026-01-01'
-          AND bill_number BETWEEN 9010 AND 9099;
+          (SELECT id FROM bills
+           WHERE bill_number BETWEEN ${PROBE_FROM} AND ${PROBE_TO});
+        DELETE FROM bills
+          WHERE bill_number BETWEEN ${PROBE_FROM} AND ${PROBE_TO};
         ALTER TABLE bill_payments ENABLE TRIGGER bill_payments_immutable;
         ALTER TABLE bills ENABLE TRIGGER bills_no_delete;
       END IF;
@@ -305,7 +315,7 @@ type ProbePaymentLine = {
 
 /**
  * Split payment spec §6.3. The probe bills are dated 2026-01-01 and numbered
- * from 9010 up; the cleanup in main() removes them.
+ * from PROBE_BILL_BASE + 10 up; the cleanup in main() removes them.
  */
 async function verifyBillPaymentConstraints(userId: string) {
   /**
@@ -315,6 +325,7 @@ async function verifyBillPaymentConstraints(userId: string) {
    */
   const billWithPayments = ({
     number,
+    date = "2026-01-01",
     method,
     total,
     discount = "0.00",
@@ -323,6 +334,7 @@ async function verifyBillPaymentConstraints(userId: string) {
     lines,
   }: {
     number: number;
+    date?: string;
     method: string;
     total: string;
     discount?: string;
@@ -333,7 +345,7 @@ async function verifyBillPaymentConstraints(userId: string) {
     const bill = sql`INSERT INTO bills (bill_number, business_date, subtotal,
         discount, total, payment_method, tendered, change_due,
         idempotency_key, created_by)
-      VALUES (${number}, '2026-01-01', ${add(total, discount)}, ${discount},
+      VALUES (${number}, ${date}, ${add(total, discount)}, ${discount},
         ${total}, ${method}, ${tendered}, ${changeDue}, gen_random_uuid(),
         ${userId}::uuid)
       RETURNING id`;
@@ -360,7 +372,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "a bill with no payment line is refused",
     billWithPayments({
-      number: 9010,
+      number: PROBE_BILL_BASE + 10,
       method: "CASH",
       total: "100.00",
       lines: [],
@@ -370,7 +382,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "payment lines must add up to the bill total",
     billWithPayments({
-      number: 9011,
+      number: PROBE_BILL_BASE + 11,
       method: "CASH",
       total: "100.00",
       lines: [{ method: "CASH", amount: "90.00" }],
@@ -380,7 +392,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "a split bill needs at least two lines",
     billWithPayments({
-      number: 9012,
+      number: PROBE_BILL_BASE + 12,
       method: "SPLIT",
       total: "100.00",
       lines: [{ method: "CASH", amount: "100.00" }],
@@ -390,7 +402,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "every line of a split bill is more than ₹0",
     billWithPayments({
-      number: 9013,
+      number: PROBE_BILL_BASE + 13,
       method: "SPLIT",
       total: "100.00",
       lines: [
@@ -403,7 +415,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "a one-method bill's line has the bill's method",
     billWithPayments({
-      number: 9014,
+      number: PROBE_BILL_BASE + 14,
       method: "UPI",
       total: "100.00",
       lines: [{ method: "CASH", amount: "100.00" }],
@@ -413,7 +425,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "a cash bill's line carries the bill's cash given and change",
     billWithPayments({
-      number: 9015,
+      number: PROBE_BILL_BASE + 15,
       method: "CASH",
       total: "100.00",
       tendered: "200.00",
@@ -456,7 +468,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectViolation(
     "a split bill keeps cash given on its cash line, not on the bill",
     billWithPayments({
-      number: 9016,
+      number: PROBE_BILL_BASE + 16,
       method: "SPLIT",
       total: "500.00",
       tendered: "600.00",
@@ -483,7 +495,7 @@ async function verifyBillPaymentConstraints(userId: string) {
   await expectAccepted(
     "a split bill whose lines add up",
     billWithPayments({
-      number: 9017,
+      number: PROBE_BILL_BASE + 17,
       method: "SPLIT",
       total: "500.00",
       lines: [
@@ -497,11 +509,32 @@ async function verifyBillPaymentConstraints(userId: string) {
       ],
     }),
   );
+  // Bill numbers are one running sequence: the same number on another day is
+  // refused, which is what stops a number repeating after midnight.
+  await expectViolation(
+    "a bill number cannot be reused on another day",
+    billWithPayments({
+      number: PROBE_BILL_BASE + 17,
+      date: "2026-01-02",
+      method: "SPLIT",
+      total: "500.00",
+      lines: [
+        {
+          method: "CASH",
+          amount: "400.00",
+          tendered: "500.00",
+          changeDue: "100.00",
+        },
+        { method: "UPI", amount: "100.00" },
+      ],
+    }),
+    "bills_number_idx",
+  );
   // A 100% discount: the one place a ₹0.00 line is allowed.
   await expectAccepted(
     "a ₹0.00 cash bill with one ₹0.00 line",
     billWithPayments({
-      number: 9018,
+      number: PROBE_BILL_BASE + 18,
       method: "CASH",
       total: "0.00",
       discount: "10.00",

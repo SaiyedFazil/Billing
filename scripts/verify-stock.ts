@@ -8,9 +8,7 @@ import {
   items,
   stockMovements,
 } from "../src/db/schema";
-import { businessDate } from "../src/lib/utils/dates";
 import { createBill } from "../src/server/bills/create-bill-service";
-import { getShopTimezone } from "../src/server/settings/settings-queries";
 import {
   getStockAlerts,
   getStockHistory,
@@ -105,13 +103,10 @@ async function main() {
     .values({ categoryId: category.id, name: UNTRACKED, price: "10.00" })
     .returning({ id: items.id });
 
-  const today = businessDate(new Date(), await getShopTimezone());
-
   async function counter(): Promise<number> {
     const [row] = await db
       .select({ lastNumber: billCounters.lastNumber })
-      .from(billCounters)
-      .where(eq(billCounters.businessDate, today));
+      .from(billCounters);
     return row?.lastNumber ?? 0;
   }
 
@@ -347,12 +342,13 @@ async function main() {
       missing,
     );
 
-    // --- two bills on different days cannot deadlock --------------------
+    // --- two bills cannot deadlock on an item ------------------------------
     // Inserting a bill line takes FOR KEY SHARE on its item (the foreign
-    // key). Two bills around midnight use different counter rows, so nothing
-    // else queues them: both hold KEY SHARE, then both lock the item for the
+    // key). Both bills hold KEY SHARE, then both lock the item for the
     // deduction. That lock must not conflict with KEY SHARE, or Postgres
-    // aborts one bill with a deadlock.
+    // aborts one bill with a deadlock. The deduction is driven directly here,
+    // without the bill counter that queues real bills, so it is the lock mode
+    // itself that is proven.
     const existingBillId = sale.ok ? sale.data.id : "";
     const rollBack = new Error("roll back the deadlock probe");
     let arrived = 0;
@@ -360,7 +356,7 @@ async function main() {
     const barrier = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const midnight = await Promise.allSettled(
+    const racers = await Promise.allSettled(
       [1, 2].map(() =>
         db.transaction(async (tx) => {
           await tx.execute(
@@ -379,11 +375,11 @@ async function main() {
       ),
     );
     check(
-      "two bills on different days cannot deadlock",
-      midnight.every(
+      "two bills deducting the same item cannot deadlock",
+      racers.every(
         (result) => result.status === "rejected" && result.reason === rollBack,
       ),
-      midnight.map((result) =>
+      racers.map((result) =>
         result.status === "rejected"
           ? String(
               (result.reason as { cause?: unknown }).cause ?? result.reason,

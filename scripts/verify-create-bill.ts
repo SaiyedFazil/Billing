@@ -367,31 +367,85 @@ async function main() {
     linesRow.rows,
   );
 
-  // --- gapless numbering --------------------------------------------------
+  // --- one running number, across days -------------------------------------
+  // Bill numbers used to start again at #1 every business day, so the same
+  // number appeared on every day's first bill. Two bills saved on different
+  // business days must now continue ONE sequence. The days are made to differ
+  // by moving the shop timezone between two zones more than a day apart, and
+  // the setting is put back afterwards.
+  const sellable =
+    menu
+      .flatMap((category) => category.items)
+      .find((item) => item.isAvailable && !item.trackStock) ?? first;
+  const settingsRow = await db.execute(
+    sql`SELECT timezone FROM shop_settings LIMIT 1`,
+  );
+  const originalTimezone = (
+    settingsRow.rows[0] as { timezone: string } | undefined
+  )?.timezone;
+  check("the shop settings row exists", Boolean(originalTimezone));
+
+  if (originalTimezone) {
+    const saveInZone = async (timezone: string) => {
+      await db.execute(sql`UPDATE shop_settings SET timezone = ${timezone}`);
+      return createBill(
+        {
+          idempotencyKey: crypto.randomUUID(),
+          lines: [{ itemId: sellable.id, quantity: 1 }],
+          discount: "0.00",
+          paymentMethod: "CASH",
+          tendered: "10000.00",
+          expectedTotal: lineTotal(sellable.price, 1),
+        },
+        userId,
+      );
+    };
+    try {
+      const early = await saveInZone("Pacific/Kiritimati"); // UTC+14
+      const late = await saveInZone("Pacific/Pago_Pago"); // UTC-11
+      check("both cross-day bills saved", early.ok && late.ok, { early, late });
+      if (early.ok && late.ok) {
+        check(
+          "the two bills fall on different business days",
+          early.data.businessDate !== late.data.businessDate,
+          { early: early.data.businessDate, late: late.data.businessDate },
+        );
+        check(
+          "the number continues on the next day instead of restarting",
+          late.data.billNumber === early.data.billNumber + 1,
+          { early: early.data.billNumber, late: late.data.billNumber },
+        );
+      }
+    } finally {
+      await db.execute(
+        sql`UPDATE shop_settings SET timezone = ${originalTimezone}`,
+      );
+    }
+  }
+
+  // --- gapless, and never repeated ----------------------------------------
   const numbersRow = await db.execute(sql`
-    SELECT bill_number FROM bills
-    WHERE business_date = ${result.data.businessDate}
-    ORDER BY bill_number`);
+    SELECT bill_number FROM bills ORDER BY bill_number`);
   const numbers = numbersRow.rows.map(
     (r) => (r as { bill_number: number }).bill_number,
   );
-  const gapless = numbers.every((value, index) => value === numbers[0] + index);
-  check("bill numbers are contiguous for the day", gapless, numbers);
+  check(
+    "bill numbers run 1..N across every day, none repeated",
+    numbers.every((value, index) => value === index + 1),
+    numbers.slice(0, 40),
+  );
 
   // --- the counter has not run ahead of the bills --------------------------
   const counterRow = await db.execute(sql`
-    SELECT c.business_date, c.last_number,
-           (SELECT count(*)::int FROM bills b WHERE b.business_date = c.business_date) AS bills
+    SELECT c.last_number,
+           (SELECT count(*)::int FROM bills) AS bills
     FROM bill_counters c`);
   console.table(counterRow.rows);
-  const noBurnedNumbers = counterRow.rows.every(
-    (r) =>
-      (r as { last_number: number; bills: number }).last_number ===
-      (r as { last_number: number; bills: number }).bills,
-  );
+  const counter = counterRow.rows[0] as
+    { last_number: number; bills: number } | undefined;
   check(
     "no bill numbers were burned by a failed attempt",
-    noBurnedNumbers,
+    counterRow.rows.length === 1 && counter?.last_number === counter?.bills,
     counterRow.rows,
   );
 
