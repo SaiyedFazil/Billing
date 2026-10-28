@@ -94,8 +94,13 @@ export function CartPanel({
       </header>
 
       {/* In the phone sheet, lines keep some height even when the keyboard
-          leaves little room; the sheet itself then scrolls. */}
-      <ScrollArea className="min-h-0 flex-1 px-5 till-phone:min-h-24">
+          leaves little room; the sheet itself then scrolls.
+
+          The sheet has only a max-height, so the viewport's height: 100% has
+          nothing to resolve against there: it grew to fit every line and the
+          stub covered the last ones. As a flex column the viewport takes the
+          height the sheet leaves it, and scrolls the lines inside it. */}
+      <ScrollArea className="min-h-0 flex-1 px-5 till-phone:flex till-phone:min-h-24 till-phone:flex-col till-phone:*:data-[slot=scroll-area-viewport]:h-auto till-phone:*:data-[slot=scroll-area-viewport]:min-h-0 till-phone:*:data-[slot=scroll-area-viewport]:flex-1">
         {lines.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">

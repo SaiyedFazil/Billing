@@ -97,13 +97,13 @@ password from `.env.local` once you have signed in.
 
 ### Environment variables
 
-| Variable                               | Required      | Notes                                                           |
-| -------------------------------------- | ------------- | --------------------------------------------------------------- |
-| `DATABASE_URL`                         | Yes           | Neon **pooled** connection string (contains `-pooler`)          |
-| `AUTH_SECRET`                          | Yes           | Generate with `npx auth secret`                                 |
-| `AUTH_URL`                             | Yes           | `http://localhost:3000` locally; the deployed URL in production |
-| `IMAGEKIT_*`, `NEXT_PUBLIC_IMAGEKIT_*` | For photos    | ImageKit keys and URL endpoint                                  |
-| `SEED_SUPERADMIN_*`                    | For `db:seed` | The first owner account                                         |
+| Variable            | Required      | Notes                                                           |
+| ------------------- | ------------- | --------------------------------------------------------------- |
+| `DATABASE_URL`      | Yes           | Neon **pooled** connection string (contains `-pooler`)          |
+| `AUTH_SECRET`       | Yes           | Generate with `npx auth secret`                                 |
+| `AUTH_URL`          | Yes           | `http://localhost:3000` locally; the deployed URL in production |
+| `IMAGEKIT_*`        | For photos    | ImageKit keys and URL endpoint (server only)                    |
+| `SEED_SUPERADMIN_*` | For `db:seed` | The first owner account                                         |
 
 `.env.template` documents each one. `.env.local` is git-ignored — never commit
 real secrets.
