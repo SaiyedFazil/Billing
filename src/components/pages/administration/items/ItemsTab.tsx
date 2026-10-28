@@ -21,7 +21,7 @@ import { ItemsTableToolbar } from "./components/ItemsTableToolbar";
 import { StockSummaryTiles } from "./components/StockSummaryTiles";
 import { CreateUpdateItemDialog } from "./create-update-item-dialog/CreateUpdateItemDialog";
 import { useItemsTab } from "./hooks/useItemsTab";
-import { ITEM_HEADERS, ItemTableRow } from "./ItemsColumns";
+import { ITEM_COLUMNS, ItemTableRow } from "./ItemsColumns";
 import { UpdateStockDialog } from "./update-stock-dialog/UpdateStockDialog";
 
 export function ItemsTab({
@@ -86,14 +86,14 @@ export function ItemsTab({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {ITEM_HEADERS.map((header, index) => (
+                    {ITEM_COLUMNS.map((column, index) => (
                       <TableHead
-                        key={header || `col-${index}`}
+                        key={column.label || `col-${index}`}
                         className={
-                          index === ITEM_HEADERS.length - 1 ? "text-right" : ""
+                          "className" in column ? column.className : ""
                         }
                       >
-                        {header}
+                        {column.label}
                       </TableHead>
                     ))}
                   </TableRow>

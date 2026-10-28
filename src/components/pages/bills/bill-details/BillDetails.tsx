@@ -102,7 +102,9 @@ export function BillDetails({
             <TableHeader>
               <TableRow>
                 <TableHead>Item</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
+                <TableHead className="text-right max-sm:hidden">
+                  Unit price
+                </TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
@@ -110,10 +112,14 @@ export function BillDetails({
             <TableBody>
               {receipt.lines.map((line, index) => (
                 <TableRow key={`${line.itemName}-${index}`}>
-                  <TableCell className="font-semibold">
+                  <TableCell className="font-semibold max-lg:whitespace-normal">
                     {line.itemName}
+                    {/* The unit price column, folded under the name. */}
+                    <span className="block text-xs font-normal text-muted-foreground tabular-nums sm:hidden">
+                      {formatINR(line.unitPrice)} each
+                    </span>
                   </TableCell>
-                  <TableCell className="text-right text-foreground/80 tabular-nums">
+                  <TableCell className="text-right text-foreground/80 tabular-nums max-sm:hidden">
                     {formatINR(line.unitPrice)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

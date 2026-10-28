@@ -108,7 +108,7 @@ function UpdateStockForm({
           value={dialog.mode}
           onValueChange={(value) => dialog.setMode(value as AdjustMode)}
         >
-          <TabsList className="w-full group-data-horizontal/tabs:h-10">
+          <TabsList className="w-full group-data-horizontal/tabs:h-10 max-lg:group-data-horizontal/tabs:h-12">
             {MODES.map((mode) => (
               <TabsTrigger
                 key={mode.value}

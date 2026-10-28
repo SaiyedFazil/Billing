@@ -76,11 +76,15 @@ export function StatCard({
         </span>
       </div>
 
-      <div className="relative space-y-1">
+      {/* Below lg the card can be narrow, so the value scales with it rather
+          than being cut off; a desktop card keeps its fixed size. */}
+      <div className="relative space-y-1 max-lg:@container">
         <p
           className={cn(
-            "truncate font-heading leading-tight font-extrabold tracking-tight tabular-nums",
-            compact ? "text-[26px]" : "text-[34px]",
+            "truncate font-heading leading-tight font-extrabold tracking-tight tabular-nums max-lg:wrap-anywhere max-lg:whitespace-normal",
+            compact
+              ? "text-[26px] max-lg:line-clamp-2"
+              : "text-[34px] max-lg:text-[clamp(1.125rem,14cqi,2.125rem)]",
           )}
         >
           {value}

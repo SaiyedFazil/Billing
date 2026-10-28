@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Input } from "@/components/ui/input";
+import { hasNoFinePointer, isBelowDesktop } from "@/lib/utils/viewport";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -25,8 +26,10 @@ export function ItemSearchBox({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A cashier is faster on the keyboard than the touchscreen, so the search
-  // box owns focus on load. See spec §8.1.
+  // box owns focus on load. See spec §8.1. Not on a phone or tablet, where
+  // focus would pop the on-screen keyboard over half the menu.
   useEffect(() => {
+    if (isBelowDesktop() && hasNoFinePointer()) return;
     inputRef.current?.focus();
   }, []);
 
@@ -48,7 +51,7 @@ export function ItemSearchBox({
           }
         }}
         placeholder="Search the menu"
-        className="h-14 rounded-2xl pr-4 pl-12 text-base shadow-card md:pr-64 md:text-base"
+        className="h-14 rounded-2xl pr-4 pl-12 text-base shadow-card md:text-base lg:pr-64"
         aria-label="Search menu items"
         aria-describedby="menu-search-hint"
       />
@@ -57,7 +60,7 @@ export function ItemSearchBox({
       </span>
       <div
         aria-hidden
-        className="pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1.5 text-xs text-muted-foreground md:flex"
+        className="pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1.5 text-xs text-muted-foreground lg:flex"
       >
         <Kbd>Enter</Kbd>
         adds top match

@@ -166,24 +166,30 @@ export function ExpenseSpreadsheetTab({
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={expensePage.page <= 1 || sheet.isPending}
-                  onClick={() => sheet.goToPage(expensePage.page - 1)}
-                >
-                  <ChevronLeft />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={expensePage.page >= lastPage || sheet.isPending}
-                  onClick={() => sheet.goToPage(expensePage.page + 1)}
-                >
-                  Next
-                  <ChevronRight />
-                </Button>
+                {/* On a phone Previous and Next take a row of their own, side
+                    by side; from sm the wrapper dissolves into the row. */}
+                <div className="flex gap-2 max-sm:w-full sm:contents">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-sm:flex-1"
+                    disabled={expensePage.page <= 1 || sheet.isPending}
+                    onClick={() => sheet.goToPage(expensePage.page - 1)}
+                  >
+                    <ChevronLeft />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-sm:flex-1"
+                    disabled={expensePage.page >= lastPage || sheet.isPending}
+                    onClick={() => sheet.goToPage(expensePage.page + 1)}
+                  >
+                    Next
+                    <ChevronRight />
+                  </Button>
+                </div>
               </div>
             </>
           ) : undefined

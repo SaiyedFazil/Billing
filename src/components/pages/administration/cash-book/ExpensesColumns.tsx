@@ -24,7 +24,7 @@ export const EXPENSE_COLUMNS = [
   // On a phone the date, and below xl these three, move under the category,
   // so Amount always stays on screen.
   { label: "Date", width: "hidden w-40 sm:table-cell" },
-  { label: "Category", width: "min-w-40 xl:w-48" },
+  { label: "Category", width: "sm:min-w-40 xl:w-48" },
   { label: "Paid to", width: "hidden w-44 xl:table-cell" },
   { label: "Note", width: "hidden min-w-40 xl:table-cell" },
   { label: "Paid by", width: "hidden w-36 xl:table-cell" },

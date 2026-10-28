@@ -56,7 +56,7 @@ export function SalesTrendChart({
   data: Array<{ label: string; net: number; isToday: boolean }>;
 }) {
   return (
-    <section className="flex flex-col gap-5 rounded-[20px] border bg-card p-6 shadow-card">
+    <section className="flex flex-col gap-5 rounded-[20px] border bg-card p-6 shadow-card max-sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="font-heading text-lg font-bold">Last 7 days</h2>

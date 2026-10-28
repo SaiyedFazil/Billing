@@ -24,13 +24,17 @@ export function ExpensesTableToolbar({
   onCategoryChange: (categoryId: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    // On a phone the two filters share the row equally.
+    <div className="flex flex-wrap gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-2">
       <Select
         value={group || "ALL"}
         disabled={disabled}
         onValueChange={onGroupChange}
       >
-        <SelectTrigger className="w-36" aria-label="Filter by how it was paid">
+        <SelectTrigger
+          className="w-full sm:w-36"
+          aria-label="Filter by how it was paid"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -45,7 +49,10 @@ export function ExpensesTableToolbar({
         disabled={disabled}
         onValueChange={onCategoryChange}
       >
-        <SelectTrigger className="w-48" aria-label="Filter by category">
+        <SelectTrigger
+          className="w-full sm:w-48"
+          aria-label="Filter by category"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

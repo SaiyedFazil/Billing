@@ -53,6 +53,41 @@ Create a real bill and print it. Check that:
 The owner changes this in the app under **Settings → Printer width** (available
 from M6). No reinstall needed — pick **58mm** and print a test receipt.
 
+## Printing from a phone
+
+Phones print the same receipt through the phone's own print system. Set each
+phone up once.
+
+### Android
+
+1. **Connect the printer.** For Bluetooth, pair it in the phone's Bluetooth
+   settings. For Wi-Fi, put the printer on the shop's Wi-Fi (its manual says
+   how) and keep the phone on the same network.
+2. **Install a print service.** Android prints only to printers that have
+   one. Install the printer maker's print app from the Play Store, or a
+   general one for thermal printers such as RawBT, and switch it on under
+   **Settings → Connected devices → Printing**. Check that your printer model
+   works with it before relying on it.
+3. **Print a test receipt.** Save a bill. When Chrome's print preview opens,
+   pick the thermal printer and set the paper size to **80mm** (or **58mm**),
+   margins to **None**, and **Headers and footers** off. Chrome remembers
+   these per printer.
+
+### iPhone
+
+An iPhone prints only to **AirPrint** printers. If the printer's box or manual
+does not list AirPrint, iPhones can do everything in the app except print;
+reprint those bills later from an Android phone or the till.
+
+If the app is installed on the home screen and the print sheet does not
+appear, open the app in a Safari tab and print from there.
+
+### The Print button
+
+Under every receipt on a phone there is a **Print** button. Use it when the
+print sheet was closed by mistake, or never opened: a phone has no Ctrl+P.
+**Back to billing** returns to the till for the next customer.
+
 ## Troubleshooting
 
 **The print dialog does not open by itself.**

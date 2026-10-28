@@ -69,7 +69,7 @@ export function DashboardPage({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           tone="hero"
           icon={IndianRupee}
@@ -103,7 +103,10 @@ export function DashboardPage({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* grid-cols-1 caps the single phone column at the screen: without it the
+          column grows to fit the chart, and the chart measures that wider
+          column and keeps it. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <SalesTrendChart data={chartData} />
         {/* Nothing tracked: the right column is exactly as before stock. */}
         {stockAlerts.trackedCount === 0 ? (

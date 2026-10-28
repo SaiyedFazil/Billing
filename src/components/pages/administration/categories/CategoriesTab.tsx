@@ -17,7 +17,7 @@ import {
 import { categoryTone } from "@/lib/utils/category-tone";
 import type { CategoryRow } from "@/types/category.types";
 
-import { CATEGORY_HEADERS, CategoryTableRow } from "./CategoriesColumns";
+import { CATEGORY_COLUMNS, CategoryTableRow } from "./CategoriesColumns";
 import { CreateUpdateCategoryDialog } from "./create-update-category-dialog/CreateUpdateCategoryDialog";
 import { useCategoriesTab } from "./hooks/useCategoriesTab";
 
@@ -49,14 +49,12 @@ export function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
           <Table>
             <TableHeader>
               <TableRow>
-                {CATEGORY_HEADERS.map((header, index) => (
+                {CATEGORY_COLUMNS.map((column, index) => (
                   <TableHead
-                    key={header || `actions-${index}`}
-                    className={
-                      index === CATEGORY_HEADERS.length - 1 ? "text-right" : ""
-                    }
+                    key={column.label || `actions-${index}`}
+                    className={"className" in column ? column.className : ""}
                   >
-                    {header}
+                    {column.label}
                   </TableHead>
                 ))}
               </TableRow>

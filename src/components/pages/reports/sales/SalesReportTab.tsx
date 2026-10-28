@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { PresetMap } from "@/lib/utils/report-params";
 import { add, formatINR, ZERO } from "@/lib/utils/money";
 import { exportSalesCsvAction } from "@/server/reports/reports-actions";
@@ -27,7 +28,13 @@ import type { PaymentBreakdownRow, SalesByDayRow } from "@/types/report.types";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { ReportDateRangeBar } from "../components/ReportDateRangeBar";
 import { PaymentBreakdownCard } from "./components/PaymentBreakdownCard";
-import { SALES_HEADERS, SalesReportRow } from "./SalesReportColumns";
+import {
+  SALES_FOLDED,
+  SALES_HEADERS,
+  SalesFoldedAmounts,
+  SalesFoldedBills,
+  SalesReportRow,
+} from "./SalesReportColumns";
 
 export function SalesReportTab({
   from,
@@ -70,7 +77,7 @@ export function SalesReportTab({
 
       <ReportDateRangeBar from={from} to={to} presets={presets} />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           tone="hero"
           icon={IndianRupee}
@@ -98,7 +105,8 @@ export function SalesReportTab({
           description="Try a wider date range."
         />
       ) : (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        // grid-cols-1: one column that never grows past the screen.
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           <TableCard>
             <Table>
               <TableHeader>
@@ -106,7 +114,10 @@ export function SalesReportTab({
                   {SALES_HEADERS.map((header, index) => (
                     <TableHead
                       key={header}
-                      className={index > 0 ? "text-right" : ""}
+                      className={cn(
+                        index > 0 && "text-right",
+                        SALES_FOLDED.has(header) && "max-sm:hidden",
+                      )}
                     >
                       {header}
                     </TableHead>
@@ -118,18 +129,25 @@ export function SalesReportTab({
                   <SalesReportRow key={row.businessDate} row={row} />
                 ))}
                 <TableRow className="bg-brand-soft font-bold text-brand-ink hover:bg-brand-soft">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="max-sm:align-top">
+                    Total
+                    <SalesFoldedBills billCount={totals.billCount} />
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums max-sm:hidden">
                     {totals.billCount}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums max-sm:hidden">
                     {formatINR(totals.gross)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums max-sm:hidden">
                     {formatINR(totals.discount)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums max-sm:align-top">
                     {formatINR(totals.net)}
+                    <SalesFoldedAmounts
+                      gross={totals.gross}
+                      discount={totals.discount}
+                    />
                   </TableCell>
                 </TableRow>
               </TableBody>

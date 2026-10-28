@@ -4,6 +4,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The till's two layouts below lg. A phone, or a phone held sideways (wide
+   but short), gets the bill bar and bottom sheet; a tablet tall enough for it
+   gets the bill beside the menu. From lg the till's lg: classes rule. */
+@custom-variant till-phone {
+  @media (width < 48rem) {
+    @slot;
+  }
+  @media (width < 64rem) and (height < 37.5rem) {
+    @slot;
+  }
+}
+@custom-variant till-tablet {
+  @media (width >= 48rem) and (width < 64rem) and (height >= 37.5rem) {
+    @slot;
+  }
+}
+
 /*
  * Ember — the visual language. See
  * docs/superpowers/specs/2026-09-19-ember-redesign-design.md for the palette
@@ -153,5 +170,12 @@
   }
   html {
     @apply font-sans;
+  }
+  /* On a phone a date field opens its picker on tap, so the calendar icon
+     only takes the room the date needs. */
+  @media (width < 40rem) {
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      display: none;
+    }
   }
 }

@@ -78,7 +78,7 @@ export function StockSummaryTiles({
               <Icon className="size-4.5" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-medium text-muted-foreground">
+              <span className="block truncate text-[13px] font-medium text-muted-foreground max-sm:leading-tight max-sm:whitespace-normal">
                 {label}
               </span>
               <span className="block font-heading text-xl leading-tight font-bold tabular-nums">

@@ -38,8 +38,10 @@ export function ItemsTableToolbar({
   onStockFilterChange: (value: StockFilter) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="relative min-w-56 flex-1 sm:max-w-sm">
+    // On a phone search takes the full row and the two filters share the
+    // next one.
+    <div className="flex flex-wrap items-center gap-3 max-sm:grid max-sm:grid-cols-2">
+      <div className="relative min-w-56 flex-1 max-sm:col-span-2 max-sm:min-w-0 sm:max-w-sm">
         <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
@@ -51,7 +53,7 @@ export function ItemsTableToolbar({
       </div>
 
       <Select value={categoryFilter} onValueChange={onCategoryFilterChange}>
-        <SelectTrigger className="w-52 shadow-card data-[size=default]:h-11">
+        <SelectTrigger className="w-full shadow-card data-[size=default]:h-11 sm:w-52">
           <SelectValue placeholder="All categories" />
         </SelectTrigger>
         <SelectContent>
@@ -69,7 +71,7 @@ export function ItemsTableToolbar({
         onValueChange={(value) => onStockFilterChange(value as StockFilter)}
       >
         <SelectTrigger
-          className="w-44 shadow-card data-[size=default]:h-11"
+          className="w-full shadow-card data-[size=default]:h-11 sm:w-44"
           aria-label="Filter by stock"
         >
           <SelectValue placeholder="All stock" />

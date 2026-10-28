@@ -58,7 +58,7 @@ export function SpreadsheetPeriodBar({
       <div
         role="group"
         aria-label="Period"
-        className="flex gap-1 rounded-[14px] border bg-card p-1 shadow-card"
+        className="flex gap-1 rounded-[14px] border bg-card p-1 shadow-card max-sm:w-full"
       >
         {PERIODS.map(({ value, label }) => {
           const active = value === period;
@@ -70,7 +70,8 @@ export function SpreadsheetPeriodBar({
               disabled={disabled || (value === "month" && months.length === 0)}
               onClick={() => onPeriodChange(value)}
               className={cn(
-                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                // On a phone the two periods share the row.
+                "h-9 cursor-pointer rounded-[10px] px-3.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 max-lg:h-10 max-sm:flex-1",
                 active
                   ? "bg-foreground font-semibold text-background"
                   : "font-medium text-foreground/80 hover:bg-muted",
@@ -88,7 +89,7 @@ export function SpreadsheetPeriodBar({
           disabled={disabled || months.length === 0}
           onValueChange={onMonthChange}
         >
-          <SelectTrigger className="w-52" aria-label="Month">
+          <SelectTrigger className="w-full sm:w-52" aria-label="Month">
             {/* Given its own text: the item text carries the count too, which
                 belongs in the list, not in the closed control. */}
             <SelectValue placeholder="Choose a month">
