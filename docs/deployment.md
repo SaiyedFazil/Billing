@@ -16,6 +16,9 @@ permits it.
 
 ```bash
 # 1. Create a Neon project at https://console.neon.tech
+#    Region: AWS US East 2 (Ohio). Netlify's free plan runs the app's server
+#    code there and cannot move it, and every page makes several queries, so
+#    a database in any other region adds that distance to each one.
 #    Copy the POOLED connection string (it must contain "-pooler").
 
 # 2. Fill in .env.local
