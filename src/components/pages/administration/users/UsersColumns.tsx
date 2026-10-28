@@ -75,7 +75,7 @@ export function UserTableRow({
             </span>
             {/* The folded columns: username, role and bill count. */}
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground lg:hidden">
-              <span className="font-mono">{row.username}</span>
+              <span className="font-mono break-all">{row.username}</span>
               <RoleBadge role={row.role} />
               <span className="tabular-nums">
                 {row.billCount} bill{row.billCount === 1 ? "" : "s"}

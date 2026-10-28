@@ -7,7 +7,8 @@ import { formatINR } from "@/lib/utils/money";
 /**
  * The phone's bill at a glance, fixed to the bottom of the till. It is always
  * there, so nothing jumps when the first item goes on; tapping it opens the
- * bill. Hidden from md, where the bill sits beside the menu.
+ * bill. Only in the till's phone layout; elsewhere the bill sits beside the
+ * menu.
  */
 export function BillBar({
   itemCount,
@@ -28,7 +29,7 @@ export function BillBar({
   return (
     <div
       inert={expanded}
-      className="fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_-20px_rgb(28_23_20/0.4)] backdrop-blur-sm md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 hidden border-t bg-card/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_32px_-20px_rgb(28_23_20/0.4)] backdrop-blur-sm till-phone:block"
     >
       <button
         ref={ref}
