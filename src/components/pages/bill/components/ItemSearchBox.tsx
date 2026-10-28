@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Input } from "@/components/ui/input";
-import { hasNoFinePointer, isBelowDesktop } from "@/lib/utils/viewport";
+import { isBelowDesktop, isMobileOS } from "@/lib/utils/viewport";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -27,9 +27,12 @@ export function ItemSearchBox({
 
   // A cashier is faster on the keyboard than the touchscreen, so the search
   // box owns focus on load. See spec §8.1. Not on a phone or tablet, where
-  // focus would pop the on-screen keyboard over half the menu.
+  // focus would pop the on-screen keyboard over half the menu: below the
+  // desktop layout, or on a phone/tablet OS (a tablet held sideways is
+  // desktop-wide). Not by pointer type: a touchscreen till may have a USB
+  // keyboard and no mouse, and some phones report a stylus as a mouse.
   useEffect(() => {
-    if (isBelowDesktop() && hasNoFinePointer()) return;
+    if (isBelowDesktop() || isMobileOS()) return;
     inputRef.current?.focus();
   }, []);
 

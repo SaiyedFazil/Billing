@@ -14,6 +14,20 @@ export function hasNoFinePointer(): boolean {
   return !window.matchMedia("(any-pointer: fine)").matches;
 }
 
+/**
+ * A phone or tablet operating system (Android, iOS, iPadOS), whose keyboard is
+ * on screen. Unlike the pointer checks, this tells a tablet held sideways
+ * (desktop-wide, touch only) from the till: a Windows or Mac touchscreen PC,
+ * which may have a USB keyboard and no mouse at all.
+ */
+export function isMobileOS(): boolean {
+  const { userAgent, maxTouchPoints } = navigator;
+  if (/Android|iPhone|iPad|iPod/i.test(userAgent)) return true;
+  // iPadOS asks for desktop sites and reports itself as a Mac; a real Mac has
+  // no touch points.
+  return /Macintosh/.test(userAgent) && maxTouchPoints > 1;
+}
+
 /** Opened from the home screen rather than in a browser tab. */
 export function isInstalledApp(): boolean {
   return window.matchMedia("(display-mode: standalone)").matches;
