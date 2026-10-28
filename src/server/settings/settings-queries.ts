@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import {
   PAYMENT_METHODS,
   type PaymentMethod,
@@ -6,16 +8,27 @@ import { db } from "@/db";
 import type { ShopSettings } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
 
+/**
+ * The one settings read. `cache()` shares it for the length of a single
+ * request, so the shell's shop name, a page's timezone and a report query's
+ * timezone cost one round trip between them instead of one each. It is not
+ * kept between requests, so a saved change shows on the next page load.
+ *
+ * Resolves to undefined when the row is missing; each reader decides how
+ * loudly to fail.
+ */
+const readShopSettings = cache(async (): Promise<ShopSettings | undefined> =>
+  withConnectionRetry(() => db.query.shopSettings.findFirst()),
+);
+
 export async function getShopSettings(): Promise<ShopSettings> {
-  return withConnectionRetry(async () => {
-    const settings = await db.query.shopSettings.findFirst();
-    if (!settings) {
-      throw new Error(
-        "Shop settings row is missing. Run `npm run db:seed` before using the app.",
-      );
-    }
-    return settings;
-  });
+  const settings = await readShopSettings();
+  if (!settings) {
+    throw new Error(
+      "Shop settings row is missing. Run `npm run db:seed` before using the app.",
+    );
+  }
+  return settings;
 }
 
 /**
@@ -25,12 +38,8 @@ export async function getShopSettings(): Promise<ShopSettings> {
  */
 export async function getShopName(): Promise<string> {
   try {
-    return await withConnectionRetry(async () => {
-      const settings = await db.query.shopSettings.findFirst({
-        columns: { shopName: true },
-      });
-      return settings?.shopName ?? "Billing";
-    });
+    const settings = await readShopSettings();
+    return settings?.shopName ?? "Billing";
   } catch (error) {
     console.error("Could not read the shop name for the app shell:", error);
     return "Billing";
@@ -38,12 +47,8 @@ export async function getShopName(): Promise<string> {
 }
 
 export async function getShopTimezone(): Promise<string> {
-  return withConnectionRetry(async () => {
-    const settings = await db.query.shopSettings.findFirst({
-      columns: { timezone: true },
-    });
-    return settings?.timezone ?? "Asia/Kolkata";
-  });
+  const settings = await readShopSettings();
+  return settings?.timezone ?? "Asia/Kolkata";
 }
 
 /**
@@ -53,12 +58,8 @@ export async function getShopTimezone(): Promise<string> {
  * still lets the shop take money rather than showing a till with no buttons.
  */
 export async function getEnabledPaymentMethods(): Promise<PaymentMethod[]> {
-  return withConnectionRetry(async () => {
-    const settings = await db.query.shopSettings.findFirst({
-      columns: { paymentMethods: true },
-    });
-    const enabled = settings?.paymentMethods;
-    if (!enabled || enabled.length === 0) return [...PAYMENT_METHODS];
-    return PAYMENT_METHODS.filter((method) => enabled.includes(method));
-  });
+  const settings = await readShopSettings();
+  const enabled = settings?.paymentMethods;
+  if (!enabled || enabled.length === 0) return [...PAYMENT_METHODS];
+  return PAYMENT_METHODS.filter((method) => enabled.includes(method));
 }

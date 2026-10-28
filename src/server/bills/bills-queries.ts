@@ -45,9 +45,12 @@ export async function getReceipt(billId: string): Promise<ReceiptData | null> {
 
   if (!bill) return null;
 
+  // The three reads below depend only on the bill existing, so they run
+  // together: one round trip to the database instead of three in a row.
+  //
   // Snapshot columns only — never join to `items` for a name or price.
   // See spec §6 Principle 2.
-  const lines = await db
+  const linesQuery = db
     .select({
       itemName: billItems.itemName,
       quantity: billItems.quantity,
@@ -59,7 +62,7 @@ export async function getReceipt(billId: string): Promise<ReceiptData | null> {
     .orderBy(asc(billItems.createdAt), asc(billItems.itemName));
 
   // One line for a one-method bill, two to four for a split, in display order.
-  const payments = await db
+  const paymentsQuery = db
     .select({
       method: billPayments.method,
       amount: billPayments.amount,
@@ -70,7 +73,11 @@ export async function getReceipt(billId: string): Promise<ReceiptData | null> {
     .where(eq(billPayments.billId, billId))
     .orderBy(asc(billPayments.position));
 
-  const settings = await getShopSettings();
+  const [lines, payments, settings] = await Promise.all([
+    linesQuery,
+    paymentsQuery,
+    getShopSettings(),
+  ]);
 
   return {
     ...bill,
