@@ -194,14 +194,15 @@ export async function createBill(
   // One transaction. Only throws from here on.
   try {
     const created = await db.transaction(async (tx) => {
-      // Reserve the day's next number. The ON CONFLICT takes a row lock, so
-      // concurrent tills serialize here. Rolling back rolls this back too,
-      // which is what makes the sequence gapless. See spec §6.7.
+      // Reserve the shop's next bill number: one running sequence, never
+      // reset. The ON CONFLICT takes a row lock, so concurrent tills
+      // serialize here. Rolling back rolls this back too, which is what makes
+      // the sequence gapless. See spec §6.7.
       const [counter] = await tx
         .insert(billCounters)
-        .values({ businessDate: date, lastNumber: 1 })
+        .values({ id: 1, lastNumber: 1 })
         .onConflictDoUpdate({
-          target: billCounters.businessDate,
+          target: billCounters.id,
           set: { lastNumber: sql`${billCounters.lastNumber} + 1` },
         })
         .returning({ lastNumber: billCounters.lastNumber });

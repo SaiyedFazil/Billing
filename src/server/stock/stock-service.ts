@@ -75,8 +75,9 @@ export async function deductStockForBill(
     .orderBy(asc(items.id))
     // NO KEY UPDATE, not UPDATE: the bill's lines already hold FOR KEY SHARE
     // on these rows through their foreign key, and FOR UPDATE conflicts with
-    // that — two bills on different days (different counter rows) would
-    // deadlock. verify:stock pins this.
+    // that — two sales of the same item would deadlock. verify:stock pins
+    // this, driving the deduction directly (the bill counter now queues real
+    // bills, so the lock mode itself must be safe).
     .for("no key update");
 
   for (const item of locked) {

@@ -250,7 +250,7 @@ Index: `(category_id)` where `is_active`.
 | Column          | Type                                        | Notes                                |
 | --------------- | ------------------------------------------- | ------------------------------------ |
 | id              | uuid PK                                     |                                      |
-| bill_number     | integer NOT NULL                            | daily sequence, gapless              |
+| bill_number     | integer NOT NULL                            | running number, never reset, gapless |
 | business_date   | date NOT NULL                               | shop-local date, stored not computed |
 | subtotal        | numeric(10,2) NOT NULL                      | `CHECK >= 0`                         |
 | discount        | numeric(10,2) NOT NULL default 0.00         | flat rupee amount, not a percentage  |
@@ -268,7 +268,7 @@ Index: `(category_id)` where `is_active`.
 
 Constraints:
 
-- `UNIQUE (business_date, bill_number)`
+- `UNIQUE (bill_number)` (until 2026-10-28 this was `(business_date, bill_number)`; see §6.7)
 - `CHECK (discount <= subtotal)`
 - `CHECK (total = subtotal - discount)`
 - `CHECK (tendered IS NULL OR change_due = tendered - total)`
@@ -292,19 +292,25 @@ Indexes: `(business_date DESC)`, `(created_at DESC)`, `(created_by)`,
 
 Indexes: `(bill_id)`, `(item_id)`.
 
-### 6.7 `bill_counters` — gapless numbering
+### 6.7 `bill_counters` — one running, gapless number
 
-| Column        | Type                       |
-| ------------- | -------------------------- |
-| business_date | date PK                    |
-| last_number   | integer NOT NULL default 0 |
+The bill number is ONE sequence for the life of the shop. It never resets at
+midnight and is never repeated, so a number identifies exactly one bill. It was
+a daily sequence until 2026-10-28, which made the same number appear on every
+day's first bill; migration `0012_running_bill_number` changed it and
+renumbered every existing bill once, oldest first.
+
+| Column      | Type                                             |
+| ----------- | ------------------------------------------------ |
+| id          | integer PK default 1, `CHECK (id = 1)` (one row) |
+| last_number | integer NOT NULL default 0                       |
 
 Incremented inside the same transaction as the bill insert:
 
 ```sql
-INSERT INTO bill_counters (business_date, last_number)
-VALUES ($1, 1)
-ON CONFLICT (business_date)
+INSERT INTO bill_counters (id, last_number)
+VALUES (1, 1)
+ON CONFLICT (id)
 DO UPDATE SET last_number = bill_counters.last_number + 1
 RETURNING last_number;
 ```
@@ -314,8 +320,8 @@ both back — the sequence is genuinely gapless. A plain Postgres sequence would
 leave a hole on every failed attempt, and holes in a bill sequence are exactly
 what an auditor questions.
 
-**Concurrency:** the `ON CONFLICT DO UPDATE` takes a row lock on that date's
-counter, so two tills saving simultaneously serialize on it — the second waits
+**Concurrency:** the `ON CONFLICT DO UPDATE` takes a row lock on the counter
+row, so two tills saving simultaneously serialize on it — the second waits
 for the first to commit, then gets the next number. This is the correct
 trade-off here: contention is nil at one or two tills, and gaplessness is worth
 more than parallelism.
@@ -492,7 +498,7 @@ Sequence, all within one transaction:
    `total`.
 6. If `total ≠ expectedTotal`, abort and return `PRICE_CHANGED` with the
    new total.
-7. Reserve the next `bill_number` for today's `business_date` (§6.7).
+7. Reserve the shop's next `bill_number` (§6.7).
 8. Insert `bills`.
 9. Insert `bill_items` with name, category name and unit price snapshots.
 10. Commit; return the bill id and number.

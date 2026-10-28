@@ -86,6 +86,12 @@ menu, `-- --dry-run` previews) ·
 10. **How a bill was paid lives in `bill_payments`.** Never sum money by
     `bills.payment_method`: a `SPLIT` bill's money belongs to its lines.
     Showing the label is fine.
+11. **Bill numbers are one running sequence.** `bills.bill_number` counts every
+    bill the shop has ever issued: never reset (not at midnight, not per
+    month), never repeated (`UNIQUE (bill_number)`). It is reserved from the
+    single `bill_counters` row inside the bill's own transaction, which keeps it
+    gapless. Never build a number from the date or restart the counter; a bill's
+    number is frozen by trigger. Migration 0012 renumbered history once.
 
 ## Structure
 
@@ -244,7 +250,7 @@ npm run build            # the production build
 | `format:check`                                        | every file is Prettier-formatted                                                    |
 | `db:verify`                                           | CHECK constraints reject impossible bills                                           |
 | `db:verify-immutability`                              | triggers reject history rewrites, but allow voiding                                 |
-| `verify:bill`                                         | idempotency, price-change detection, gapless numbering                              |
+| `verify:bill`                                         | idempotency, price-change detection, one running number across days                 |
 | `verify:stock-utils`                                  | stock status, caps, adjustment maths, filters (no DB)                               |
 | `verify:stock`                                        | sale deduction, last-unit race, adjustments, history                                |
 | `verify:cash-book-utils`                              | grouping, day merge, summary maths, expense validation, spreadsheet helpers (no DB) |

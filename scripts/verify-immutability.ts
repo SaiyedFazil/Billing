@@ -48,7 +48,7 @@ async function main() {
     ), b AS (
       INSERT INTO bills (bill_number, business_date, subtotal, discount,
                          total, payment_method, idempotency_key, created_by)
-      SELECT 9100, '2026-01-02', 50.00, 0.00, 50.00, 'CASH', gen_random_uuid(), u.id
+      SELECT 2100009100, '2026-01-02', 50.00, 0.00, 50.00, 'CASH', gen_random_uuid(), u.id
       FROM u RETURNING id
     ), p AS (
       -- In the same statement as its bill, so the deferred balance check
