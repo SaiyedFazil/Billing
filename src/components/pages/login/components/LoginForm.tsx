@@ -19,8 +19,14 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  // Stays true once sign-in succeeds, until this page is replaced. The
+  // transition below ends the moment navigation is *requested*, which would
+  // otherwise give the form back to the user while the dashboard is loading.
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const busy = isPending || redirecting;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,8 +46,10 @@ export function LoginForm() {
             ? next
             : "/dashboard";
 
+        setRedirecting(true);
+        // No router.refresh(): a pushed navigation already fetches the page
+        // fresh, and a refresh on top would run the whole server render twice.
         router.push(destination);
-        router.refresh();
         return;
       }
 
@@ -62,7 +70,7 @@ export function LoginForm() {
             autoComplete="username"
             autoFocus
             required
-            disabled={isPending}
+            disabled={busy}
             aria-invalid={Boolean(fieldErrors.username)}
             className="h-13 rounded-[14px] pl-11 text-base md:text-base"
           />
@@ -82,7 +90,7 @@ export function LoginForm() {
             type="password"
             autoComplete="current-password"
             required
-            disabled={isPending}
+            disabled={busy}
             aria-invalid={Boolean(fieldErrors.password)}
             className="h-13 rounded-[14px] pl-11 text-base md:text-base"
           />
@@ -106,9 +114,9 @@ export function LoginForm() {
         type="submit"
         size="lg"
         className="h-13 w-full rounded-[14px]"
-        disabled={isPending}
+        disabled={busy}
       >
-        {isPending ? (
+        {busy ? (
           <>
             <Loader2 className="size-4.5 animate-spin" />
             Signing in…
