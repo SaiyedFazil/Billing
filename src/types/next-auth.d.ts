@@ -38,6 +38,8 @@ declare module "next-auth/jwt" {
     username: string;
     role: Role;
     sessionVersion: number;
+    /** Epoch seconds. A session ends SESSION_MAX_AGE_SECONDS after it. */
+    signedInAt: number;
   }
 }
 
@@ -47,5 +49,7 @@ declare module "@auth/core/jwt" {
     username: string;
     role: Role;
     sessionVersion: number;
+    /** Epoch seconds. A session ends SESSION_MAX_AGE_SECONDS after it. */
+    signedInAt: number;
   }
 }

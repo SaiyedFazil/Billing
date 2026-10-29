@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { usesSecureCookie } from "@/lib/auth/session-policy";
+import { hasOutlivedSignIn, usesSecureCookie } from "@/lib/auth/session-policy";
 import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 
 // Next.js 16 renamed `middleware.ts` to `proxy.ts`.
@@ -32,7 +32,7 @@ export default async function proxy(req: NextRequest) {
     secureCookie: usesSecureCookie(process.env.AUTH_URL, req.nextUrl.href),
   });
 
-  if (!token) {
+  if (!token || hasOutlivedSignIn(token.signedInAt)) {
     const url = new URL(AUTH_ROUTES.login, req.nextUrl.origin);
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);

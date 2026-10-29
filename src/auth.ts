@@ -5,6 +5,10 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import {
+  hasOutlivedSignIn,
+  SESSION_MAX_AGE_SECONDS,
+} from "@/lib/auth/session-policy";
 import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 import { loginSchema } from "@/lib/validation/user-schema";
 import {
@@ -18,8 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    // One shift.
-    maxAge: 8 * 60 * 60,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   callbacks: {
     jwt({ token, user }) {
@@ -28,7 +31,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.username = user.username;
         token.role = user.role;
         token.sessionVersion = user.sessionVersion;
+        token.signedInAt = Math.floor(Date.now() / 1000);
       }
+      // null ends the session: auth() returns none, so the guards reject it.
+      if (hasOutlivedSignIn(token.signedInAt)) return null;
       return token;
     },
     session({ session, token }) {

@@ -8,6 +8,26 @@ import type { SessionUser } from "./guard";
  * copy, and `scripts/verify-auth.ts` proves them without a server.
  */
 
+/** How long a sign-in lasts — one long shift, counted from sign-in. */
+export const SESSION_MAX_AGE_SECONDS = 10 * 60 * 60;
+
+/**
+ * Whether a session has outlived its sign-in, given the sign-in time stored
+ * in the token (epoch seconds). Auth.js re-issues the cookie with a fresh
+ * expiry whenever `/api/auth/session` is read, so the cookie's own expiry
+ * cannot hold a session to a fixed length; the sign-in time inside it can. A
+ * token without one predates this rule and counts as ended.
+ */
+export function hasOutlivedSignIn(
+  signedInAt: unknown,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): boolean {
+  return (
+    typeof signedInAt !== "number" ||
+    nowSeconds - signedInAt >= SESSION_MAX_AGE_SECONDS
+  );
+}
+
 /** What the session cookie says about its user, fixed at sign-in. */
 export type SessionClaims = {
   id: string;
