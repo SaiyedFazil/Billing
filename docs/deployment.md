@@ -185,6 +185,23 @@ counter row per day), so migrate and deploy straight away:
 
 To undo it, restore from the step 1 backup and redeploy the previous build.
 
+### Sessions the owner can end (0013)
+
+`0013_session_version.sql` adds `users.session_version`, which the sign-in
+guard checks on every page and action (see
+`docs/superpowers/specs/2026-10-29-auth-sessions-design.md`). It only adds a
+column with a default, and the code before it ignores the column, so it is
+safe to run while the shop is open:
+
+1. Back up, as for any migration.
+2. `npm run db:migrate` against the live database.
+3. Deploy, after closing. The new code reads the column on every page, so
+   migrate first. **Everyone signs in again once**: cookies issued before the
+   deploy are rejected, which would interrupt a cashier mid-sale.
+4. Check that sign-in works, that Sign out then reopening the site lands on
+   `/login`, and that a test cashier you deactivate is sent to `/login` on
+   their next click.
+
 ### The hand-written trigger migration
 
 `0001_immutability_triggers.sql` is written by hand because drizzle-kit does

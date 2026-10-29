@@ -377,8 +377,11 @@ timezone conversion.
 
 ## 7. Authentication and authorization
 
-Auth.js v5, credentials provider, bcrypt cost 12, JWT session strategy with an
-8-hour expiry (one shift). No session table is required.
+Auth.js v5, credentials provider, bcrypt cost 12, JWT session strategy. A
+sign-in lasts 10 hours from sign-in, never extended. No session table is
+required: `users.session_version` lets the owner end a user's sessions. See
+`2026-10-29-auth-sessions-design.md`, which supersedes the session details
+here.
 
 **There is no public signup route.** The first superadmin is created by
 `db/seed.ts` from environment variables. Every subsequent account is created by
@@ -421,13 +424,16 @@ requireUser(); // any active account, else UNAUTHORIZED
 requireSuperadmin(); // else FORBIDDEN
 ```
 
-Deactivated users are rejected by the guard even if they hold a valid JWT.
+Deactivated users are rejected by the guard even if they hold a valid JWT: the
+guard loads the user and compares `session_version` (added 2026-10-29; before
+that it read only the cookie).
 
 ### 7.3 Login hardening
 
 Failed attempts are counted on the `users` row. Five consecutive failures lock
-the account for five minutes via `locked_until`. No Redis or third-party
-service is required.
+the account for five minutes via `locked_until`. Each attempt is counted
+before its password is checked, in one atomic update, so guesses sent together
+cannot slip past the lock. No Redis or third-party service is required.
 
 Minimum password length is 8 characters. There is no email-based password
 reset; a superadmin resets passwords directly, which is the correct model for a
