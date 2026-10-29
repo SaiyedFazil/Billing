@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-import { authConfig } from "@/auth.config";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 import { loginSchema } from "@/lib/validation/user-schema";
 import {
   clearFailedLogins,
@@ -13,7 +13,30 @@ import {
 } from "@/server/users/login-attempts";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
+  pages: {
+    signIn: AUTH_ROUTES.login,
+  },
+  session: {
+    strategy: "jwt",
+    // One shift.
+    maxAge: 8 * 60 * 60,
+  },
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id!;
+        token.username = user.username;
+        token.role = user.role;
+      }
+      return token;
+    },
+    session({ session, token }) {
+      session.user.id = token.id;
+      session.user.username = token.username;
+      session.user.role = token.role;
+      return session;
+    },
+  },
   providers: [
     Credentials({
       credentials: {
