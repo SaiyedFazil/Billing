@@ -3,7 +3,6 @@
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { signIn } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { guarded, requireSuperadmin } from "@/lib/auth/guard";
@@ -112,7 +111,7 @@ export async function resetPasswordAction(
   payload: unknown,
 ): Promise<ActionResult<null>> {
   return guarded(async () => {
-    const actor = await requireSuperadmin();
+    await requireSuperadmin();
 
     const parsed = resetPasswordSchema.safeParse(payload);
     if (!parsed.success) {
@@ -135,22 +134,16 @@ export async function resetPasswordAction(
         failedAttempts: 0,
         lockedUntil: null,
         // Signs the user out everywhere: whoever knew the old password, or
-        // holds a cookie from it, is out on their next request.
+        // holds a cookie from it, is out on their next request. That includes
+        // owners resetting their own, on this device too: the page re-render
+        // that follows this action sends them to sign in with the new one.
+        // (Signing them straight back in does not work: Auth.js reads the
+        // session from the request headers, which still carry the old cookie
+        // during that re-render.)
         sessionVersion: sql`${users.sessionVersion} + 1`,
         updatedAt: new Date(),
       })
       .where(eq(users.id, parsed.data.id));
-
-    // Owners resetting their own password stay signed in on this device —
-    // signed straight back in with the new password — while their other
-    // devices are signed out.
-    if (parsed.data.id === actor.id) {
-      await signIn("credentials", {
-        username: before.username,
-        password: parsed.data.password,
-        redirect: false,
-      });
-    }
 
     revalidatePath(ADMIN_ROUTES.users);
     return ok(null);

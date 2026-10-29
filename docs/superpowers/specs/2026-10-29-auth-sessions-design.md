@@ -125,9 +125,16 @@ SIGN OUT ───────────────────────�
 
 OWNER DEACTIVATES / REACTIVATES / RESETS A PASSWORD ────────────────────────
  users.session_version + 1 ─▶ every cookie that user holds fails on its next
- request. Owners resetting their own password are signed straight back in on
- this device, so only their other devices drop out.
+ request. Owners resetting their own password are signed out here too, and
+ sign in again with the new one.
 ```
+
+Owners who reset their own password are not signed straight back in. Setting
+a cookie in a server action re-renders the page in the same response, and
+Auth.js reads the session from the request headers, which still carry the old
+cookie during that re-render. The page would see the old version and redirect
+anyway. Signing out everywhere is also the safer rule after a password
+change.
 
 ## The rules
 
