@@ -1,3 +1,4 @@
+import { hashPassword, verifyPassword } from "../src/lib/auth/password";
 import {
   currentSessionUser,
   hasOutlivedSignIn,
@@ -138,7 +139,34 @@ check(
   true,
 );
 
-console.log(
-  failures === 0 ? "\nAll auth checks passed." : `\n${failures} FAILURE(S)`,
-);
-process.exit(failures === 0 ? 0 : 1);
+// ── An unknown username costs as much as a wrong password ───────────────────
+
+async function timed(run: () => Promise<boolean>) {
+  const start = performance.now();
+  const result = await run();
+  return { result, ms: Math.round(performance.now() - start) };
+}
+
+async function main() {
+  const hash = await hashPassword("Correct@123");
+  const wrong = await timed(() => verifyPassword("Wrong@1234", hash));
+  const noAccount = await timed(() => verifyPassword("Wrong@1234", null));
+
+  check("a wrong password does not verify", wrong.result, false);
+  check("a username with no account never verifies", noAccount.result, false);
+  check(
+    `no account still costs a full bcrypt check (${noAccount.ms} ms vs ${wrong.ms} ms)`,
+    noAccount.ms > wrong.ms / 2,
+    true,
+  );
+
+  console.log(
+    failures === 0 ? "\nAll auth checks passed." : `\n${failures} FAILURE(S)`,
+  );
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,39 +1,45 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { LOCKOUT_MINUTES, MAX_FAILED_ATTEMPTS } from "@/constants/sign-in";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
 /**
- * Records a failed sign-in and locks the account after MAX_FAILED_ATTEMPTS
- * consecutive failures.
+ * Counts a sign-in attempt BEFORE its password is checked, and says whether
+ * the account may try at all — false while it is locked.
  *
- * Silently does nothing when the username does not exist — counting attempts
- * against a non-existent account would reveal which usernames are real.
+ * One UPDATE does the check and the count, and it locks the account on the
+ * MAX_FAILED_ATTEMPTS-th attempt. Attempts sent in parallel queue on the row,
+ * so at most MAX_FAILED_ATTEMPTS of them reach a password check before the
+ * lock lands. Counting after a wrong password instead let every attempt that
+ * arrived together pass the lock check first.
+ *
+ * A correct password then clears the count (clearFailedLogins), so only
+ * consecutive failures add up.
  */
-export async function registerFailedLogin(username: string): Promise<void> {
-  const user = await db.query.users.findFirst({
-    where: sql`lower(${users.username}) = lower(${username})`,
-    columns: { id: true, failedAttempts: true },
-  });
+export async function claimSignInAttempt(userId: string): Promise<boolean> {
+  const now = new Date();
+  const lockUntil = new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000);
 
-  if (!user) return;
-
-  const attempts = user.failedAttempts + 1;
-  const shouldLock = attempts >= MAX_FAILED_ATTEMPTS;
-
-  await db
+  const claimed = await db
     .update(users)
     .set({
-      failedAttempts: attempts,
-      lockedUntil: shouldLock
-        ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
-        : null,
+      failedAttempts: sql`${users.failedAttempts} + 1`,
+      // Both sides read the row as it was before this update.
+      lockedUntil: sql`case when ${users.failedAttempts} + 1 >= ${MAX_FAILED_ATTEMPTS} then ${lockUntil.toISOString()}::timestamptz else null end`,
     })
-    .where(eq(users.id, user.id));
+    .where(
+      and(
+        eq(users.id, userId),
+        or(isNull(users.lockedUntil), lte(users.lockedUntil, now)),
+      ),
+    )
+    .returning({ id: users.id });
+
+  return claimed.length > 0;
 }
 
-/** Clears the counter after a successful sign-in. */
+/** Clears the count after a successful sign-in. */
 export async function clearFailedLogins(userId: string): Promise<void> {
   await db
     .update(users)

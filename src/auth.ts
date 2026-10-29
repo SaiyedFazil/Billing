@@ -12,8 +12,8 @@ import {
 import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 import { loginSchema } from "@/lib/validation/user-schema";
 import {
+  claimSignInAttempt,
   clearFailedLogins,
-  registerFailedLogin,
 } from "@/server/users/login-attempts";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -61,21 +61,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: sql`lower(${users.username}) = lower(${username})`,
         });
 
-        // Every failure path returns the same null. Never reveal which check
+        // Every failure path returns the same null and costs one bcrypt
+        // check, so neither the answer nor its timing reveals which check
         // failed — that is how username enumeration starts.
-        if (!user) return null;
-        if (!user.isActive) return null;
-        if (user.lockedUntil && user.lockedUntil > new Date()) return null;
-
-        const valid = await verifyPassword(password, user.passwordHash);
-        if (!valid) {
-          await registerFailedLogin(username);
+        if (!user || !user.isActive) {
+          await verifyPassword(password, null);
           return null;
         }
 
-        if (user.failedAttempts > 0 || user.lockedUntil) {
-          await clearFailedLogins(user.id);
-        }
+        const allowed = await claimSignInAttempt(user.id);
+        const valid = await verifyPassword(password, user.passwordHash);
+        if (!allowed || !valid) return null;
+
+        await clearFailedLogins(user.id);
 
         return {
           id: user.id,

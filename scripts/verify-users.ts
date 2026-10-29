@@ -5,10 +5,13 @@ import { db } from "../src/db";
 import { users } from "../src/db/schema";
 import { hashPassword, verifyPassword } from "../src/lib/auth/password";
 import {
+  claimSignInAttempt,
   clearFailedLogins,
-  registerFailedLogin,
 } from "../src/server/users/login-attempts";
-import { countActiveSuperadmins } from "../src/server/users/users-queries";
+import {
+  countActiveSuperadmins,
+  findSessionUser,
+} from "../src/server/users/users-queries";
 
 let failures = 0;
 
@@ -90,19 +93,55 @@ async function main() {
     newHash.startsWith("$2") && !newHash.includes("NewProbe"),
   );
 
-  // Wrong passwords lock the account; a good sign-in clears the lock.
+  // The guard's lookup carries the session version, never the hash.
+  const session = await findSessionUser(probe.id);
+  check(
+    "a new user starts at session version 0",
+    session?.sessionVersion === 0,
+    session,
+  );
+  check(
+    "the session lookup never returns the password hash",
+    session !== undefined && !("passwordHash" in session),
+  );
+
+  // Every attempt is counted before its password is checked. Five without a
+  // correct password lock the account; a good sign-in clears the lock.
+  const allowed: boolean[] = [];
   for (let attempt = 0; attempt < MAX_FAILED_ATTEMPTS; attempt += 1) {
-    await registerFailedLogin("invariant-probe");
+    allowed.push(await claimSignInAttempt(probe.id));
   }
+  check(
+    "the first five attempts may check a password",
+    allowed.every(Boolean),
+    allowed,
+  );
   const locked = (await db.query.users.findFirst({
     where: eq(users.id, probe.id),
   }))!;
   check(
-    "five wrong passwords lock the account",
+    "five attempts without a correct password lock the account",
     locked.failedAttempts === MAX_FAILED_ATTEMPTS &&
       locked.lockedUntil !== null &&
       locked.lockedUntil > new Date(),
     { failedAttempts: locked.failedAttempts, lockedUntil: locked.lockedUntil },
+  );
+  check(
+    "a sixth attempt is refused while the account is locked",
+    !(await claimSignInAttempt(probe.id)),
+  );
+
+  await clearFailedLogins(probe.id);
+
+  // Guesses sent together queue on the row: they cannot all pass the lock
+  // check before any of them is counted.
+  const together = await Promise.all(
+    Array.from({ length: 12 }, () => claimSignInAttempt(probe.id)),
+  );
+  check(
+    "of 12 attempts sent at once, only five reach a password check",
+    together.filter(Boolean).length === MAX_FAILED_ATTEMPTS,
+    together,
   );
 
   await clearFailedLogins(probe.id);
