@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { OfflineBanner } from "@/components/custom/OfflineBanner";
 import { PageLoader } from "@/components/custom/PageLoader";
 import { AppShell } from "@/components/layout/AppShell";
-import { requireUser, type SessionUser } from "@/lib/auth/guard";
+import { readSessionUser, type SessionUser } from "@/lib/auth/guard";
+import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 import { getShopName } from "@/server/settings/settings-queries";
 
 const FALLBACK_SHOP_NAME = "Billing";
@@ -13,10 +15,12 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // proxy.ts has already redirected anonymous requests, but this is the gate
-  // that actually enforces it. It reads only the session cookie — no database
-  // — so it does not hold the response back.
-  const user = await requireUser();
+  // Reads only the session cookie — no database — so it does not hold the
+  // shell back. That makes it a display read, not a gate: every page inside
+  // calls requireUser(), which checks the database and redirects a session
+  // the owner has ended.
+  const user = await readSessionUser();
+  if (!user) redirect(AUTH_ROUTES.login);
 
   // The shop name needs a database read. Awaiting it here would keep the whole
   // screen blank until the database answers (after sign-in, or on a reload),

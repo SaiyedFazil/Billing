@@ -25,6 +25,10 @@ export const users = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     failedAttempts: integer("failed_attempts").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    // Copied into the session cookie at sign-in. Adding one ends every
+    // session the user has open: the guard rejects a cookie whose number no
+    // longer matches. Raised by a password reset and by (de)activation.
+    sessionVersion: integer("session_version").notNull().default(0),
     createdBy: uuid("created_by").references((): AnyPgColumn => users.id),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

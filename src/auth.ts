@@ -27,6 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id!;
         token.username = user.username;
         token.role = user.role;
+        token.sessionVersion = user.sessionVersion;
       }
       return token;
     },
@@ -34,6 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id;
       session.user.username = token.username;
       session.user.role = token.role;
+      session.user.sessionVersion = token.sessionVersion;
       return session;
     },
   },
@@ -74,6 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           username: user.username,
           role: user.role,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),

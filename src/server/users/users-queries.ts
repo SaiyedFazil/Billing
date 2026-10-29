@@ -3,7 +3,30 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { bills, users } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
+import type { SessionUserRecord } from "@/lib/auth/session-policy";
 import type { UserRow } from "@/types/user.types";
+
+/**
+ * What the guard needs to decide whether a session still counts — and never
+ * the password hash. Runs on every page and action, by primary key.
+ */
+export async function findSessionUser(
+  id: string,
+): Promise<SessionUserRecord | undefined> {
+  return withConnectionRetry(async () =>
+    db.query.users.findFirst({
+      where: eq(users.id, id),
+      columns: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        isActive: true,
+        sessionVersion: true,
+      },
+    }),
+  );
+}
 
 export async function listUsers(): Promise<UserRow[]> {
   return withConnectionRetry(async () =>

@@ -92,6 +92,13 @@
       "when": 1793173055086,
       "tag": "0012_running_bill_number",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793258370285,
+      "tag": "0013_session_version",
+      "breakpoints": true
     }
   ]
 }

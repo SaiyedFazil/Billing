@@ -1,46 +1,41 @@
 import { getToken } from "next-auth/jwt";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { usesSecureCookie } from "@/lib/auth/session-policy";
 import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
-import { REPORT_ROUTES } from "@/lib/routes/report-routes";
 
 // Next.js 16 renamed `middleware.ts` to `proxy.ts`.
 //
 // This is a REDIRECT CONVENIENCE, not access control. Real enforcement is
-// requireUser() / requireSuperadmin() inside every action and page.
+// requireUser() / requireSuperadmin() inside every action and page, which
+// also check the session against the database. The proxy cannot: it may run
+// at the edge, where the Neon Pool cannot connect.
 //
 // It only READS the session cookie and never writes one. Auth.js's `auth()`
 // proxy wrapper re-issues the session cookie on every response, so the
 // sign-out request came back with two cookies: signOut's deletion and the
 // wrapper's fresh session. Netlify appends the proxy's cookies last, the fresh
 // session won, and signing out did nothing.
+//
+// Signed-in visitors to /login are sent on by the login page itself, not
+// here. A session the owner has ended still has a cookie; redirecting it from
+// /login to a page that rejects it would loop.
 const PUBLIC_ROUTES: string[] = [AUTH_ROUTES.login];
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return;
 
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
-    // Auth.js names the cookie `__Secure-…` on an https site, judging by
-    // AUTH_URL when it is set and by the request otherwise. Read that name.
-    secureCookie: (process.env.AUTH_URL ?? req.nextUrl.href).startsWith(
-      "https://",
-    ),
+    secureCookie: usesSecureCookie(process.env.AUTH_URL, req.nextUrl.href),
   });
-  const isLoggedIn = token !== null;
 
-  if (!isLoggedIn && !isPublic) {
+  if (!token) {
     const url = new URL(AUTH_ROUTES.login, req.nextUrl.origin);
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
-  }
-
-  if (isLoggedIn && isPublic) {
-    return NextResponse.redirect(
-      new URL(REPORT_ROUTES.dashboard, req.nextUrl.origin),
-    );
   }
 }
 
