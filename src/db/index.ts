@@ -16,16 +16,20 @@ if (typeof globalThis.WebSocket === "undefined") {
 
 type BillingDatabase = NeonDatabase<typeof schema>;
 
-// Reuse the pool across hot reloads in development, otherwise every file save
+// Reuse the POOL across hot reloads in development, otherwise every file save
 // opens a new pool and exhausts Neon's connection limit.
-const globalForDb = globalThis as unknown as {
-  billingPool?: Pool;
-  billingDb?: BillingDatabase;
-};
+//
+// Only the pool. The Drizzle client is built with the schema, so caching it
+// here kept the schema the dev server first loaded: after a migration dropped
+// users.session_version, every sign-in still asked for it and failed until
+// the server was restarted. The client is a cheap wrapper with no connection
+// of its own, so it is rebuilt whenever this module is.
+const globalForDb = globalThis as unknown as { billingPool?: Pool };
 
-function createDatabase(): BillingDatabase {
+function getPool(): Pool {
+  if (globalForDb.billingPool) return globalForDb.billingPool;
+
   const connectionString = process.env.DATABASE_URL;
-
   if (!connectionString) {
     throw new Error(
       "DATABASE_URL is not set. Copy .env.template to .env.local and paste " +
@@ -33,22 +37,17 @@ function createDatabase(): BillingDatabase {
     );
   }
 
-  const pool = globalForDb.billingPool ?? new Pool({ connectionString });
+  const pool = new Pool({ connectionString });
   if (process.env.NODE_ENV !== "production") {
     globalForDb.billingPool = pool;
   }
-
-  return drizzle(pool, { schema });
+  return pool;
 }
 
-function getDatabase(): BillingDatabase {
-  const cached = globalForDb.billingDb;
-  if (cached) return cached;
+let database: BillingDatabase | undefined;
 
-  const database = createDatabase();
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.billingDb = database;
-  }
+function getDatabase(): BillingDatabase {
+  database ??= drizzle(getPool(), { schema });
   return database;
 }
 

@@ -7,6 +7,7 @@ export type ErrorCode =
   | "PRICE_CHANGED"
   | "OUT_OF_STOCK"
   | "DB_UNAVAILABLE"
+  | "LOCKED"
   | "UNKNOWN";
 
 export type ActionError = {

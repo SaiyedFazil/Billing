@@ -3,6 +3,8 @@
 import {
   AlertCircle,
   ArrowRight,
+  Eye,
+  EyeOff,
   Loader2,
   LockKeyhole,
   UserRound,
@@ -23,6 +25,7 @@ export function LoginForm() {
   // transition below ends the moment navigation is *requested*, which would
   // otherwise give the form back to the user while the dashboard is loading.
   const [redirecting, setRedirecting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -87,13 +90,29 @@ export function LoginForm() {
           <Input
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
             disabled={busy}
             aria-invalid={Boolean(fieldErrors.password)}
-            className="h-13 rounded-[14px] pl-11 text-base md:text-base"
+            // Edge draws its own reveal eye; ours replaces it.
+            className="h-13 rounded-[14px] pr-13 pl-11 text-base md:text-base [&::-ms-reveal]:hidden"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((shown) => !shown)}
+            disabled={busy}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            aria-controls="password"
+            className="absolute top-1/2 right-1.5 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-[10px] text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-4 focus-visible:ring-brand/15 disabled:pointer-events-none disabled:opacity-60"
+          >
+            {showPassword ? (
+              <EyeOff className="size-4.5" />
+            ) : (
+              <Eye className="size-4.5" />
+            )}
+          </button>
         </div>
         {fieldErrors.password ? (
           <p className="text-sm text-destructive">{fieldErrors.password}</p>
