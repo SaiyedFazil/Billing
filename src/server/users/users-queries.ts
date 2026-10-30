@@ -1,4 +1,4 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { bills, users } from "@/db/schema";
@@ -45,12 +45,15 @@ export async function listUsers(): Promise<UserRow[]> {
         role: users.role,
         lockedUntil: users.lockedUntil,
         createdAt: users.createdAt,
-        billCount: sql<number>`
-          (SELECT count(*)::int FROM ${bills} WHERE ${bills.createdBy} = ${users.id})
-        `,
+        // A join, not a subquery: Drizzle writes a single-table select's
+        // columns without their table, so a subquery read
+        // `WHERE "created_by" = "id"` — bills.id — and counted 0 for everyone.
+        billCount: count(bills.id),
       })
       .from(users)
+      .leftJoin(bills, eq(bills.createdBy, users.id))
       .where(eq(users.isActive, true))
+      .groupBy(users.id)
       .orderBy(asc(users.name)),
   );
 }
