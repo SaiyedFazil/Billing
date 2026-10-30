@@ -1,31 +1,43 @@
-import NextAuth from "next-auth";
+import { getToken } from "next-auth/jwt";
+import { type NextRequest, NextResponse } from "next/server";
 
-import { authConfig } from "@/auth.config";
+import { hasOutlivedSignIn, usesSecureCookie } from "@/lib/auth/session-policy";
+import { AUTH_ROUTES } from "@/lib/routes/auth-routes";
 
-// Next.js 16 renamed `middleware.ts` to `proxy.ts`. Uses the edge-safe config
-// only — no database, no bcrypt.
+// Next.js 16 renamed `middleware.ts` to `proxy.ts`.
 //
 // This is a REDIRECT CONVENIENCE, not access control. Real enforcement is
-// requireUser() / requireSuperadmin() inside every action and page.
-const { auth } = NextAuth(authConfig);
+// requireUser() / requireSuperadmin() inside every action and page, which
+// also check the session against the database. The proxy cannot: it may run
+// at the edge, where the Neon Pool cannot connect.
+//
+// It only READS the session cookie and never writes one. Auth.js's `auth()`
+// proxy wrapper re-issues the session cookie on every response, so the
+// sign-out request came back with two cookies: signOut's deletion and the
+// wrapper's fresh session. Netlify appends the proxy's cookies last, the fresh
+// session won, and signing out did nothing.
+//
+// Signed-in visitors to /login are sent on by the login page itself, not
+// here. A session the owner has ended still has a cookie; redirecting it from
+// /login to a page that rejects it would loop.
+const PUBLIC_ROUTES: string[] = [AUTH_ROUTES.login];
 
-const PUBLIC_ROUTES = ["/login"];
-
-export default auth((req) => {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-  const isLoggedIn = Boolean(req.auth?.user);
+  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) return;
 
-  if (!isLoggedIn && !isPublic) {
-    const url = new URL("/login", req.nextUrl.origin);
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: usesSecureCookie(process.env.AUTH_URL, req.nextUrl.href),
+  });
+
+  if (!token || hasOutlivedSignIn(token.signedInAt)) {
+    const url = new URL(AUTH_ROUTES.login, req.nextUrl.origin);
     url.searchParams.set("next", pathname);
-    return Response.redirect(url);
+    return NextResponse.redirect(url);
   }
-
-  if (isLoggedIn && isPublic) {
-    return Response.redirect(new URL("/dashboard", req.nextUrl.origin));
-  }
-});
+}
 
 export const config = {
   // Everything except the auth endpoints and static assets. The brand logo,

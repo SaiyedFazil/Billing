@@ -46,5 +46,7 @@ export const resetPasswordSchema = z.object({
     ),
 });
 
+export const userIdSchema = z.object({ id: z.uuid() });
+
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

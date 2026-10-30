@@ -13,6 +13,7 @@ Auth.js v5, Tailwind v4 + shadcn/ui, deployed to Netlify on free tiers.
 | `docs/superpowers/specs/2026-10-20-cash-book-design.md`         | Cash book: money in vs owner-entered money out  |
 | `docs/superpowers/specs/2026-10-24-split-payment-design.md`     | Split payment: one bill paid by several methods |
 | `docs/superpowers/specs/2026-10-24-mobile-responsive-design.md` | Phones and tablets: what changes below 1024px   |
+| `docs/superpowers/specs/2026-10-29-auth-sessions-design.md`     | Sessions: sign-out, revocation, 10-hour limit   |
 | `docs/superpowers/plans/`                                       | Implementation plans, one per piece of work     |
 | `docs/deployment.md`                                            | Netlify + Neon setup, migrations, backups       |
 | `docs/printer-setup.md`                                         | One-time thermal printer setup on the till      |
@@ -64,12 +65,26 @@ menu, `-- --dry-run` previews) ·
    screen but received the entire menu with prices in the response body. Every
    page under `/administration` now calls the guard itself.
 
+   The guards check the session against the database (`is_active`, and the
+   password stamp in the cookie against the current password hash) and take
+   the role from there. A dead session redirects to `/login` from a page and
+   from an action alike; `guarded()` lets that redirect through with
+   `unstable_rethrow`. `readSessionUser()` reads the cookie alone and is for
+   drawing the shell, never for access.
+
+   **The proxy never writes a cookie.** It reads the session with
+   `getToken()`. Auth.js's `auth()` wrapper re-issues the session cookie on
+   every response, which is what made sign-out fail on Netlify. See
+   `docs/superpowers/specs/2026-10-29-auth-sessions-design.md`.
+
 3. **The client never sends prices.** Bill payloads carry `{ itemId, quantity }`.
    The server re-reads every price from the database.
 4. **Reports read `bill_items` snapshot columns.** Never join to `items` for a
    name or price — that would let a rename rewrite history.
 5. **Never `DELETE` an item, category, user, expense or expense category.**
-   Set `is_active = false`, or cancel the expense.
+   Set `is_active = false`, or cancel the expense. "Delete" on the Users
+   screen is this too: bills, expenses and stock movements reference the user
+   (`ON DELETE RESTRICT`), and the name stays on their receipts.
 6. **Inside `db.transaction`, only throw.** Returning from the callback commits.
    Any validation that can fail belongs _before_ the transaction opens — see
    the structure of `create-bill-service.ts`.
@@ -254,6 +269,7 @@ npm run build            # the production build
 | ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `verify:money`                                        | exact rupee arithmetic and the shop-local midnight rollover                         |
 | `verify:retry`                                        | cold-start retry fires once, and never on a real error                              |
+| `verify:auth`                                         | session rules, the 10-hour limit, cookie naming, sign-in timing (no DB)             |
 | `verify:reports`                                      | date-range and CSV helpers                                                          |
 | `format:check`                                        | every file is Prettier-formatted                                                    |
 | `db:verify`                                           | CHECK constraints reject impossible bills                                           |
@@ -265,7 +281,7 @@ npm run build            # the production build
 | `verify:split-payment`                                | split payment rules and the till's split maths (no DB)                              |
 | `verify:menu-import`                                  | card is valid, adds no duplicate, replace is exact (no DB)                          |
 | `verify:expenses`                                     | expense writes, cancellation, categories, cash book and spreadsheet totals          |
-| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards                                                      |
+| `verify:categories` · `verify:items` · `verify:users` | admin actions and their guards; the lockout holds against parallel guesses          |
 | `verify:report-queries`                               | report SQL against real data; saves a test bill                                     |
 | `db:audit-payments`                                   | every bill's payments add up; read-only, safe on live data                          |
 | `verify:imagekit`                                     | image upload credentials                                                            |

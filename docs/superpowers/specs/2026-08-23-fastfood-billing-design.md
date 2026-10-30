@@ -377,8 +377,11 @@ timezone conversion.
 
 ## 7. Authentication and authorization
 
-Auth.js v5, credentials provider, bcrypt cost 12, JWT session strategy with an
-8-hour expiry (one shift). No session table is required.
+Auth.js v5, credentials provider, bcrypt cost 12, JWT session strategy. A
+sign-in lasts 10 hours from sign-in, never extended. No session table is
+required: the guard checks every session against the users row. See
+`2026-10-29-auth-sessions-design.md`, which supersedes the session details
+here.
 
 **There is no public signup route.** The first superadmin is created by
 `db/seed.ts` from environment variables. Every subsequent account is created by
@@ -421,13 +424,23 @@ requireUser(); // any active account, else UNAUTHORIZED
 requireSuperadmin(); // else FORBIDDEN
 ```
 
-Deactivated users are rejected by the guard even if they hold a valid JWT.
+Deleted users are rejected by the guard even if they hold a valid JWT: the
+guard loads the user, checks `is_active`, and compares a stamp of the
+password hash with the one in the cookie, so a password reset ends older
+sessions too (added 2026-10-29; before that it read only the cookie).
 
 ### 7.3 Login hardening
 
 Failed attempts are counted on the `users` row. Five consecutive failures lock
-the account for five minutes via `locked_until`. No Redis or third-party
-service is required.
+the account for five minutes via `locked_until`. Each attempt is counted
+before its password is checked, in one atomic update, so guesses sent together
+cannot slip past the lock. No Redis or third-party service is required.
+
+A wrong password, an unknown username and a deleted account all get the
+same "Incorrect username or password", in the same time. A lock is the one
+exception: from the fifth wrong attempt the form says the account is locked
+and for how many minutes, because staff told "incorrect password" keep
+retrying a locked account.
 
 Minimum password length is 8 characters. There is no email-based password
 reset; a superadmin resets passwords directly, which is the correct model for a
@@ -747,11 +760,12 @@ adapter, using the stored `image_file_id`.
 
 ### 12.3 Users
 
-Create (username, name, role, initial password), deactivate, reset password.
+Create (username, name, role, initial password), delete, reset password.
 
-Users are **never deleted** — bills reference them. A superadmin cannot
-deactivate their own account, and the system enforces at least one active
-superadmin at all times.
+Delete never removes the row — bills reference it — but sets `is_active =
+false`, hides the account and signs it out everywhere (2026-10-30; it used to
+be Deactivate / Reactivate). A superadmin cannot delete their own account,
+and the system enforces at least one active superadmin at all times.
 
 ### 12.4 Settings
 

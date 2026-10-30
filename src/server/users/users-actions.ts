@@ -13,6 +13,7 @@ import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import {
   createUserSchema,
   resetPasswordSchema,
+  userIdSchema,
 } from "@/lib/validation/user-schema";
 import { countActiveSuperadmins } from "@/server/users/users-queries";
 
@@ -32,16 +33,19 @@ export async function createUserAction(
     }
 
     const [existing] = await db
-      .select({ id: users.id })
+      .select({ isActive: users.isActive })
       .from(users)
       .where(sql`lower(${users.username}) = lower(${parsed.data.username})`)
       .limit(1);
 
+    // A deleted account keeps its username: its bills still carry it.
     if (existing) {
       return fail<{ id: string }>(
         "CONFLICT",
-        "That username is already taken.",
-        { username: "Already taken" },
+        existing.isActive
+          ? "That username is already taken."
+          : "That username belonged to a deleted account. Choose another.",
+        { username: existing.isActive ? "Already taken" : "Used before" },
       );
     }
 
@@ -61,29 +65,47 @@ export async function createUserAction(
   });
 }
 
-export async function setUserActiveAction(payload: {
-  id: string;
-  isActive: boolean;
-}): Promise<ActionResult<null>> {
+/**
+ * Deletes an account, as far as the shop can see.
+ *
+ * The row itself stays: every bill, expense and stock movement the user made
+ * points at it (bills.created_by is ON DELETE RESTRICT, and bills are frozen
+ * by trigger), and their name stays on past receipts and reports. So delete
+ * sets is_active = false — the account leaves the Users list, cannot sign in,
+ * and every session it has open is sent to /login on its next request, since
+ * the guards check is_active every time. There is no undo in the app.
+ */
+export async function deleteUserAction(
+  payload: unknown,
+): Promise<ActionResult<null>> {
   return guarded(async () => {
     const actor = await requireSuperadmin();
 
-    if (payload.id === actor.id && !payload.isActive) {
-      return fail<null>("CONFLICT", "You cannot deactivate your own account.");
+    const parsed = userIdSchema.safeParse(payload);
+    if (!parsed.success) {
+      return fail<null>("NOT_FOUND", "That user no longer exists.");
+    }
+    const { id } = parsed.data;
+
+    if (id === actor.id) {
+      return fail<null>("CONFLICT", "You can't delete your own account.");
     }
 
     const before = await db.query.users.findFirst({
-      where: eq(users.id, payload.id),
+      where: eq(users.id, id),
+      columns: { role: true, isActive: true },
     });
-    if (!before) return fail<null>("NOT_FOUND", "That user no longer exists.");
+    if (!before?.isActive) {
+      return fail<null>("NOT_FOUND", "That user no longer exists.");
+    }
 
     // Never leave the shop with no way in.
-    if (!payload.isActive && before.role === "SUPERADMIN") {
-      const remaining = await countActiveSuperadmins(payload.id);
+    if (before.role === "SUPERADMIN") {
+      const remaining = await countActiveSuperadmins(id);
       if (remaining === 0) {
         return fail<null>(
           "CONFLICT",
-          "This is the last active owner account. Create another owner first.",
+          "This is the last owner account. Create another owner first.",
         );
       }
     }
@@ -91,13 +113,12 @@ export async function setUserActiveAction(payload: {
     await db
       .update(users)
       .set({
-        isActive: payload.isActive,
-        // Reactivating clears any lockout so they can sign straight in.
+        isActive: false,
         failedAttempts: 0,
         lockedUntil: null,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, payload.id));
+      .where(eq(users.id, id));
 
     revalidatePath(ADMIN_ROUTES.users);
     return ok(null);
@@ -121,9 +142,19 @@ export async function resetPasswordAction(
 
     const before = await db.query.users.findFirst({
       where: eq(users.id, parsed.data.id),
+      columns: { isActive: true },
     });
-    if (!before) return fail<null>("NOT_FOUND", "That user no longer exists.");
+    if (!before?.isActive) {
+      return fail<null>("NOT_FOUND", "That user no longer exists.");
+    }
 
+    // A new hash means a new password stamp, so this signs the user out
+    // everywhere: whoever knew the old password, or holds a cookie from it,
+    // is sent to /login on their next request. That includes owners
+    // resetting their own, on this device too — the page re-render that
+    // follows this action does it. (Signing them straight back in does not
+    // work: Auth.js reads the session from the request headers, which still
+    // carry the old cookie during that re-render.)
     await db
       .update(users)
       .set({

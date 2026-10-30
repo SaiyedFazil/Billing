@@ -1,8 +1,10 @@
 "use server";
 
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn } from "@/auth";
+import { lockoutMessage } from "@/lib/auth/lockout";
+import { AccountLocked } from "@/lib/auth/sign-in-errors";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { loginSchema } from "@/lib/validation/user-schema";
 
@@ -31,10 +33,28 @@ export async function loginAction(
     });
     return ok(null);
   } catch (error) {
-    if (error instanceof AuthError) {
-      // Deliberately vague: never reveal whether the username exists, whether
-      // the account is deactivated, or whether it is locked.
+    if (error instanceof AccountLocked) {
+      return fail("LOCKED", lockoutMessage(error.lockedUntil));
+    }
+    if (error instanceof CredentialsSignin) {
+      // authorize() returned null. Deliberately vague: never reveal whether
+      // the username exists, whether the account is deactivated, or whether
+      // it is locked.
       return fail("UNAUTHORIZED", "Incorrect username or password.");
+    }
+    if (error instanceof AuthError) {
+      // authorize() threw — the database is unreachable, or out of step with
+      // the code (a migration not yet run). Auth.js wraps that in an AuthError
+      // too; reporting it as a wrong password hid the real fault.
+      const correlationId = crypto.randomUUID().slice(0, 8);
+      console.error(
+        `[${correlationId}] Sign-in failed:`,
+        error.cause?.err ?? error,
+      );
+      return fail(
+        "UNKNOWN",
+        `Sign-in is unavailable right now. Try again in a moment, or quote reference ${correlationId}.`,
+      );
     }
     throw error;
   }

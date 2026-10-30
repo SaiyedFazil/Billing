@@ -44,8 +44,8 @@ takings on a live dashboard.
 - Saving is idempotent: a retry after a timeout cannot create a second bill.
 - Bill numbers are gapless, and database triggers stop past bills from being
   rewritten.
-- Items, categories and accounts are deactivated, never deleted, so history
-  stays intact.
+- Items, categories and accounts are retired, never removed from the
+  database (a deleted account keeps its row), so history stays intact.
 - Every page and server action checks the signed-in role; repeated failed
   sign-ins lock the account temporarily.
 
