@@ -107,14 +107,20 @@ async function main() {
 
   // Every attempt is counted before its password is checked. Five without a
   // correct password lock the account; a good sign-in clears the lock.
-  const allowed: boolean[] = [];
+  const claims: Awaited<ReturnType<typeof claimSignInAttempt>>[] = [];
   for (let attempt = 0; attempt < MAX_FAILED_ATTEMPTS; attempt += 1) {
-    allowed.push(await claimSignInAttempt(probe.id));
+    claims.push(await claimSignInAttempt(probe.id));
   }
   check(
     "the first five attempts may check a password",
-    allowed.every(Boolean),
-    allowed,
+    claims.every((claim) => claim.allowed),
+    claims,
+  );
+  check(
+    "only the fifth attempt reports a lock",
+    claims.map((claim) => claim.lockedUntil !== null).join() ===
+      "false,false,false,false,true",
+    claims,
   );
   const locked = (await db.query.users.findFirst({
     where: eq(users.id, probe.id),
@@ -126,9 +132,12 @@ async function main() {
       locked.lockedUntil > new Date(),
     { failedAttempts: locked.failedAttempts, lockedUntil: locked.lockedUntil },
   );
+  const sixth = await claimSignInAttempt(probe.id);
   check(
     "a sixth attempt is refused while the account is locked",
-    !(await claimSignInAttempt(probe.id)),
+    !sixth.allowed &&
+      sixth.lockedUntil?.getTime() === locked.lockedUntil?.getTime(),
+    sixth,
   );
 
   await clearFailedLogins(probe.id);
@@ -140,7 +149,7 @@ async function main() {
   );
   check(
     "of 12 attempts sent at once, only five reach a password check",
-    together.filter(Boolean).length === MAX_FAILED_ATTEMPTS,
+    together.filter((claim) => claim.allowed).length === MAX_FAILED_ATTEMPTS,
     together,
   );
 

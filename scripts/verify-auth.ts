@@ -1,3 +1,4 @@
+import { lockoutMessage } from "../src/lib/auth/lockout";
 import { hashPassword, verifyPassword } from "../src/lib/auth/password";
 import {
   currentSessionUser,
@@ -113,6 +114,36 @@ check(
 check(
   "a sign-in time that is not a number is ended",
   hasOutlivedSignIn(String(SIGNED_IN), SIGNED_IN),
+  true,
+);
+
+// ── What a locked account is told ───────────────────────────────────────────
+
+const LOCK_SET = new Date("2026-10-30T06:43:16Z");
+const UNLOCKS = new Date("2026-10-30T06:48:16Z");
+
+check(
+  "a fresh lock says five minutes",
+  lockoutMessage(UNLOCKS, LOCK_SET).includes("Try again in 5 minutes"),
+  true,
+);
+check(
+  "part of a minute left rounds up",
+  lockoutMessage(UNLOCKS, new Date("2026-10-30T06:46:30Z")).includes(
+    "Try again in 2 minutes",
+  ),
+  true,
+);
+check(
+  "the last minute is singular",
+  lockoutMessage(UNLOCKS, new Date("2026-10-30T06:48:00Z")).includes(
+    "Try again in 1 minute,",
+  ),
+  true,
+);
+check(
+  "a lock just expiring never says 0 minutes",
+  lockoutMessage(UNLOCKS, UNLOCKS).includes("Try again in 1 minute,"),
   true,
 );
 

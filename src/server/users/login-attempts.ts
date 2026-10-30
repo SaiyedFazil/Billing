@@ -16,8 +16,13 @@ import { users } from "@/db/schema";
  *
  * A correct password then clears the count (clearFailedLogins), so only
  * consecutive failures add up.
+ *
+ * `lockedUntil` is the account's lock after this attempt: set when the
+ * attempt was refused, or when this one was the attempt that locked it.
  */
-export async function claimSignInAttempt(userId: string): Promise<boolean> {
+export async function claimSignInAttempt(
+  userId: string,
+): Promise<{ allowed: boolean; lockedUntil: Date | null }> {
   const now = new Date();
   const lockUntil = new Date(now.getTime() + LOCKOUT_MINUTES * 60 * 1000);
 
@@ -34,9 +39,17 @@ export async function claimSignInAttempt(userId: string): Promise<boolean> {
         or(isNull(users.lockedUntil), lte(users.lockedUntil, now)),
       ),
     )
-    .returning({ id: users.id });
+    .returning({ lockedUntil: users.lockedUntil });
 
-  return claimed.length > 0;
+  if (claimed.length > 0) {
+    return { allowed: true, lockedUntil: claimed[0].lockedUntil };
+  }
+
+  const [row] = await db
+    .select({ lockedUntil: users.lockedUntil })
+    .from(users)
+    .where(eq(users.id, userId));
+  return { allowed: false, lockedUntil: row?.lockedUntil ?? lockUntil };
 }
 
 /** Clears the count after a successful sign-in. */

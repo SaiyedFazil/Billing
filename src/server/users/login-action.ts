@@ -3,6 +3,8 @@
 import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn } from "@/auth";
+import { lockoutMessage } from "@/lib/auth/lockout";
+import { AccountLocked } from "@/lib/auth/sign-in-errors";
 import { type ActionResult, fail, ok } from "@/lib/utils/result";
 import { loginSchema } from "@/lib/validation/user-schema";
 
@@ -31,6 +33,9 @@ export async function loginAction(
     });
     return ok(null);
   } catch (error) {
+    if (error instanceof AccountLocked) {
+      return fail("LOCKED", lockoutMessage(error.lockedUntil));
+    }
     if (error instanceof CredentialsSignin) {
       // authorize() returned null. Deliberately vague: never reveal whether
       // the username exists, whether the account is deactivated, or whether

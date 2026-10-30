@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { AccountLocked } from "@/lib/auth/sign-in-errors";
 import {
   hasOutlivedSignIn,
   SESSION_MAX_AGE_SECONDS,
@@ -61,19 +62,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: sql`lower(${users.username}) = lower(${username})`,
         });
 
-        // Every failure path returns the same null and costs one bcrypt
-        // check, so neither the answer nor its timing reveals which check
-        // failed — that is how username enumeration starts.
+        // A wrong password, an unknown username and a deactivated account
+        // all return the same null and cost one bcrypt check, so neither the
+        // answer nor its timing reveals which it was — that is how username
+        // enumeration starts.
         if (!user || !user.isActive) {
           await verifyPassword(password, null);
           return null;
         }
 
-        const allowed = await claimSignInAttempt(user.id);
+        const attempt = await claimSignInAttempt(user.id);
         const valid = await verifyPassword(password, user.passwordHash);
-        if (!allowed || !valid) return null;
 
-        await clearFailedLogins(user.id);
+        if (attempt.allowed && valid) {
+          await clearFailedLogins(user.id);
+        } else if (attempt.lockedUntil) {
+          // A lock is said out loud, even though only real accounts lock:
+          // staff who are told "incorrect password" keep retrying a locked
+          // account. Five wrong guesses are needed before this appears.
+          throw new AccountLocked(attempt.lockedUntil);
+        } else {
+          return null;
+        }
 
         return {
           id: user.id,
