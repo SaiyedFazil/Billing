@@ -435,6 +435,12 @@ the account for five minutes via `locked_until`. Each attempt is counted
 before its password is checked, in one atomic update, so guesses sent together
 cannot slip past the lock. No Redis or third-party service is required.
 
+A wrong password, an unknown username and a deactivated account all get the
+same "Incorrect username or password", in the same time. A lock is the one
+exception: from the fifth wrong attempt the form says the account is locked
+and for how many minutes, because staff told "incorrect password" keep
+retrying a locked account.
+
 Minimum password length is 8 characters. There is no email-based password
 reset; a superadmin resets passwords directly, which is the correct model for a
 shop.
