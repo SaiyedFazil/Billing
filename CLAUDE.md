@@ -65,11 +65,12 @@ menu, `-- --dry-run` previews) ·
    screen but received the entire menu with prices in the response body. Every
    page under `/administration` now calls the guard itself.
 
-   The guards check the session against the database (`session_version`,
-   `is_active`) and take the role from there. On a page a dead session
-   redirects to `/login`; inside `guarded()` it returns `UNAUTHORIZED`, so
-   every action calls its guard inside `guarded()`. `readSessionUser()` reads
-   the cookie alone and is for drawing the shell, never for access.
+   The guards check the session against the database (`is_active`, and the
+   password stamp in the cookie against the current password hash) and take
+   the role from there. A dead session redirects to `/login` from a page and
+   from an action alike; `guarded()` lets that redirect through with
+   `unstable_rethrow`. `readSessionUser()` reads the cookie alone and is for
+   drawing the shell, never for access.
 
    **The proxy never writes a cookie.** It reads the session with
    `getToken()`. Auth.js's `auth()` wrapper re-issues the session cookie on
@@ -81,7 +82,9 @@ menu, `-- --dry-run` previews) ·
 4. **Reports read `bill_items` snapshot columns.** Never join to `items` for a
    name or price — that would let a rename rewrite history.
 5. **Never `DELETE` an item, category, user, expense or expense category.**
-   Set `is_active = false`, or cancel the expense.
+   Set `is_active = false`, or cancel the expense. "Delete" on the Users
+   screen is this too: bills, expenses and stock movements reference the user
+   (`ON DELETE RESTRICT`), and the name stays on their receipts.
 6. **Inside `db.transaction`, only throw.** Returning from the callback commits.
    Any validation that can fail belongs _before_ the transaction opens — see
    the structure of `create-bill-service.ts`.

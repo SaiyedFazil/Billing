@@ -3,6 +3,11 @@
 Status: implemented on `fix/auth-sessions` (2026-10-29). Supersedes the session
 paragraphs of the product spec §7 (`2026-08-23-fastfood-billing-design.md`).
 
+Revised 2026-10-30: `users.session_version` was dropped (migration 0014) in
+favour of a password stamp; accounts are deleted rather than deactivated; and
+a dead session now redirects to `/login` from a server action too. This
+document describes the revised design.
+
 ## The problem
 
 Signing out appeared to work — the browser landed on `/login` — but opening the
@@ -102,8 +107,9 @@ SIGN IN ────────────────────────
                               refused or wrong ─▶ null
                               right ─▶ clearFailedLogins()
                             ◀── Set-Cookie: session = encrypted { id, name,
-                                  username, role, sessionVersion, signedInAt }
+                                  username, role, passwordStamp, signedInAt }
                                   exp sign-in + 10h
+                              passwordStamp = HMAC(AUTH_SECRET, password hash)
 
 EVERY REQUEST ───────────────────────────────────────────────────────────────
  browser ──cookie──▶ proxy: getToken()   READ ONLY — never sets a cookie
@@ -111,9 +117,9 @@ EVERY REQUEST ──────────────────────
                      page / action: requireUser()
                        auth() decrypts; jwt callback ends it at 10h
                        findSessionUser(id)          one primary-key query
-                       inactive, or sessionVersion ≠ cookie's
-                         page   ─▶ redirect /login
-                         action ─▶ { ok: false, UNAUTHORIZED }
+                       deleted (is_active = false), or the stamp of today's
+                       password hash ≠ the cookie's
+                         page and action alike ─▶ redirect /login
                        role and name taken from the database
                      /login: already signed in (checked against the DB)
                        ─▶ redirect /dashboard
@@ -123,16 +129,36 @@ SIGN OUT ───────────────────────�
                     action: Set-Cookie session=; Max-Age=0   — the only one
                             redirect ▶ /login   (relative)
 
-OWNER DEACTIVATES / REACTIVATES / RESETS A PASSWORD ────────────────────────
- users.session_version + 1 ─▶ every cookie that user holds fails on its next
+OWNER DELETES AN ACCOUNT ────────────────────────────────────────────────────
+ is_active = false ─▶ every cookie that user holds fails on its next request,
+ page or action, and the browser lands on /login.
+
+OWNER RESETS A PASSWORD ─────────────────────────────────────────────────────
+ new hash ─▶ new stamp ─▶ every cookie from the old password fails on its next
  request. Owners resetting their own password are signed out here too, and
  sign in again with the new one.
 ```
 
+**Why a password stamp, not a version column.** The cookie stores
+`passwordStamp`, an HMAC of the user's bcrypt hash keyed with `AUTH_SECRET`
+(`src/lib/auth/password-stamp.ts`). A reset writes a new hash, so the stamp
+moves on its own and older cookies stop matching — Django ends sessions the
+same way. The 2026-10-29 design kept a separate `session_version` counter;
+its only other job was keeping old cookies dead through a reactivation, and
+accounts are now deleted, not reactivated. Because the stamp is keyed, it
+says nothing about the password even to the cookie's holder, who can read it
+through `/api/auth/session`.
+
+**Deleting an account.** A user row is never removed: `bills.created_by`,
+`expenses.created_by` and `stock_movements.created_by` are `ON DELETE
+RESTRICT`, bills are frozen by trigger, and receipts print the cashier's
+name. Delete sets `is_active = false`, hides the account from the Users list
+and keeps its username reserved. There is no undo in the app.
+
 Owners who reset their own password are not signed straight back in. Setting
 a cookie in a server action re-renders the page in the same response, and
 Auth.js reads the session from the request headers, which still carry the old
-cookie during that re-render. The page would see the old version and redirect
+cookie during that re-render. The page would see the old stamp and redirect
 anyway. Signing out everywhere is also the safer rule after a password
 change.
 
@@ -145,8 +171,8 @@ All pure, in `src/lib/auth/session-policy.ts`, proven by `npm run verify:auth`:
   re-issues the cookie with a fresh expiry whenever `/api/auth/session` is
   read. So the token carries `signedInAt`, the `jwt` callback returns `null`
   once it is 10 hours old, and the proxy redirects it.
-- **A session counts only while** the account is active and
-  `users.session_version` equals the number in the cookie
+- **A session counts only while** the account is not deleted and the stamp
+  of its current password hash equals the one in the cookie
   (`currentSessionUser`).
 - **The proxy reads the cookie by the name Auth.js wrote** —
   `__Secure-authjs.session-token` on https, decided by `AUTH_URL` when set and
@@ -160,7 +186,7 @@ All pure, in `src/lib/auth/session-policy.ts`, proven by `npm run verify:auth`:
 | `proxy.ts`                     | cookie only              | redirect to `/login` when there is no live cookie — courtesy |
 | `(app)/layout.tsx`             | cookie only              | the name and links in the shell — display, never access      |
 | every page, `requireUser()`    | cookie + one users query | access; redirects a dead session to `/login`                 |
-| every action, inside `guarded` | cookie + one users query | access; returns `UNAUTHORIZED`                               |
+| every action, inside `guarded` | cookie + one users query | access; redirects a dead session to `/login`                 |
 | `/login`                       | cookie + one users query | send an already-signed-in user to the dashboard              |
 
 React's `cache` shares the users query between a layout and its page. It does
@@ -172,9 +198,11 @@ and after sign-in, and a database read there would keep the whole screen blank
 through a Neon cold start. Layouts are not re-rendered on client navigation,
 so it could not be the gate anyway; the pages are.
 
-`requireUser()` tells a page from an action through an `AsyncLocalStorage`
-flag that `guarded()` sets. Every server action calls its guard inside
-`guarded()`.
+`requireUser()` redirects a dead session from an action exactly as from a
+page. Next rejects the caller's promise and navigates the browser to `/login`
+itself, so no screen needs its own "signed out" handling. `guarded()` catches
+every error to turn it into an `ActionResult`, so it lets Next's redirect
+through with `unstable_rethrow`.
 
 ## Why not access and refresh tokens
 
@@ -184,25 +212,25 @@ domain. Here browser and server are one origin, and the standard (OWASP
 Session Management Cheat Sheet) is a server-issued session in an httpOnly
 cookie, which this is. A refresh token would add a second secret to steal and
 a rotation scheme, and would still need a server-side record to be revocable.
-`session_version` gives that revocation with one indexed lookup, and keeps
-Auth.js, whose Credentials provider supports only JWT sessions.
+The guard's one lookup by primary key — `is_active` plus the password stamp —
+gives that revocation, and keeps Auth.js, whose Credentials provider supports
+only JWT sessions.
 
 ## Rolling it out
 
-- **Migration 0013** adds `users.session_version integer NOT NULL DEFAULT 0`.
-  It is additive: the code before this change ignores the column. Run it
-  **before** deploying, because the new guard reads the column on every page.
+- **Migrations 0013 and 0014** add `users.session_version`, then drop it. The
+  code reads neither, so they can run before or after the deploy. A database
+  that never ran 0013 runs both and ends where it started.
 - **Everyone signs in once after the deploy.** Cookies issued earlier carry no
-  `sessionVersion` or `signedInAt`, so they are rejected.
+  `passwordStamp` or `signedInAt`, so they are rejected.
 - **A session that ends mid-sale.** At the 10-hour mark, Save on the till
-  returns "You must be signed in." The cart lives only in that tab's memory:
-  signing in again in another tab, then pressing Save in the original, keeps
-  it.
+  sends the cashier to `/login`, and the cart, which lives only in that tab's
+  memory, is lost. Sign in again before the 10 hours run out on a long day.
 
 ## Verification
 
-| Check                  | Proves                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| `npm run verify:auth`  | session rules, the 10-hour boundary, cookie naming, the dummy-hash timing (no DB)        |
-| `npm run verify:users` | session version defaults to 0; five attempts lock; 12 sent at once let only five through |
-| Manual, against dev    | an ordinary response sets no cookie; sign-out sends exactly one, the deletion            |
+| Check                  | Proves                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `npm run verify:auth`  | session rules, the 10-hour boundary, cookie naming, the dummy-hash timing (no DB)       |
+| `npm run verify:users` | the stamp moves with a reset; five attempts lock; 12 sent at once let only five through |
+| Manual, against dev    | an ordinary response sets no cookie; sign-out sends exactly one, the deletion           |
