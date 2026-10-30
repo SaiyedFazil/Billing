@@ -1,5 +1,6 @@
 import { lockoutMessage } from "../src/lib/auth/lockout";
 import { hashPassword, verifyPassword } from "../src/lib/auth/password";
+import { passwordStamp } from "../src/lib/auth/password-stamp";
 import {
   currentSessionUser,
   hasOutlivedSignIn,
@@ -24,15 +25,39 @@ function check(label: string, actual: unknown, expected: unknown) {
 // ── Whether a session still belongs to a current user ───────────────────────
 
 const ID = "6f1c2a7e-0d4b-4c39-9a51-2b8e7f3d4c10";
-const claims = { id: ID, sessionVersion: 3 };
+const SECRET = "verify-auth-secret";
+const OLD_HASH = "$2b$12$oldhasholdhasholdhasholdhasholdhasholdhasholdhashold";
+const NEW_HASH = "$2b$12$newhashnewhashnewhashnewhashnewhashnewhashnewhashnew";
+const claims = { id: ID, passwordStamp: passwordStamp(OLD_HASH, SECRET) };
 const record: SessionUserRecord = {
   id: ID,
   name: "Asha",
   username: "asha",
   role: "ADMIN",
   isActive: true,
-  sessionVersion: 3,
+  passwordStamp: passwordStamp(OLD_HASH, SECRET),
 };
+
+check(
+  "a password stamp is the same for the same hash",
+  passwordStamp(OLD_HASH, SECRET) === passwordStamp(OLD_HASH, SECRET),
+  true,
+);
+check(
+  "a new password hash gives a new stamp",
+  passwordStamp(OLD_HASH, SECRET) === passwordStamp(NEW_HASH, SECRET),
+  false,
+);
+check(
+  "the stamp depends on AUTH_SECRET, so it cannot be worked out without it",
+  passwordStamp(OLD_HASH, SECRET) === passwordStamp(OLD_HASH, "other"),
+  false,
+);
+check(
+  "the stamp never contains the hash",
+  passwordStamp(OLD_HASH, SECRET).includes("oldhash"),
+  false,
+);
 
 check(
   "a current session returns its user",
@@ -45,17 +70,20 @@ check(
   },
 );
 check(
-  "a deactivated account has no session",
+  "a deleted account has no session",
   currentSessionUser(claims, { ...record, isActive: false }),
   null,
 );
 check(
-  "a password reset (version moved on) ends the session",
-  currentSessionUser(claims, { ...record, sessionVersion: 4 }),
+  "a password reset (new hash, new stamp) ends the session",
+  currentSessionUser(claims, {
+    ...record,
+    passwordStamp: passwordStamp(NEW_HASH, SECRET),
+  }),
   null,
 );
 check(
-  "a cookie from before session versions existed is rejected",
+  "a cookie from before password stamps existed is rejected",
   currentSessionUser({ id: ID } as typeof claims, record),
   null,
 );

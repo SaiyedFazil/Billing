@@ -1,6 +1,4 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
 import { auth } from "@/auth";
@@ -29,17 +27,10 @@ export class GuardError extends Error {
 }
 
 /**
- * Set while guarded() runs a server action. An action's caller expects an
- * ActionResult, so there the guards report a dead session instead of
- * redirecting.
- */
-const insideAction = new AsyncLocalStorage<true>();
-
-/**
  * The signed-in user, checked against the database: null when there is no
- * session, or when the owner has since deactivated the account or reset its
- * password. React's cache shares the one query between a layout and its page;
- * it does nothing inside a server action, which queries for itself.
+ * session, when the owner has since deleted the account, or when its password
+ * has changed. React's cache shares the one query between a layout and its
+ * page; it does nothing inside a server action, which queries for itself.
  */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const session = await auth();
@@ -53,9 +44,9 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
 /**
  * The user as the session cookie describes them, WITHOUT asking the database.
- * For drawing the shell only: a deactivated user's cookie still reads here,
- * so never decide access with it. The pages inside the shell call
- * requireUser() and redirect a dead session.
+ * For drawing the shell only: a deleted user's cookie still reads here, so
+ * never decide access with it. The pages inside the shell call requireUser()
+ * and redirect a dead session.
  */
 export async function readSessionUser(): Promise<SessionUser | null> {
   const session = await auth();
@@ -76,17 +67,14 @@ export async function readSessionUser(): Promise<SessionUser | null> {
  * anyone who learns an action ID can invoke it directly regardless of what the
  * proxy does — so this is the real access control. See spec §7.2.
  *
- * On a page, a missing or ended session redirects to sign-in. Inside guarded()
- * it throws, and the action returns UNAUTHORIZED.
+ * A missing or dead session redirects to sign-in, from a page and from an
+ * action alike. In an action, Next rejects the caller's promise and navigates
+ * the browser to /login, so no screen needs its own "signed out" handling.
  */
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (user) return user;
-
-  if (insideAction.getStore()) {
-    throw new GuardError("UNAUTHORIZED", "You must be signed in.");
-  }
-  redirect(AUTH_ROUTES.login);
+  if (!user) redirect(AUTH_ROUTES.login);
+  return user;
 }
 
 export async function requireSuperadmin(): Promise<SessionUser> {
@@ -101,26 +89,29 @@ export async function requireSuperadmin(): Promise<SessionUser> {
  * Wraps a server action body so guard failures become ActionResults rather
  * than unhandled exceptions, and unexpected errors never leak internals.
  *
+ * Next's own control flow — the redirect a dead session raises — passes
+ * straight through.
+ *
  * The correlation ID is logged server-side and shown to the user, so a support
  * call gives you something to grep for.
  */
 export async function guarded<T>(
   run: () => Promise<ActionResult<T>>,
 ): Promise<ActionResult<T>> {
-  return insideAction.run(true, async () => {
-    try {
-      return await run();
-    } catch (error) {
-      if (error instanceof GuardError) {
-        return fail(error.code, error.message);
-      }
+  try {
+    return await run();
+  } catch (error) {
+    unstable_rethrow(error);
 
-      const correlationId = crypto.randomUUID().slice(0, 8);
-      console.error(`[${correlationId}] Unhandled action error:`, error);
-      return fail(
-        "UNKNOWN",
-        `Something went wrong. Quote reference ${correlationId} if you report this.`,
-      );
+    if (error instanceof GuardError) {
+      return fail(error.code, error.message);
     }
-  });
+
+    const correlationId = crypto.randomUUID().slice(0, 8);
+    console.error(`[${correlationId}] Unhandled action error:`, error);
+    return fail(
+      "UNKNOWN",
+      `Something went wrong. Quote reference ${correlationId} if you report this.`,
+    );
+  }
 }

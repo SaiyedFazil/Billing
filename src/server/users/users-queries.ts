@@ -3,17 +3,19 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { bills, users } from "@/db/schema";
 import { withConnectionRetry } from "@/db/with-connection-retry";
+import { passwordStamp } from "@/lib/auth/password-stamp";
 import type { SessionUserRecord } from "@/lib/auth/session-policy";
 import type { UserRow } from "@/types/user.types";
 
 /**
- * What the guard needs to decide whether a session still counts — and never
- * the password hash. Runs on every page and action, by primary key.
+ * What the guard needs to decide whether a session still counts. Runs on
+ * every page and action, by primary key. The password hash is read only to
+ * stamp it and never leaves this function.
  */
 export async function findSessionUser(
   id: string,
 ): Promise<SessionUserRecord | undefined> {
-  return withConnectionRetry(async () =>
+  const row = await withConnectionRetry(async () =>
     db.query.users.findFirst({
       where: eq(users.id, id),
       columns: {
@@ -22,12 +24,17 @@ export async function findSessionUser(
         username: true,
         role: true,
         isActive: true,
-        sessionVersion: true,
+        passwordHash: true,
       },
     }),
   );
+  if (!row) return undefined;
+
+  const { passwordHash, ...user } = row;
+  return { ...user, passwordStamp: passwordStamp(passwordHash) };
 }
 
+/** The accounts the shop has — deleted ones (is_active = false) are left out. */
 export async function listUsers(): Promise<UserRow[]> {
   return withConnectionRetry(async () =>
     db
@@ -36,7 +43,6 @@ export async function listUsers(): Promise<UserRow[]> {
         username: users.username,
         name: users.name,
         role: users.role,
-        isActive: users.isActive,
         lockedUntil: users.lockedUntil,
         createdAt: users.createdAt,
         billCount: sql<number>`
@@ -44,6 +50,7 @@ export async function listUsers(): Promise<UserRow[]> {
         `,
       })
       .from(users)
+      .where(eq(users.isActive, true))
       .orderBy(asc(users.name)),
   );
 }

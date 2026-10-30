@@ -33,7 +33,7 @@ export function UsersTab({
     <div className="space-y-6">
       <PageHeader
         title="Accounts"
-        description="Who can sign in. Accounts are deactivated, never deleted — bills reference them."
+        description="Who can sign in. A deleted account's name stays on its past bills."
         actions={
           <Button onClick={tab.openCreate}>
             <Plus className="size-4.5" strokeWidth={2.25} />
@@ -63,7 +63,7 @@ export function UsersTab({
                 row={row}
                 currentUserId={currentUserId}
                 onReset={tab.setResetTarget}
-                onToggle={tab.setToggleTarget}
+                onDelete={tab.setDeleteTarget}
                 disabled={tab.isPending}
               />
             ))}
@@ -97,24 +97,16 @@ export function UsersTab({
       />
 
       <ConfirmDialog
-        open={tab.toggleTarget !== null}
+        open={tab.deleteTarget !== null}
         onOpenChange={(open) => {
-          if (!open) tab.setToggleTarget(null);
+          if (!open) tab.setDeleteTarget(null);
         }}
-        title={
-          tab.toggleTarget?.isActive
-            ? `Deactivate ${tab.toggleTarget?.name}?`
-            : `Reactivate ${tab.toggleTarget?.name}?`
-        }
-        description={
-          tab.toggleTarget?.isActive
-            ? "They will not be able to sign in. Their past bills are unaffected and stay in the ledger under their name."
-            : "They will be able to sign in again, and any lockout is cleared."
-        }
-        confirmLabel={tab.toggleTarget?.isActive ? "Deactivate" : "Reactivate"}
-        destructive={tab.toggleTarget?.isActive}
+        title={`Delete ${tab.deleteTarget?.name}'s account?`}
+        description="They are signed out at once, wherever they are signed in, and cannot sign in again. Their past bills keep their name. This cannot be undone."
+        confirmLabel="Delete account"
+        destructive
         isPending={tab.isPending}
-        onConfirm={tab.confirmToggle}
+        onConfirm={tab.confirmDelete}
       />
     </div>
   );

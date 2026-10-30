@@ -4,6 +4,7 @@ import { MAX_FAILED_ATTEMPTS } from "../src/constants/sign-in";
 import { db } from "../src/db";
 import { users } from "../src/db/schema";
 import { hashPassword, verifyPassword } from "../src/lib/auth/password";
+import { passwordStamp } from "../src/lib/auth/password-stamp";
 import {
   claimSignInAttempt,
   clearFailedLogins,
@@ -93,12 +94,24 @@ async function main() {
     newHash.startsWith("$2") && !newHash.includes("NewProbe"),
   );
 
-  // The guard's lookup carries the session version, never the hash.
+  // The guard's lookup carries a stamp of the hash, never the hash itself,
+  // and the stamp moves when the password does.
   const session = await findSessionUser(probe.id);
+  const probeHash = (await db.query.users.findFirst({
+    where: eq(users.id, probe.id),
+  }))!.passwordHash;
   check(
-    "a new user starts at session version 0",
-    session?.sessionVersion === 0,
+    "the session lookup stamps the current password hash",
+    session?.passwordStamp === passwordStamp(probeHash),
     session,
+  );
+  await db
+    .update(users)
+    .set({ passwordHash: await hashPassword("Another@123") })
+    .where(eq(users.id, probe.id));
+  check(
+    "a password reset changes the stamp, ending older sessions",
+    (await findSessionUser(probe.id))?.passwordStamp !== session?.passwordStamp,
   );
   check(
     "the session lookup never returns the password hash",

@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { passwordStamp } from "@/lib/auth/password-stamp";
 import { AccountLocked } from "@/lib/auth/sign-in-errors";
 import {
   hasOutlivedSignIn,
@@ -31,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id!;
         token.username = user.username;
         token.role = user.role;
-        token.sessionVersion = user.sessionVersion;
+        token.passwordStamp = user.passwordStamp;
         token.signedInAt = Math.floor(Date.now() / 1000);
       }
       // null ends the session: auth() returns none, so the guards reject it.
@@ -42,7 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id;
       session.user.username = token.username;
       session.user.role = token.role;
-      session.user.sessionVersion = token.sessionVersion;
+      session.user.passwordStamp = token.passwordStamp;
       return session;
     },
   },
@@ -90,7 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           username: user.username,
           role: user.role,
-          sessionVersion: user.sessionVersion,
+          passwordStamp: passwordStamp(user.passwordHash),
         };
       },
     }),

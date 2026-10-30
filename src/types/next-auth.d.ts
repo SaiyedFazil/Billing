@@ -20,7 +20,7 @@ declare module "next-auth" {
       id: string;
       username: string;
       role: Role;
-      sessionVersion: number;
+      passwordStamp: string;
     } & DefaultSession["user"];
   }
 
@@ -28,7 +28,7 @@ declare module "next-auth" {
     id?: string;
     username: string;
     role: Role;
-    sessionVersion: number;
+    passwordStamp: string;
   }
 }
 
@@ -37,7 +37,7 @@ declare module "next-auth/jwt" {
     id: string;
     username: string;
     role: Role;
-    sessionVersion: number;
+    passwordStamp: string;
     /** Epoch seconds. A session ends SESSION_MAX_AGE_SECONDS after it. */
     signedInAt: number;
   }
@@ -48,7 +48,7 @@ declare module "@auth/core/jwt" {
     id: string;
     username: string;
     role: Role;
-    sessionVersion: number;
+    passwordStamp: string;
     /** Epoch seconds. A session ends SESSION_MAX_AGE_SECONDS after it. */
     signedInAt: number;
   }

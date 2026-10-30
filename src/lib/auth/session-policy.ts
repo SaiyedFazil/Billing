@@ -31,7 +31,8 @@ export function hasOutlivedSignIn(
 /** What the session cookie says about its user, fixed at sign-in. */
 export type SessionClaims = {
   id: string;
-  sessionVersion: number;
+  /** passwordStamp() of the password hash at sign-in. */
+  passwordStamp: string;
 };
 
 /** The same user as the database has them now. */
@@ -40,22 +41,25 @@ export type SessionUserRecord = {
   name: string;
   username: string;
   role: Role;
+  /** False once the owner has deleted the account. */
   isActive: boolean;
-  sessionVersion: number;
+  /** passwordStamp() of the password hash now. */
+  passwordStamp: string;
 };
 
 /**
- * The user a session belongs to, or null when the owner has ended it since
- * sign-in: the account was deactivated, or its session version has moved on
- * (a password reset). Name and role come from the database rather than the
- * cookie, so a change takes effect on the next request.
+ * The user a session belongs to, or null when it has ended since sign-in:
+ * the owner deleted the account, or its password has changed (a reset), so
+ * the stamp in the cookie no longer matches. Name and role come from the
+ * database rather than the cookie, so a change takes effect on the next
+ * request.
  */
 export function currentSessionUser(
   claims: SessionClaims,
   record: SessionUserRecord | undefined,
 ): SessionUser | null {
   if (!record || record.id !== claims.id || !record.isActive) return null;
-  if (record.sessionVersion !== claims.sessionVersion) return null;
+  if (record.passwordStamp !== claims.passwordStamp) return null;
 
   return {
     id: record.id,

@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import type { Role } from "@/constants/roles";
 import {
   createUserAction,
+  deleteUserAction,
   resetPasswordAction,
-  setUserActiveAction,
 } from "@/server/users/users-actions";
 import type { UserRow } from "@/types/user.types";
 
@@ -37,7 +37,7 @@ export function useUsersTab() {
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
-  const [toggleTarget, setToggleTarget] = useState<UserRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
 
   const openCreate = useCallback(() => {
     setForm(EMPTY_USER);
@@ -81,28 +81,21 @@ export function useUsersTab() {
     });
   }, [newPassword, resetTarget, router]);
 
-  const confirmToggle = useCallback(() => {
-    if (!toggleTarget) return;
-    const target = toggleTarget;
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
 
     startTransition(async () => {
-      const result = await setUserActiveAction({
-        id: target.id,
-        isActive: !target.isActive,
-      });
+      const result = await deleteUserAction({ id: target.id });
       if (result.ok) {
-        toast.success(
-          target.isActive
-            ? `${target.name} can no longer sign in`
-            : `${target.name} can sign in again`,
-        );
+        toast.success(`${target.name}'s account is deleted`);
       } else {
         toast.error(result.error.message);
       }
-      setToggleTarget(null);
+      setDeleteTarget(null);
       router.refresh();
     });
-  }, [router, toggleTarget]);
+  }, [deleteTarget, router]);
 
   return {
     isPending,
@@ -118,8 +111,8 @@ export function useUsersTab() {
     newPassword,
     setNewPassword,
     submitReset,
-    toggleTarget,
-    setToggleTarget,
-    confirmToggle,
+    deleteTarget,
+    setDeleteTarget,
+    confirmDelete,
   };
 }

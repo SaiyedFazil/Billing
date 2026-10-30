@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, UserCheck, UserX } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 
 import { RowActionsMenu } from "@/components/custom/RowActionsMenu";
 import { Badge } from "@/components/ui/badge";
@@ -38,20 +38,20 @@ export function UserTableRow({
   row,
   currentUserId,
   onReset,
-  onToggle,
+  onDelete,
   disabled,
 }: {
   row: UserRow;
   currentUserId: string;
   onReset: (row: UserRow) => void;
-  onToggle: (row: UserRow) => void;
+  onDelete: (row: UserRow) => void;
   disabled: boolean;
 }) {
   const isSelf = row.id === currentUserId;
   const isLocked = row.lockedUntil !== null && row.lockedUntil > new Date();
 
   return (
-    <TableRow className={row.isActive ? "" : "opacity-60"}>
+    <TableRow>
       <TableCell>
         <span className="flex items-center gap-3">
           <span
@@ -96,9 +96,7 @@ export function UserTableRow({
         {row.billCount}
       </TableCell>
       <TableCell>
-        {!row.isActive ? (
-          <Badge variant="outline">Deactivated</Badge>
-        ) : isLocked ? (
+        {isLocked ? (
           <Badge variant="warning" dot>
             Locked
           </Badge>
@@ -120,14 +118,14 @@ export function UserTableRow({
               disabled,
             },
             {
-              label: row.isActive ? "Deactivate" : "Reactivate",
-              icon: row.isActive ? UserX : UserCheck,
-              onSelect: () => onToggle(row),
+              label: "Delete",
+              icon: Trash2,
+              onSelect: () => onDelete(row),
               disabled: disabled || isSelf,
               disabledReason: isSelf
-                ? "You can't deactivate your own account"
+                ? "You can't delete your own account"
                 : undefined,
-              destructive: row.isActive,
+              destructive: true,
             },
           ]}
         />
@@ -145,22 +143,12 @@ export function UserTableRow({
           variant="ghost"
           size="icon"
           disabled={disabled || isSelf}
-          aria-label={
-            row.isActive ? `Deactivate ${row.name}` : `Reactivate ${row.name}`
-          }
-          onClick={() => onToggle(row)}
-          className={cn(
-            "max-lg:hidden",
-            row.isActive
-              ? "text-destructive hover:bg-destructive-soft hover:text-destructive"
-              : "text-success hover:bg-success-soft hover:text-success",
-          )}
+          aria-label={`Delete ${row.name}`}
+          title={isSelf ? "You can't delete your own account" : undefined}
+          onClick={() => onDelete(row)}
+          className="text-destructive hover:bg-destructive-soft hover:text-destructive max-lg:hidden"
         >
-          {row.isActive ? (
-            <UserX className="size-4" />
-          ) : (
-            <UserCheck className="size-4" />
-          )}
+          <Trash2 className="size-4" />
         </Button>
       </TableCell>
     </TableRow>
